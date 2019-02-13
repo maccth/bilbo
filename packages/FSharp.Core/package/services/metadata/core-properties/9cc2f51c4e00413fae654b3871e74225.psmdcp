@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:creator>Microsoft and F# Software Foundation</dc:creator>
+  <dc:description>FSharp.Core redistributables from Visual F# Tools version 10.4 For F# 4.6
+                Supported Platforms:
+                    .NET Framework 4.5+ (net45)
+                    netstandard1.6      (netstandard1.6)
+                    netstandard2.0      (netstandard2.0)
+
+                Commit hash: b5c01b8cc65af6381d2dd558ee63a4aa9e0e98d5</dc:description>
+  <dc:identifier>FSharp.Core</dc:identifier>
+  <version>4.6.1</version>
+  <keywords>Visual F# Compiler FSharp functional programming</keywords>
+  <lastModifiedBy>NuGet.Build.Tasks.Pack, Version=4.9.0.6, Culture=neutral, PublicKeyToken=31bf3856ad364e35;Microsoft Windows NT 10.0.14393.0;.NET Framework 4.6</lastModifiedBy>
+</coreProperties>

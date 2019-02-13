@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>FsCheck</id>
+    <version>2.13.0</version>
+    <authors>Kurt Schelfthout and contributors</authors>
+    <owners>Kurt Schelfthout and contributors</owners>
+    <licenseUrl>https://github.com/fsharp/FsCheck/blob/master/License.txt</licenseUrl>
+    <projectUrl>https://github.com/fsharp/FsCheck</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/fscheck/FsCheck/master/docs/files/img/logo.png</iconUrl>
+    <description>FsCheck is a tool for testing .NET programs automatically. You provide a specification of the program, in the form of properties which functions, methods or objects should satisfy, and FsCheck then tests that the properties hold in a large number of randomly generated cases. Such properties are actually a testable specification of your program.
+
+Properties are written in F#, C# or VB. FsCheck helps you to define properties, observe the distribution of test data, and define test data generators. Crucially, when a property fails, FsCheck automatically displays a minimal counter example.</description>
+    <summary>FsCheck is a tool for testing .NET programs automatically using randomly generated test cases.</summary>
+    <releaseNotes>Stop shipping Portable Class Libraries (PCL), which are essentially deprecated by Microsoft in favor of .NET Standard. FsCheck now targets .NET Standard 1.0 (which takes the place of 3 PCLs that were previously included, while it still run on all those platforms and more), .NET Standard 1.6 (which is the lowest version modern FSharp.Core versions support) and .NET Standard 2.0 (which is advised by NuGet so clients don't need to download as much stuff if they can target 2.0 or higher). FsCheck also still targets .NET Framework 4.5.2 and upwards as a convenience.
+FsCheck.Xunit and FsCheck.NUnit similarly target .NET Standard 1.6 and 2.0, as well as .NET Framework 4.5.2. They've never targeted PCL before.
+It's my hope and expectation that this makes FsCheck usable on the same range of platforms (and more) as before, while greatly simplifying development: there is now just one solution (instead of three), and only one FsCheck project (instead of five) and so on.
+Add NonWhiteSpaceString to default generated types. (by Stijn Moreels)</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>test testing random fscheck quickcheck</tags>
+    <dependencies>
+      <group targetFramework="net452">
+        <dependency id="FSharp.Core" version="4.2.3" />
+      </group>
+      <group targetFramework="netstandard1.6">
+        <dependency id="FSharp.Core" version="4.2.3" />
+      </group>
+      <group targetFramework="netstandard2.0">
+        <dependency id="FSharp.Core" version="4.2.3" />
+      </group>
+      <group targetFramework="netstandard1.0">
+        <dependency id="FSharp.Core" version="4.0.0.1" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

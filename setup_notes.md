@@ -1,0 +1,21 @@
+- [this](https://github.com/rafalpienkowski/bash-extensions/blob/master/dotnet-solution) is very useful
+- `mkdir src`
+- `mkdir src/Parser`
+- Go to parser dir and do `dotnet new console -lang F#`
+- `mkdir test/TestParser`
+- This to install Expecto project template `dotnet new -i Expecto.Template::*`
+- Then inside `test/TestParser` do `dotnet new expecto`
+- Then to add a reference from the parser `fsproj` to the `test` `fsproj`
+- Do `dotnet add reference ../../src/Parser/Parser.fsproj`
+- Go to top level dir, time to make a solution
+- `dotnet new sln --name bilbo`
+- `dotnet sln add src/Parser/Parser.fsproj`
+- Same with testing fsproj
+- Follow instructions from [here](https://fsprojects.github.io/Paket/installation.html) to setup paket for repository
+- `mono .paket/paket.exe init`
+- Add things to paket.dependencies
+- `mono .paket/paket.exe install`
+- Add `paket.references` in each of the projects. Paket uses these to forward solution-wide dependencies to specific projects.
+- `.paket/paket.exe install`
+- `dotnet restore`
+- Done!

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doc>
+<assembly><name>Expecto.FsCheck</name></assembly>
+<members>
+<member name="M:Expecto.ExpectoFsCheckModule.etestProperty``1(System.Int32,System.Int32,System.String)">
+<summary>
+ Builds a test property that will make Expecto focus on this test use an error stdGen.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.ftestProperty``1(System.String)">
+<summary>
+ Builds a test property that will make Expecto to ignore other unfocused tests.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.ptestProperty``1(System.String)">
+<summary>
+ Builds a test property that will be ignored by Expecto.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.testProperty``1(System.String)">
+<summary>
+ Builds a test property.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.etestPropertyWithConfig``1(System.Int32,System.Int32,Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds a test property with config that will make Expecto
+ ignore other unfocused tests and use an error stdGen.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.ftestPropertyWithConfig``1(Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds a test property with config that will make Expecto
+ ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.ptestPropertyWithConfig``1(Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds a test property with config that will be ignored by Expecto.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.testPropertyWithConfig``1(Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds a test property with config
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.etestPropertyWithConfigs``1(System.Int32,System.Int32,Expecto.FsCheckConfig,Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds a test property with config that will make Expecto to
+ ignore other unfocused tests and use an error stdGen.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.ftestPropertyWithConfigs``1(Expecto.FsCheckConfig,Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds an ignored test property with an explicit config.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.ptestPropertyWithConfigs``1(Expecto.FsCheckConfig,Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds an ignored test property with an explicit config.
+</summary>
+</member>
+<member name="M:Expecto.ExpectoFsCheckModule.testPropertyWithConfigs``1(Expecto.FsCheckConfig,Expecto.FsCheckConfig,System.String)">
+<summary>
+ Builds a test property with config
+</summary>
+</member>
+</members>
+</doc>

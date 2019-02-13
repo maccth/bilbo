@@ -1,0 +1,17 @@
+D: /_rels
+F: /_rels/.rels
+D: /package
+D: /package/services
+D: /package/services/metadata
+D: /package/services/metadata/core-properties
+F: /package/services/metadata/core-properties/2632ed59b8644dbaaf96f2fd54a18f58.psmdcp
+D: /runtimes
+D: /runtimes/ubuntu.14.04-x64
+D: /runtimes/ubuntu.14.04-x64/native
+F: /runtimes/ubuntu.14.04-x64/native/System.Security.Cryptography.Native.OpenSsl.so
+F: /.signature.p7s
+F: /ThirdPartyNotices.txt
+F: /[Content_Types].xml
+F: /dotnet_library_license.txt
+F: /runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography.OpenSsl.nuspec
+F: /runtime.ubuntu.14.04-x64.runtime.native.system.security.cryptography.openssl.4.3.3.nupkg

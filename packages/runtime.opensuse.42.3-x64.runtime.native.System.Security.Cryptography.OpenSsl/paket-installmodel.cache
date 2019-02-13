@@ -1,0 +1,17 @@
+D: /_rels
+F: /_rels/.rels
+D: /package
+D: /package/services
+D: /package/services/metadata
+D: /package/services/metadata/core-properties
+F: /package/services/metadata/core-properties/ffad059aa49b43c787f84dae1947f184.psmdcp
+D: /runtimes
+D: /runtimes/opensuse.42.3-x64
+D: /runtimes/opensuse.42.3-x64/native
+F: /runtimes/opensuse.42.3-x64/native/System.Security.Cryptography.Native.OpenSsl.so
+F: /.signature.p7s
+F: /ThirdPartyNotices.txt
+F: /[Content_Types].xml
+F: /dotnet_library_license.txt
+F: /runtime.opensuse.42.3-x64.runtime.native.System.Security.Cryptography.OpenSsl.nuspec
+F: /runtime.opensuse.42.3-x64.runtime.native.system.security.cryptography.openssl.4.3.3.nupkg

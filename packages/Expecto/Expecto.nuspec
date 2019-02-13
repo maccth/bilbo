@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Expecto</id>
+    <version>8.8.0</version>
+    <title>Expecto</title>
+    <authors>Anthony Lloyd &amp; Henrik Feldt and contributors</authors>
+    <owners>Anthony Lloyd &amp; Henrik Feldt and contributors</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectUrl>https://github.com/haf/expecto</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/haf/expecto/master/docs/expecto-logo-small.png</iconUrl>
+    <description>Advanced testing library for F#</description>
+    <releaseNotes>Better isFasterThan equal stopping criteria. thanks @AnthonyLloyd
+Remove outliers in isFasterThan statistics. thanks @AnthonyLloyd
+Add atomic printfn shadow function. #267 thanks @AnthonyLloyd</releaseNotes>
+    <copyright>Copyright 2018</copyright>
+    <tags>test testing fsharp assert expect stress performance unit random property</tags>
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.1">
+        <dependency id="Argu" version="5.2.0" exclude="Build,Analyzers" />
+        <dependency id="Mono.Cecil" version="0.10.1" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Argu" version="5.2.0" exclude="Build,Analyzers" />
+        <dependency id="Mono.Cecil" version="0.10.1" exclude="Build,Analyzers" />
+        <dependency id="System.Diagnostics.FileVersionInfo" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

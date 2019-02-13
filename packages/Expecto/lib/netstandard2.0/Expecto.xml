@@ -1,0 +1,2024 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doc>
+<assembly><name>Expecto</name></assembly>
+<members>
+<member name="P:FSharp.Control.Tasks.CopiedDoNotReference.V2.ContextInsensitive.task">
+<summary>
+ Builds a `System.Threading.Tasks.Task&lt;&apos;a&gt;` similarly to a C# async/await method, but with
+ all awaited tasks automatically configured *not* to resume on the captured context.
+ This is often preferable when writing library code that is not context-aware, but undesirable when writing
+ e.g. code that must interact with user interface controls on the same thread as its caller.
+</summary>
+</member>
+<member name="P:FSharp.Control.Tasks.CopiedDoNotReference.V2.ContextSensitive.task">
+<summary>
+ Builds a `System.Threading.Tasks.Task&lt;&apos;a&gt;` similarly to a C# async/await method.
+ Use this like `task { let! taskResult = someTask(); return taskResult.ToString(); }`.
+</summary>
+</member>
+<member name="P:FSharp.Control.Tasks.CopiedDoNotReference.ContextInsensitive.task">
+<summary>
+ Builds a `System.Threading.Tasks.Task&lt;&apos;a&gt;` similarly to a C# async/await method, but with
+ all awaited tasks automatically configured *not* to resume on the captured context.
+ This is often preferable when writing library code that is not context-aware, but undesirable when writing
+ e.g. code that must interact with user interface controls on the same thread as its caller.
+</summary>
+</member>
+<member name="P:FSharp.Control.Tasks.CopiedDoNotReference.ContextSensitive.task">
+<summary>
+ Builds a `System.Threading.Tasks.Task&lt;&apos;a&gt;` similarly to a C# async/await method.
+ Use this like `task { let! taskResult = someTask(); return taskResult.ToString(); }`.
+</summary>
+</member>
+<member name="F:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.StepStateMachine`1.continuation">
+<summary>
+ The continuation we left off awaiting on our last MoveNext().
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.StepStateMachine`1.Run">
+<summary>
+ Start execution as a `Task&lt;Task&lt;&apos;a&gt;&gt;`.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.StepStateMachine`1.System-Runtime-CompilerServices-IAsyncStateMachine-MoveNext">
+<summary>
+ Proceed to one of three states: result, failure, or awaiting.
+ If awaiting, MoveNext() will be called again when the awaitable completes.
+</summary>
+</member>
+<member name="T:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.StepStateMachine`1">
+<summary>
+ Implements the machinery of running a `Step&lt;&apos;m, &apos;m&gt;` as a task returning a continuation task.
+</summary>
+</member>
+<member name="T:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step`1.ReturnFrom">
+<summary>
+ We model tail calls explicitly, but still can&apos;t run them without O(n) memory usage.
+</summary>
+</member>
+<member name="T:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step`1">
+<summary>
+ Represents the state of a computation:
+ either awaiting something with a continuation,
+ or completed with a return value.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.run``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``0}})">
+<summary>
+ Runs a step as a task -- with a short-circuit for immediately completed steps.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.forLoop``1(System.Collections.Generic.IEnumerable{``0},Microsoft.FSharp.Core.FSharpFunc{``0,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{Microsoft.FSharp.Core.Unit}})">
+<summary>
+ Implements a loop that runs `body` for each element in `sequence`.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.using``2(``0,Microsoft.FSharp.Core.FSharpFunc{``0,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``1}})">
+<summary>
+ Implements a using statement that disposes `disp` after `body` has completed.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.tryFinally``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``0}},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Wraps a step in a try/finally. This catches exceptions both in the evaluation of the function
+ to retrieve the step, and in the continuation of the step (if any).
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.tryWith``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``0}},Microsoft.FSharp.Core.FSharpFunc{System.Exception,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``0}})">
+<summary>
+ Wraps a step in a try/with. This catches exceptions both in the evaluation of the function
+ to retrieve the step, and in the continuation of the step (if any).
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.whileLoop(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,System.Boolean},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{Microsoft.FSharp.Core.Unit}})">
+<summary>
+ Builds a step that executes the body while the condition predicate is true.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.combine``1(FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{Microsoft.FSharp.Core.Unit},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``0}})">
+<summary>
+ Chains together a step with its following step.
+ Note that this requires that the first step has no result.
+ This prevents constructs like `task { return 1; return 2; }`.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.bindTaskConfigureFalse``2(System.Threading.Tasks.Task{``0},Microsoft.FSharp.Core.FSharpFunc{``0,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``1}})">
+<summary>
+ Special case of the above for `Task&lt;&apos;a&gt;`, for the context-insensitive builder.
+ Have to write this out by hand to avoid confusing the compiler thinking our built-in bind method
+ defined on the builder has fancy generic constraints on inp and out parameters.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.bindTask``2(System.Threading.Tasks.Task{``0},Microsoft.FSharp.Core.FSharpFunc{``0,FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.Step{``1}})">
+<summary>
+ Special case of the above for `Task&lt;&apos;a&gt;`. Have to write this out by hand to avoid confusing the compiler
+ trying to decide between satisfying the constraints with `Task` or `Task&lt;&apos;a&gt;`.
+</summary>
+</member>
+<member name="M:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.ret``1(``0)">
+<summary>
+ Used to return a value.
+</summary>
+</member>
+<member name="P:FSharp.Control.Tasks.CopiedDoNotReference.TaskBuilder.zero">
+<summary>
+ Used to represent no-ops like the implicit empty &quot;else&quot; branch of an &quot;if&quot; expression.
+</summary>
+</member>
+<member name="T:Expecto.FTestsAttribute">
+<summary>
+ Allows to mark a test as FocusState.Focused (will be run and will change the behavior for
+ all other tests marked as FocusState.Normal to be ignored)
+ Is a fast way to exclude some tests from running.
+ The test will run even if PTest is also present. Have priority over TestAttribute.
+</summary>
+</member>
+<member name="T:Expecto.PTestsAttribute">
+<summary>
+ Allows to mark a test as Pending (will be skipped/ignored if no other TestAttribute is present)
+ Is a fast way to exclude some tests from running.
+ If FTest or Test is also present then this attribute will be ignored.
+</summary>
+</member>
+<member name="T:Expecto.TestsAttribute">
+<summary>
+ Marks a top-level test for scanning
+ The test will run even if PTest is also present.
+</summary>
+</member>
+<member name="T:Expecto.NullTestDiscoveryException">
+<summary>
+ Represents a null test value during test discovery.
+</summary>
+</member>
+<member name="T:Expecto.TestDiscoveryException">
+<summary>
+ Represents an error during test discovery.
+</summary>
+</member>
+<member name="T:Expecto.Test.Sequenced">
+<summary>
+ Require sequenced for a Test (list or test code).
+</summary>
+</member>
+<member name="T:Expecto.Test.TestLabel">
+<summary>
+ A labelling of a Test (list or test code).
+</summary>
+</member>
+<member name="T:Expecto.Test.TestList">
+<summary>
+ A collection/list of tests.
+</summary>
+</member>
+<member name="T:Expecto.Test.TestCase">
+<summary>
+ A test case is a function from unit to unit, that can be executed
+ by Expecto to run the test code.
+</summary>
+</member>
+<member name="T:Expecto.Test">
+<summary>
+ Test tree – this is how you compose your tests as values. Since
+ any of these can act as a test, you can pass any of these DU cases
+ into a function that takes a Test.
+</summary>
+</member>
+<member name="T:Expecto.FocusState.Focused">
+<summary>
+ The state of a test that will be evaluated
+ All other test marked with Normal or Pending will be ignored
+</summary>
+</member>
+<member name="T:Expecto.FocusState.Pending">
+<summary>
+ The state of a test that will be ignored by Expecto
+</summary>
+</member>
+<member name="T:Expecto.FocusState.Normal">
+<summary>
+ The default state of a test that will be evaluated
+</summary>
+</member>
+<member name="T:Expecto.FocusState">
+<summary>
+ The parent state (watching the tests as a tree structure) will influence
+ the child tests state. By following rules, if parent test state is:
+     - Focused will elevate all Normal child tests to Focused.
+              Focused and Pending child tests will not change state(behavior)
+     - Normal will not influence the child tests states(behavior).
+     - Pending will elevate all Normal and Focused child tests to Pending.
+              Pending child test will not change state(behavior)
+</summary>
+</member>
+<member name="T:Expecto.TestCode">
+<summary>
+ Actual test function; either an async one, or a synchronous one.
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.finishedTest">
+<summary>
+ Callback when the test case has finished
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.successfulShrink">
+<summary>
+ Callback when the test case was successfully shrunk
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.receivedArgs">
+<summary>
+ Callback when the test case had input parameters generated.
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.arbitrary">
+<summary>
+ The Arbitrary instances on this class will be merged in back to front order, i.e. instances for the same generated type at the front
+ of the list will override those at the back. The instances on Arb.Default are always known, and are at the back (so they can always be
+ overridden)
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.replay">
+<summary>
+ If set, the seed to use to start testing. Allows reproduction of previous runs.
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.endSize">
+<summary>
+ The size to use for the last test, when all the tests are passing. The size increases linearly between Start- and EndSize.
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.startSize">
+<summary>
+ The size to use for the first test.
+</summary>
+</member>
+<member name="P:Expecto.FsCheckConfig.maxTest">
+<summary>
+ The maximum number of tests that are run.
+</summary>
+</member>
+<member name="T:Expecto.Logging.CombiningTarget">
+<summary>
+ A logger to use for combining a number of other loggers
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateConsoleTarget.#ctor(System.String[],Expecto.Logging.LogLevel,System.String,Microsoft.FSharp.Core.FSharpOption{Expecto.Logging.Literate.LiterateOptions},Microsoft.FSharp.Core.FSharpOption{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Collections.FSharpList{System.Tuple{System.String,System.ConsoleColor}},Microsoft.FSharp.Core.Unit}},Microsoft.FSharp.Core.FSharpOption{System.Object})">
+<summary>
+ Creates the target with a custom output template.
+ For example, the default output template would be:
+ `[{timestamp:HH:mm:ss} {level}] {message} &lt;{source}&gt;{newLineIfNext}{exceptions}`.
+ Available template fields are: `timestamp`, `timestampUtc`, `level`, `source`,
+ `newline`, `tab`, `message`, `properties`, `exceptions`.
+ A special field named `newLineIfNext` will output a new line if the next field renders
+ anything (i.e. non-empty). Any other property names will become a
+ `LiterateToken.MissingTemplateField`.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LiterateConsoleTarget">
+<summary>
+ Logs a line in a format that is great for human consumption,
+ using console colours to enhance readability.
+ Sample: [10:30:49 INF] User &quot;AdamC&quot; began the &quot;checkout&quot; process with 100 cart items
+</summary>
+</member>
+<member name="M:Expecto.Logging.Logger.logWithAck(Expecto.Logging.LogLevel,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Logs with the specified log level with backpressure via the logging
+ library&apos;s buffers *and* ACK/flush to the underlying message targets.
+
+ Calls to this function will block the caller only while executing the
+ callback (if the level is active).
+
+ The returned async value will yield when the message has been flushed to
+ the underlying message targets.
+
+ You need to start the (cold) async value for the logging to happen.
+
+ You should not do blocking/heavy operations in the callback.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Logger.log(Expecto.Logging.LogLevel,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Logs with the specified log level with backpressure via the logging
+ library&apos;s buffers.
+
+ Calls to this function will block the caller only while executing the
+ callback (if the level is active).
+
+ The returned async value will yield when the message has been added to
+ the buffers of the logging library.
+
+ You need to start the (cold) async value for the logging to happen.
+
+ You should not do blocking/heavy operations in the callback.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Logger.name">
+<summary>
+ Gets the name of the logger instance.
+</summary>
+</member>
+<member name="T:Expecto.Logging.Logger">
+<summary>
+ The logger is the interface for calling code to use for logging. Its
+ different functions have different semantics - read the docs for each
+ method to choose the right one for your use-case.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.level">
+<summary>
+ How important? See the docs on the LogLevel type for details.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.timestamp">
+<summary>
+ When? nanoseconds since UNIX epoch.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.fields">
+<summary>
+ The structured-logging data.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.value">
+<summary>
+ The main value for this metric or event. Either a Gauge or an Event. (A
+ discriminated union type)
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.name">
+<summary>
+ The &apos;path&apos; or &apos;name&apos; of this data point. Do not confuse template in
+ (Event template) = message.value
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.utcTicks">
+<summary>
+ Gets the ticks for UTC since 0001-01-01 00:00:00 for this message. You
+ can pass this value into a DateTimeOffset c&apos;tor
+</summary>
+</member>
+<member name="P:Expecto.Logging.Message.README">
+<summary>
+ If you&apos;re looking for how to transform the Message&apos;s fields, then use the
+ module methods rather than instance methods, since you&apos;ll be creating new
+ values rather than changing an existing value.
+</summary>
+</member>
+<member name="T:Expecto.Logging.Message">
+<summary>
+ This is record that is logged. It&apos;s capable of representing both metrics
+ (gauges) and events. See https://github.com/logary/logary for details.
+</summary>
+</member>
+<member name="T:Expecto.Logging.EpochNanoSeconds">
+<summary>
+ The # of nanoseconds after 1970-01-01 00:00:00.
+</summary>
+</member>
+<member name="T:Expecto.Logging.PointValue.Gauge">
+<summary>
+ This is as value for a metric, with a unit attached. The unit can be
+ something like Seconds or Hz.
+</summary>
+</member>
+<member name="T:Expecto.Logging.PointValue.Event">
+<summary>
+ An event is what it sounds like; something occurred and needs to be
+ logged. Its field is named &apos;template&apos; because it should not be interpolated
+ with values; instead these values should be put in the &apos;fields&apos; field of
+ the Message.
+</summary>
+</member>
+<member name="T:Expecto.Logging.PointValue">
+<summary>
+ Represents a logged value; either a Gauge or an Event.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel.Fatal">
+<summary>
+ The log message denotes a fatal error which cannot be recovered from. The
+ service should be shut down. Human corrective action is needed.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel.Error">
+<summary>
+ The log message is at an error level, meaning an unhandled exception
+ occurred at a location where it is deemed important to keeping the service
+ running. A human should take corrective action.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel.Warn">
+<summary>
+ The log message is a warning; e.g. there was an unhandled exception or
+ an even occurred which was unexpected. Sometimes human corrective action
+ is needed.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel.Info">
+<summary>
+ The log message is informational; e.g. the service started, stopped or
+ some important business event occurred.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel.Debug">
+<summary>
+ The log message is at a default level, debug level. Useful for shipping to
+ infrastructure that further processes it, but not so useful for human
+ inspection in its raw format, except during development.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel.Verbose">
+<summary>
+ The log message is not that important; can be used for intricate debugging.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LogLevel.toInt">
+<summary>
+ Turn the LogLevel into an integer
+</summary>
+</member>
+<member name="M:Expecto.Logging.LogLevel.ofString(System.String)">
+<summary>
+ Converts the string passed to a Loglevel.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LogLevel.ofInt(System.Int32)">
+<summary>
+ Turn an integer into a LogLevel
+</summary>
+</member>
+<member name="M:Expecto.Logging.LogLevel.ToString">
+<summary>
+ Converts the LogLevel to a string
+</summary>
+</member>
+<member name="T:Expecto.Logging.LogLevel">
+<summary>
+ The log level denotes how &apos;important&apos; the gauge or event message is.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.addExn``1(``0,Expecto.Logging.Message)">
+<summary>
+ Adds an exception to the Message, to the &apos;errors&apos; field, inside a list.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setLevel(Expecto.Logging.LogLevel,Expecto.Logging.Message)">
+<summary>
+ Sets the level on the log message.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setTimestamp(System.Int64,Expecto.Logging.Message)">
+<summary>
+ Sets the timestamp on the log message.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setFieldValue``1">
+<summary>
+ Alias to `setField`
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setField(System.String,System.Object,Expecto.Logging.Message)">
+<summary>
+ Sets the value of the field on the log message.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setSingleName(System.String,Expecto.Logging.Message)">
+<summary>
+ Sets the name as a single string; if this string contains dots, the string
+ will be split on these dots.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setNameEnding(System.String,Expecto.Logging.Message)">
+<summary>
+ Sets the final portion o fthe name of the Message.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.setName(System.String[],Expecto.Logging.Message)">
+<summary>
+ Sets the name/path of the log message.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.gauge(System.Double,System.String)">
+<summary>
+ Create a new instantaneous value in a log message.
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.eventX(System.String,Expecto.Logging.LogLevel)">
+<summary>
+ Create a new event log message – like `event` but with parameters flipped.
+ Useful to use with `Logger.log` with point-free style, to reduce the
+ noise. E.g. `logger.logVerbose (eventX &quot;Returned {code}&quot; &gt;&gt; setField &quot;code&quot; 24)`
+</summary>
+</member>
+<member name="M:Expecto.Logging.MessageModule.event(Expecto.Logging.LogLevel,System.String)">
+<summary>
+ Create a new event log message.
+</summary>
+</member>
+<member name="T:Expecto.Logging.MessageModule">
+<summary>
+ The Message module contains functions that can help callers compose messages. This
+ module is especially helpful to open to make calls into Logary&apos;s facade small.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Log.create(System.String)">
+<summary>
+ Create a named logger. Full stop (.) acts as segment delimiter in the
+ hierachy of namespaces and loggers.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Log.createHiera(System.String[])">
+<summary>
+ Create an hierarchically named logger
+</summary>
+</member>
+<member name="T:Expecto.Logging.Log">
+<summary>
+ Module for acquiring static loggers (when you don&apos;t want or can&apos;t)
+ pass loggers as values.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Targets.create(Expecto.Logging.LogLevel,System.String[])">
+<summary>
+ Create a new target. Prefer `Log.create` in your own libraries, or let the
+ composing app replace your target instance through your configuration.
+
+ Will log to console (colourised) by default, and also to the output window
+ in your IDE if you specify a level below Info.
+</summary>
+</member>
+<member name="T:Expecto.Logging.Targets">
+<summary>
+ &quot;Shortcut&quot; for creating targets; useful at the top-level configuration point of
+ your library.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Global.initialise(Expecto.Logging.LoggingConfig)">
+<summary>
+ Call from the initialisation of your library. Initialises the Logary.Facade globally/per process.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Global.lockSem``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0})">
+<summary>
+ Run the passed function under the console semaphore lock.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Global.semaphore">
+<summary>
+ Returns the synchronisation object to use when printing to the console.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Global.timestamp">
+<summary>
+ Gets the current timestamp.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Global.semD">
+<summary>
+ This is the global semaphore for writing to the console output. Ensure
+ that the same semaphore is used across libraries by using the Logary
+ Facade Adapter in the final composing app/service.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.writeAndFlushRaw(System.String)">
+<summary>
+ HERE BE DRAGONS
+
+ Unbuffered, unlocked write and flush to the original stdout file descriptor. Only use this when you are sure that
+ you want to be manipulating the state of the output buffer/console directly. Calls to this function does not
+ trigger the FlushStart/FlushEnd events.
+
+ This function is internal, because it needs to be guarded by a Monitor object; in the case of Expecto, this
+ guard is in Progress.fs, an is the lock on the ref cell `isRunning`.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.remove_FlushStart(Microsoft.FSharp.Control.FSharpHandler{Microsoft.FSharp.Core.Unit})">
+<summary>
+ This event is triggered when the ANSIOutputWriter is about to flush its internal buffer of characters to print to
+ STDOUT. Events are synchronously dispatched on the caller thread.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.remove_FlushEnd(Microsoft.FSharp.Control.FSharpHandler{Microsoft.FSharp.Core.Unit})">
+<summary>
+ This event is triggered when the ANSIOutputWriter has finished flusing its internal buffer of characters to to
+ STDOUT. Events are synchronously dispatched on the caller thread.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.init">
+<summary>
+ During the time between calls x.init() -&gt; IDisposable.Dispose(), there must be no other calls to `init`.
+
+ This installs interceptors for both STDOUT and STDERR, having them go through this instance; `
+</summary>
+</member>
+<member name="P:Expecto.Logging.ANSIOutputWriter.T.FlushStart">
+<summary>
+ This event is triggered when the ANSIOutputWriter is about to flush its internal buffer of characters to print to
+ STDOUT. Events are synchronously dispatched on the caller thread.
+</summary>
+</member>
+<member name="P:Expecto.Logging.ANSIOutputWriter.T.FlushEnd">
+<summary>
+ This event is triggered when the ANSIOutputWriter has finished flusing its internal buffer of characters to to
+ STDOUT. Events are synchronously dispatched on the caller thread.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.flush">
+<summary>
+ Flushes the built-up buffer and clears it. Calling this function will trigger FlushStart and FlushEnd, in that
+ order.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.add_FlushStart(Microsoft.FSharp.Control.FSharpHandler{Microsoft.FSharp.Core.Unit})">
+<summary>
+ This event is triggered when the ANSIOutputWriter is about to flush its internal buffer of characters to print to
+ STDOUT. Events are synchronously dispatched on the caller thread.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.add_FlushEnd(Microsoft.FSharp.Control.FSharpHandler{Microsoft.FSharp.Core.Unit})">
+<summary>
+ This event is triggered when the ANSIOutputWriter has finished flusing its internal buffer of characters to to
+ STDOUT. Events are synchronously dispatched on the caller thread.
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.T.System-IDisposable-Dispose">
+<summary>
+ Must correspond to a previous init call.
+</summary>
+</member>
+<member name="T:Expecto.Logging.ANSIOutputWriter.T">
+<summary>
+ Lifecycle: (new T() -&gt; t.init() -&gt; t._ {0,*} -&gt; (t :&gt; IDisposable).Dispose()) {1,*}
+</summary>
+</member>
+<member name="M:Expecto.Logging.ANSIOutputWriter.WindowsConsole.enableVTMode">
+<summary>
+ https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateFormatting.tokeniserForOutputTemplate(System.String)">
+<summary>
+ Creates a `LiterateTokeniser` function which can be used by the `LiterateConsoleTarget`
+ to customise how each log message is rendered. The default output template
+ would be: `[{timestamp:HH:mm:ss} {level}] {message}{newline}{exceptions}`.
+ Available template fields are: `timestamp`, `timestampUtc`, `level`, `source`,
+ `newline`, `tab`, `message`, `properties`, `exceptions`. A special field named
+ `newLineIfNext` will output a new line if the next field in the template will render
+ anything (i.e. non-empty). Any misspelled or different property names will become a
+ `LiterateToken.MissingTemplateField`.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateFormatting.atomicallyWriteColouredTextToConsole``1(``0,Microsoft.FSharp.Collections.FSharpList{System.Tuple{System.String,System.ConsoleColor}})">
+<summary>
+ Writes string*ConsoleColor parts atomically (in a `lock`)
+</summary>
+</member>
+<member name="T:Expecto.Logging.LiterateFormatting">
+<summary>
+ Assists with controlling the output of the `LiterateConsoleTarget`.
+</summary>
+</member>
+<member name="M:Expecto.Logging.Formatting.defaultFormatter(Expecto.Logging.Message)">
+<summary>
+ let the ISO8601 love flow
+</summary>
+</member>
+<member name="T:Expecto.Logging.Formatting">
+<summary>
+ Internal module for formatting text for printing to the console.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LiterateTokenisation.LiterateTokeniser">
+<summary>
+ Converts some part(s) of a `Message` into text with an associated `LiterateToken`.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LiterateTokenisation.TokenisedPart">
+<summary>
+ A piece of text with an associated `LiterateToken`.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateTokenisation.tokeniseMessage(Expecto.Logging.Literate.LiterateOptions,Expecto.Logging.Message)">
+<summary>
+ Converts a `Message` into sequence of literate tokens.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateTokenisation.tokeniseMessageExns(Expecto.Logging.Literate.LiterateOptions,Expecto.Logging.Message)">
+<summary>
+ Converts all exceptions in a `Message` into a sequence of literate tokens.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateTokenisation.tokeniseExn(Expecto.Logging.Literate.LiterateOptions,System.Exception)">
+<summary>
+ Converts a single exception into a sequence of literate tokens.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateTokenisation.tokenisePointValue(Expecto.Logging.Literate.LiterateOptions,Microsoft.FSharp.Collections.FSharpMap{System.String,System.Object},Expecto.Logging.PointValue)">
+<summary>
+ Converts a `PointValue` into a sequence literate tokens. The returned `Set&lt;string&gt;` contains
+ the names of the properties that were found in the `Event` template.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LiterateTokenisation.getTokenTypeForValue(System.Object)">
+<summary>
+ Chooses the appropriate `LiterateToken` based on the value `Type`.
+</summary>
+</member>
+<member name="T:Expecto.Logging.LiterateTokenisation">
+<summary>
+ Internal module for converting message parts into theme-able tokens.
+</summary>
+</member>
+<member name="M:Expecto.Logging.FsMtParser.parseParts(System.String,Microsoft.FSharp.Core.FSharpFunc{System.String,Microsoft.FSharp.Core.Unit},Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.FsMtParser.Property,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Parses template strings such as &quot;Hello, {PropertyWithFormat:##.##}&quot;
+ and calls the &apos;foundTextF&apos; or &apos;foundPropF&apos; functions as the text or
+ property tokens are encountered.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Literals.FacadeLanguage">
+<summary>
+ What language this Facade has. This controls things like naming standards.
+</summary>
+</member>
+<member name="P:Expecto.Logging.Literals.FacadeVersion">
+<summary>
+ What version of the Facade is this. This is a major version that allows the Facade
+ adapter to choose how it handles the API.
+</summary>
+</member>
+<member name="T:Expecto.Logging.Literals">
+<summary>
+ Module that contains the &apos;known&apos; keys of the Maps in the Message type&apos;s
+ fields/runtime data.
+</summary>
+</member>
+<member name="T:Expecto.Logging.Literate.LiterateToken">
+<summary>
+ The output tokens, which can be potentially coloured.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.logSimple(Expecto.Logging.Logger,Expecto.Logging.Message)">
+<summary>
+ Log a message, but don&apos;t synchronously wait for the message to be placed
+ inside the logging library&apos;s buffers. Instead the message will be added
+ to the logging library&apos;s buffers asynchronously (with respect to the
+ caller) with a timeout of 5 seconds, and will then be dropped.
+
+ This is the way we avoid the unbounded buffer problem.
+
+ If you have dropped messages, they will be logged to STDERR. You should load-
+ test your app to ensure that your targets can send at a rate high enough
+ without dropping messages.
+
+ It&apos;s recommended to have alerting on STDERR.
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.fatalWithBP(Expecto.Logging.Logger,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Log with backpressure
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.errorWithBP(Expecto.Logging.Logger,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Log with backpressure
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.warnWithBP(Expecto.Logging.Logger,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Log with backpressure
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.infoWithBP(Expecto.Logging.Logger,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Log with backpressure
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.debugWithBP(Expecto.Logging.Logger,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Log with backpressure
+</summary>
+</member>
+<member name="M:Expecto.Logging.LoggerEx.Logger.verboseWithBP(Expecto.Logging.Logger,Microsoft.FSharp.Core.FSharpFunc{Expecto.Logging.LogLevel,Expecto.Logging.Message})">
+<summary>
+ Log with backpressure
+</summary>
+</member>
+<member name="T:Expecto.Logging.LoggerEx">
+<summary>
+ Syntactic sugar on top of Logger for F# libraries.
+</summary>
+</member>
+<member name="M:Expecto.Logging.DateTimeOffset.ticksUTC(System.Int64)">
+<summary>
+ Get the DateTimeOffset ticks from EpochNanoSeconds
+</summary>
+</member>
+<member name="M:Expecto.Logging.DateTimeOffset.timestamp(System.DateTimeOffset)">
+<summary>
+ Get the Logary timestamp off the DateTimeOffset.
+</summary>
+</member>
+<member name="T:Expecto.Logging.DateTimeOffset">
+<summary>
+ Helper functions for transforming DateTimeOffset to timestamps in unix epoch.
+</summary>
+</member>
+<member name="M:Expecto.Logging.DateTime.ticksUTC(System.Int64)">
+<summary>
+ Get the DateTimeOffset ticks off from the EpochNanoSeconds.
+</summary>
+</member>
+<member name="M:Expecto.Logging.DateTime.timestamp(System.DateTime)">
+<summary>
+ Get the Logary timestamp off the DateTime.
+</summary>
+</member>
+<member name="T:Expecto.Logging.DateTime">
+<summary>
+ Helper functions for transforming DateTime to timestamps in unix epoch.
+</summary>
+</member>
+<member name="M:Expecto.Statistics.welchTest(Expecto.Statistics.WelchStatistic)">
+<summary>
+ Welch&apos;s t-test for a given Welch statistic using a 99.99% confidence level.
+</summary>
+</member>
+<member name="M:Expecto.Statistics.welchStatistic(Expecto.SampleStatistics,Expecto.SampleStatistics)">
+<summary>
+ Welch&apos;s t-test statistic for two given sample statistics.
+</summary>
+</member>
+<member name="P:Expecto.Statistics.tInv99">
+<summary>
+ Student&apos;s t-distribution inverse for the 99.99% probability by degrees of freedom.
+</summary>
+</member>
+<member name="P:Expecto.Statistics.tInv01">
+<summary>
+ Student&apos;s t-distribution inverse for the 00.01% probability by degrees of freedom.
+</summary>
+</member>
+<member name="M:Expecto.Statistics.scale(System.Double,Expecto.SampleStatistics)">
+<summary>
+ Scale the statistics for the given underlying random variable change of scale.
+</summary>
+</member>
+<member name="M:Expecto.Statistics.sampleStatistics``1(System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Online statistics sequence for a given sample sequence.
+</summary>
+</member>
+<member name="P:Expecto.Statistics.normInv99_995">
+<summary>
+ Inverse normal for 99.995%. Two-tailed 99.99% Z-Score.
+</summary>
+</member>
+<member name="T:Expecto.Tests.CLIArguments">
+<summary>
+ The CLI arguments are the parameters that are possible to send to Expecto
+ and change the runner&apos;s behaviour.
+</summary>
+</member>
+<member name="T:Expecto.Tests.TestAsyncBuilder">
+<summary>
+ Async test case computation expression builder
+</summary>
+</member>
+<member name="T:Expecto.Tests.TestCaseBuilder">
+<summary>
+ Test case computation expression builder
+</summary>
+</member>
+<member name="M:Expecto.Tests.runTestsInAssembly(Expecto.Impl.ExpectoConfig,System.String[])">
+<summary>
+ Runs tests in this assembly with the supplied command-line options.
+ Returns 0 if all tests passed, otherwise 1
+</summary>
+</member>
+<member name="M:Expecto.Tests.runTestsInAssemblyWithCancel(System.Threading.CancellationToken,Expecto.Impl.ExpectoConfig,System.String[])">
+<summary>
+ Runs tests in this assembly with the supplied command-line options.
+ Returns 0 if all tests passed, otherwise 1
+</summary>
+</member>
+<member name="M:Expecto.Tests.runTestsWithArgs(Expecto.Impl.ExpectoConfig,System.String[],Expecto.Test)">
+<summary>
+ Runs all given tests with the supplied command-line options.
+ Returns 0 if all tests passed, otherwise 1
+</summary>
+</member>
+<member name="M:Expecto.Tests.runTestsWithArgsAndCancel(System.Threading.CancellationToken,Expecto.Impl.ExpectoConfig,System.String[],Expecto.Test)">
+<summary>
+ Runs all given tests with the supplied command-line options.
+ Returns 0 if all tests passed, otherwise 1
+</summary>
+</member>
+<member name="M:Expecto.Tests.runTests(Expecto.Impl.ExpectoConfig,Expecto.Test)">
+<summary>
+ Runs tests with the supplied config.
+ Returns 0 if all tests passed, otherwise 1
+</summary>
+</member>
+<member name="M:Expecto.Tests.runTestsWithCancel(System.Threading.CancellationToken,Expecto.Impl.ExpectoConfig,Expecto.Test)">
+<summary>
+ Runs tests with the supplied config.
+ Returns 0 if all tests passed, otherwise 1
+</summary>
+</member>
+<member name="M:Expecto.Tests.duplicatedNames(Expecto.Test)">
+<summary>
+ Prints out names of all tests for given test suite.
+</summary>
+</member>
+<member name="M:Expecto.Tests.listTests(Expecto.Test)">
+<summary>
+ Prints out names of all tests for given test suite.
+</summary>
+</member>
+<member name="P:Expecto.Tests.defaultConfig">
+<summary>
+ The default configuration for Expecto.
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptestTask(System.String)">
+<summary>
+ Builds a task test case that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftestTask(System.String)">
+<summary>
+ Builds a task test case that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.testTask(System.String)">
+<summary>
+ Builds a task test case
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptestAsync(System.String)">
+<summary>
+ Builds an async test case that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftestAsync(System.String)">
+<summary>
+ Builds an async test case that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.testAsync(System.String)">
+<summary>
+ Builds an async test case
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptest(System.String)">
+<summary>
+ Builds a test case that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftest(System.String)">
+<summary>
+ Builds a test case that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.test(System.String)">
+<summary>
+ Builds a test case
+</summary>
+</member>
+<member name="M:Expecto.Tests.testParam``1(``0)">
+<summary>
+ Applies a value to a list of partial tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.testFixture``1(Microsoft.FSharp.Core.FSharpFunc{``0,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit}})">
+<summary>
+ Applies a function to a list of values to build test cases
+</summary>
+</member>
+<member name="M:Expecto.Tests.testSequencedGroup(System.String,Expecto.Test)">
+<summary>
+ Test case or list needs to run sequenced with other tests in this group.
+</summary>
+</member>
+<member name="M:Expecto.Tests.testSequenced(Expecto.Test)">
+<summary>
+ Test case or list needs to run sequenced. Use for any benchmark code or
+ for tests using `Expect.isFasterThan`
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptestCaseAsync(System.String,Microsoft.FSharp.Control.FSharpAsync{Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds an async test case that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptestCaseWithCancel(System.String,Microsoft.FSharp.Core.FSharpFunc{System.Threading.CancellationToken,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds a test case with cancel that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptestCase(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds a test case that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftestCaseAsync(System.String,Microsoft.FSharp.Control.FSharpAsync{Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds an async test case that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftestCaseWithCancel(System.String,Microsoft.FSharp.Core.FSharpFunc{System.Threading.CancellationToken,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds a test case with cancel that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftestCase(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds a test case that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.testCaseAsync(System.String,Microsoft.FSharp.Control.FSharpAsync{Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds an async test case
+</summary>
+</member>
+<member name="M:Expecto.Tests.testCaseWithCancel(System.String,Microsoft.FSharp.Core.FSharpFunc{System.Threading.CancellationToken,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds a test case with a CancellationToken that can be check for cancel
+</summary>
+</member>
+<member name="M:Expecto.Tests.testCase(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Builds a test case that will be ignored by Expecto if exists focused
+ tests and none of the parents is focused
+</summary>
+</member>
+<member name="M:Expecto.Tests.testLabel(System.String,Expecto.Test)">
+<summary>
+ Labels the passed test with a text segment. In Expecto, tests are slash-separated (`/`), so this wraps the passed
+ tests in such a label. Useful when you don&apos;t want lots of indentation in your tests (the code would become hard to
+ modify and read, due to all the whitespace), and you want to do `testList &quot;...&quot; [ ] |&gt; testLabel &quot;api&quot;`.
+</summary>
+</member>
+<member name="M:Expecto.Tests.ptestList(System.String,Microsoft.FSharp.Collections.FSharpList{Expecto.Test})">
+<summary>
+ Builds a list/group of tests that will be ignored by Expecto
+</summary>
+</member>
+<member name="M:Expecto.Tests.ftestList(System.String,Microsoft.FSharp.Collections.FSharpList{Expecto.Test})">
+<summary>
+ Builds a list/group of tests that will make Expecto to ignore other unfocused tests
+</summary>
+</member>
+<member name="M:Expecto.Tests.testList(System.String,Microsoft.FSharp.Collections.FSharpList{Expecto.Test})">
+<summary>
+ Builds a list/group of tests that will be ignored by Expecto if exists
+ focused tests and none of the parents is focused
+</summary>
+</member>
+<member name="M:Expecto.Tests.skiptestf``2(Microsoft.FSharp.Core.PrintfFormat{``0,Microsoft.FSharp.Core.Unit,System.String,``1})">
+<summary>
+ Skip this test
+</summary>
+</member>
+<member name="M:Expecto.Tests.skiptest``1(System.String)">
+<summary>
+ Skip this test
+</summary>
+</member>
+<member name="M:Expecto.Tests.failtestNoStackf``2(Microsoft.FSharp.Core.PrintfFormat{``0,Microsoft.FSharp.Core.Unit,System.String,``1})">
+<summary>
+ Fail this test
+</summary>
+</member>
+<member name="M:Expecto.Tests.failtestNoStack``1(System.String)">
+<summary>
+ Fail this test
+</summary>
+</member>
+<member name="M:Expecto.Tests.failtestf``2(Microsoft.FSharp.Core.PrintfFormat{``0,Microsoft.FSharp.Core.Unit,System.String,``1})">
+<summary>
+ Fail this test
+</summary>
+</member>
+<member name="M:Expecto.Tests.failtest``1(System.String)">
+<summary>
+ Fail this test
+</summary>
+</member>
+<member name="M:Expecto.Tests.testName">
+<summary>
+ The full name of the currently running test
+</summary>
+</member>
+<member name="M:Expecto.Tests.printfn``1(Microsoft.FSharp.Core.PrintfFormat{``0,System.Text.StringBuilder,Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Expecto atomic printfn shadow function
+</summary>
+</member>
+<member name="M:Expecto.Tests.afterRunTests(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Add a function that will be called after all testing has finished.
+</summary>
+</member>
+<member name="M:Expecto.Tests.ExpectoConfigModule.fillFromArgs(Expecto.Impl.ExpectoConfig,System.String[])">
+<summary>
+ Parses command-line arguments into a config. This allows you to
+ override the config from the command line, rather than having
+ to go into the compiled code to change how they are being run.
+ Also checks if tests should be run or only listed
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.noSpinner">
+<summary>
+ Disable spinner progress update.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.allowDuplicateNames">
+<summary>
+ Allows duplicate test names.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.mySpiritIsWeak">
+<summary>
+ Depricated. Will be removed on next major release.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.fsCheckEndSize">
+<summary>
+ FsCheck end size (default: 100 for testing and 10,000 for
+ stress testing).
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.fsCheckStartSize">
+<summary>
+ FsCheck start size (default: 1).
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.fsCheckMaxTests">
+<summary>
+ FsCheck maximum number of tests (default: 100).
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.locate">
+<summary>
+ Optional function used for finding source code location of test
+ Defaults to empty source code.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.logName">
+<summary>
+ Process name to log under (default: &quot;Expecto&quot;)
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.verbosity">
+<summary>
+ Verbosity level (default: Info).
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.printer">
+<summary>
+ Allows the test printer to be parametised to your liking.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.filter">
+<summary>
+ An optional filter function. Useful if you only would
+ like to run a subset of all the tests defined in your assembly.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.failOnFocusedTests">
+<summary>
+ Whether to make the test runner fail if focused tests exist.
+ This can be used from CI servers to ensure no focused tests are
+ commited and therefor all tests are run.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.stressMemoryLimit">
+<summary>
+ Stress test memory limit in MB to stop the test and report as
+ a memory leak (default 100 MB).
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.stressTimeout">
+<summary>
+ Stress test deadlock timeout TimeSpan to wait after stress TimeSpan
+ before stopping and reporting as a deadlock (default 5 mins).
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.stress">
+<summary>
+ Stress test by running tests randomly for the given TimeSpan.
+ Can be sequenced or parallel depending on the config.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.parallelWorkers">
+<summary>
+ Number of parallel workers. Defaults to the number of
+ logical processors.
+</summary>
+</member>
+<member name="P:Expecto.Impl.ExpectoConfig.parallel">
+<summary>
+ Whether to run the tests in parallel. Defaults to
+ true, because your code should not mutate global
+ state by default.
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.summary">
+<summary>
+ Prints a summary given the test result counts
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.exn">
+<summary>
+ test name -&gt; exception -&gt; time taken -&gt; unit
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.failed">
+<summary>
+ test name -&gt; other message -&gt; time taken -&gt; unit
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.ignored">
+<summary>
+ test name -&gt; ignore message -&gt; unit
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.passed">
+<summary>
+ test name -&gt; time taken -&gt; unit
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.info">
+<summary>
+ info
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.beforeEach">
+<summary>
+ Called before atomic test (TestCode) is executed.
+</summary>
+</member>
+<member name="P:Expecto.Impl.TestPrinters.beforeRun">
+<summary>
+ Called before a test run (e.g. at the top of your main function)
+</summary>
+</member>
+<member name="T:Expecto.Impl.TestPrinters">
+<summary>
+ Hooks to print report through test run
+</summary>
+</member>
+<member name="M:Expecto.Impl.passesFocusTestCheck(Expecto.Impl.ExpectoConfig,Expecto.Test)">
+<summary>
+ When the failOnFocusedTests switch is activated this function that no
+ focused tests exist.
+
+ Returns true if the check passes, otherwise false.
+</summary>
+</member>
+<member name="M:Expecto.Impl.testFromThisAssembly">
+<summary>
+ Scan tests marked with TestsAttribute from entry assembly
+</summary>
+</member>
+<member name="P:Expecto.Impl.testFromAssembly">
+<summary>
+ Scan tests marked with TestsAttribute from an assembly
+</summary>
+</member>
+<member name="M:Expecto.Impl.testFromAssemblyWithFilter(Microsoft.FSharp.Core.FSharpFunc{System.Type,System.Boolean},System.Reflection.Assembly)">
+<summary>
+ Scan filtered tests marked with TestsAttribute from an assembly
+</summary>
+</member>
+<member name="M:Expecto.Impl.runEval(Expecto.Impl.ExpectoConfig,Expecto.Test)">
+<summary>
+ Runs tests, returns error code
+</summary>
+</member>
+<member name="M:Expecto.Impl.runEvalWithCancel(System.Threading.CancellationToken,Expecto.Impl.ExpectoConfig,Expecto.Test)">
+<summary>
+ Runs tests, returns error code
+</summary>
+</member>
+<member name="M:Expecto.Impl.evalTests(Expecto.Impl.ExpectoConfig,Expecto.Test)">
+<summary>
+ Evaluates tests.
+</summary>
+</member>
+<member name="M:Expecto.Impl.evalTestsWithCancel(System.Threading.CancellationToken,Expecto.Impl.ExpectoConfig,Expecto.Test,System.Boolean)">
+<summary>
+ Evaluates tests.
+</summary>
+</member>
+<member name="M:Expecto.TestModule.timeout(System.Int32,Expecto.TestCode)">
+<summary>
+ Applies a timeout to a test.
+</summary>
+</member>
+<member name="M:Expecto.TestModule.filter(Microsoft.FSharp.Core.FSharpFunc{System.String,System.Boolean})">
+<summary>
+ Filter tests by name.
+</summary>
+</member>
+<member name="M:Expecto.TestModule.replaceTestCode(Microsoft.FSharp.Core.FSharpFunc{System.String,Microsoft.FSharp.Core.FSharpFunc{Expecto.TestCode,Expecto.Test}},Expecto.Test)">
+<summary>
+ Recursively replaces TestCodes in a Test.
+ Check translateFocusState for focus state behaviour description.
+</summary>
+</member>
+<member name="M:Expecto.TestModule.translateFocusState(Expecto.FocusState,Expecto.Test)">
+<summary>
+ Change the FocusState by appling the old state to a new state
+ Note: this is not state replacement!!!
+ Used in replaceTestCode and the order is intended for scenario:
+  1. User wants to automate some tests and his intent is not to change
+      the test state (use Normal), so this way the current state will be preserved
+ Don&apos;t see the use case: the user wants to automate some tests and wishes
+ to change the test states
+</summary>
+</member>
+<member name="M:Expecto.TestModule.toTestCodeList(Expecto.Test)">
+<summary>
+ Flattens a tree of tests
+</summary>
+</member>
+<member name="M:Expecto.TestModule.isFocused(Expecto.Test)">
+<summary>
+ Is focused set on at least one test
+</summary>
+</member>
+<member name="M:Expecto.TestModule.computeChildFocusState(Expecto.FocusState,Expecto.FocusState)">
+<summary>
+ Compute the child test state based on parent test state
+</summary>
+</member>
+<member name="M:Expecto.Performance.findFastest``1(Microsoft.FSharp.Core.FSharpFunc{System.Int32,``0},System.Int32,System.Int32)">
+<summary>
+ Find the int input of the function f between lo and hi that gives the
+ fastest execution time. Statistical test to 99.99% confidence level
+ using a trisect search.
+</summary>
+</member>
+<member name="M:Expecto.Performance.timeCompare``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0}},``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0}},``0})">
+<summary>
+ Time comparison for two given functions to a 99.99% confidence level.
+</summary>
+</member>
+<member name="M:Expecto.Performance.timeStatistics``3(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{``0,``1},Microsoft.FSharp.Core.FSharpFunc{``0,``1}},``2})">
+<summary>
+ Time statistics for a given function accurate to a mean standard error of 0.1%.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isFasterThan``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},System.String)">
+<summary>
+ Expects function `f1` is faster than `f2`. Statistical test to 99.99%
+ confidence level.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isFasterThanSub``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0}},``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0}},``0},System.String)">
+<summary>
+ Expects function `f1` is faster than `f2`. Measurer used to measure only a
+ subset of the functions. Statistical test to 99.99% confidence level.
+</summary>
+</member>
+<member name="M:Expecto.Expect.streamsEqual(System.IO.Stream,System.IO.Stream,System.String)">
+<summary>
+ Expect the streams to byte-wise equal.
+</summary>
+</member>
+<member name="M:Expecto.Expect.stringHasLength(System.String,System.Int32,System.String)">
+<summary>
+ Expect the string `subject` to have length equals `length`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `length`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.stringEnds(System.String,System.String,System.String)">
+<summary>
+ Expect the string `subject` to end with `suffix`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `suffix`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.stringStarts(System.String,System.String,System.String)">
+<summary>
+ Expect the string `subject` to start with `prefix`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `prefix`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.stringContains(System.String,System.String,System.String)">
+<summary>
+ Expect the string `subject` to contain `substring` as part of itself.
+ If it does not, then fail with `message` and `subject` and `substring`
+ as part of the error message.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isDescending``1(System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expect the sequence `subject` to be descending. If it does not
+ then fail with `message` as an error message.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isAscending``1(System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expect the sequence `subject` to be ascending. If it does not
+ then fail with `message` as an error message.
+</summary>
+</member>
+<member name="M:Expecto.Expect.sequenceContainsOrder``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expect the sequence `actual` to contains elements from sequence `expected` in the right order.
+</summary>
+</member>
+<member name="M:Expecto.Expect.sequenceStarts``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expect the sequence `subject` to start with `prefix`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `prefix`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.sequenceEqual``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expects the `actual` sequence to equal the `expected` one.
+</summary>
+</member>
+<member name="M:Expecto.Expect.distribution``1(System.Collections.Generic.IEnumerable{``0},Microsoft.FSharp.Collections.FSharpMap{``0,System.UInt32},System.String)">
+<summary>
+ Expects the `actual` sequence to contain all elements from `expected` map,
+ first element in every tuple from `expected` map means item which should be
+ presented in `actual` sequence, the second element means an expected number of occurrences
+ of this item in sequence.
+ Function is not taking into account an order of elements.
+ Calling this function will enumerate both sequences; they have to be finite.
+</summary>
+</member>
+<member name="M:Expecto.Expect.containsAll``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expects the `actual` sequence to contain all elements from `expected`
+ it doesn&apos;t take into account number of occurances of characters
+ sequence (not taking into account an order of elements). Calling this
+ function will enumerate both sequences; they have to be finite.
+</summary>
+</member>
+<member name="M:Expecto.Expect.contains``1(System.Collections.Generic.IEnumerable{``0},``0,System.String)">
+<summary>
+ Expects the `sequence` to contain the `element`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.allEqual``1(System.Collections.Generic.IEnumerable{``0},``0,System.String)">
+<summary>
+ Expect that all elements from `actual` are equal to `equalTo`
+</summary>
+</member>
+<member name="M:Expecto.Expect.all``1(System.Collections.Generic.IEnumerable{``0},Microsoft.FSharp.Core.FSharpFunc{``0,System.Boolean},System.String)">
+<summary>
+ Expect that all elements from `actual` satisfies the given `asserter`
+</summary>
+</member>
+<member name="M:Expecto.Expect.exists``1(System.Collections.Generic.IEnumerable{``0},Microsoft.FSharp.Core.FSharpFunc{``0,System.Boolean},System.String)">
+<summary>
+ Expect that some element from `actual` satisfies the given `asserter`
+</summary>
+</member>
+<member name="M:Expecto.Expect.isTrue(System.Boolean,System.String)">
+<summary>
+ Expects the value to be true.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isFalse(System.Boolean,System.String)">
+<summary>
+ Expects the value to be false.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotRegexMatch(System.String,System.Text.RegularExpressions.Regex,System.String)">
+<summary>
+ Expects that actual not matches regex.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotMatch(System.String,System.String,System.String)">
+<summary>
+ Expects that actual not matches pattern.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isMatchRegexGroups(System.String,System.Text.RegularExpressions.Regex,Microsoft.FSharp.Core.FSharpFunc{System.Text.RegularExpressions.GroupCollection,System.Boolean},System.String)">
+<summary>
+ Expects that matched groups (from a regex match) match with matches operator
+</summary>
+</member>
+<member name="M:Expecto.Expect.isMatchGroups(System.String,System.String,Microsoft.FSharp.Core.FSharpFunc{System.Text.RegularExpressions.GroupCollection,System.Boolean},System.String)">
+<summary>
+ Expects that matched groups (from a pattern match) match with matches operator
+</summary>
+</member>
+<member name="M:Expecto.Expect.isRegexMatch(System.String,System.Text.RegularExpressions.Regex,System.String)">
+<summary>
+ Expects that actual matches regex.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isMatch(System.String,System.String,System.String)">
+<summary>
+ Expects that actual matches pattern.
+</summary>
+</member>
+<member name="M:Expecto.Expect.notEqual``1(``0,``0,System.String)">
+<summary>
+ Expects the two values not to equal each other.
+</summary>
+</member>
+<member name="M:Expecto.Expect.equal``1(``0,``0,System.String)">
+<summary>
+ Expects the two values to equal each other.
+</summary>
+</member>
+<member name="M:Expecto.Expect.hasCountOf``1(System.Collections.Generic.IEnumerable{``0},System.UInt32,Microsoft.FSharp.Core.FSharpFunc{``0,System.Boolean},System.String)">
+<summary>
+ Expect that the counts of the found value occurrences in sequence equal the expected.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNonEmpty``1(System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expect the passed sequence not to be empty.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isEmpty``1(System.Collections.Generic.IEnumerable{``0},System.String)">
+<summary>
+ Expect the passed sequence to be empty.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotWhitespace(System.String,System.String)">
+<summary>
+ Expect the passed string is not whitespace
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotEmpty(System.String,System.String)">
+<summary>
+ Expect the passed string not to be empty.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotInfinity(System.Double,System.String)">
+<summary>
+ Expect the passed float not to be infinity.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotNegativeInfinity(System.Double,System.String)">
+<summary>
+ Expect the passed float not to be negative infinity.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotPositiveInfinity(System.Double,System.String)">
+<summary>
+ Expect the passed float not to be positive infinity.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotNaN(System.Double,System.String)">
+<summary>
+ Expect the passed float to be a number.
+</summary>
+</member>
+<member name="M:Expecto.Expect.floatGreaterThanOrClose(Expecto.Accuracy,System.Double,System.Double,System.String)">
+<summary>
+ Expects `actual` to be greater than `expected` or to be within a
+ given `accuracy`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.floatLessThanOrClose(Expecto.Accuracy,System.Double,System.Double,System.String)">
+<summary>
+ Expects `actual` to be less than `expected` or to be within a
+ given `accuracy`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.floatClose(Expecto.Accuracy,System.Double,System.Double,System.String)">
+<summary>
+ Expects `actual` and `expected` (that are both floats) to be within a
+ given `accuracy`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.floatEqual(System.Double,System.Double,Microsoft.FSharp.Core.FSharpOption{System.Double},System.String)">
+<summary>
+ Expects `actual` and `expected` (that are both floats) to equal within a
+ given `epsilon`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isGreaterThanOrEqual``1(``0,``0,System.String)">
+<summary>
+ Expects `a` &gt;= `b`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isGreaterThan``1(``0,``0,System.String)">
+<summary>
+ Expects `a` &gt; `b`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isLessThanOrEqual``1(``0,``0,System.String)">
+<summary>
+ Expects `a` &lt;= `b`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isLessThan``1(``0,``0,System.String)">
+<summary>
+ Expects `a` to be less than `b`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNull``1(``0,System.String)">
+<summary>
+ Expects the value to be null.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNotNull``1(``0,System.String)">
+<summary>
+ Expects the value not to be null.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isError``2(Microsoft.FSharp.Core.FSharpResult{``0,``1},System.String)">
+<summary>
+ Expects the value to be a Result.Error value.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isOk``2(Microsoft.FSharp.Core.FSharpResult{``0,``1},System.String)">
+<summary>
+ Expects the value to be a Result.Ok value.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isChoice2Of2``2(Microsoft.FSharp.Core.FSharpChoice{``0,``1},System.String)">
+<summary>
+ Expects the value to be a Choice2Of2 value.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isChoice1Of2``2(Microsoft.FSharp.Core.FSharpChoice{``0,``1},System.String)">
+<summary>
+ Expects the value to be a Choice1Of2 value.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isSome``1(Microsoft.FSharp.Core.FSharpOption{``0},System.String)">
+<summary>
+ Expects the value to be a Some _ value.
+</summary>
+</member>
+<member name="M:Expecto.Expect.isNone``1(Microsoft.FSharp.Core.FSharpOption{``0},System.String)">
+<summary>
+ Expects the value to be a None value.
+</summary>
+</member>
+<member name="M:Expecto.Expect.throwsT``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit},System.String)">
+<summary>
+ Expects the passed function to throw `&apos;texn`.
+</summary>
+</member>
+<member name="M:Expecto.Expect.throwsC``1(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit},Microsoft.FSharp.Core.FSharpFunc{System.Exception,``0})">
+<summary>
+ Expects f to throw, and calls `cont` with its exception.
+</summary>
+</member>
+<member name="M:Expecto.Expect.throws(Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit},System.String)">
+<summary>
+ Expects f to throw an exception.
+</summary>
+</member>
+<member name="T:Expecto.Expect">
+<summary>
+ A module for specifying what you expect from the values generated
+ by your tests.
+</summary>
+</member>
+<member name="M:Expecto.CSharp.Function.IsFasterThan``1(System.Action,System.Func{``0},System.Action,System.Action,System.Func{``0},System.Action,System.String,System.String@)">
+<summary>
+ Expects function `f1` is faster than `f2`. Statistical test to 99.99%
+ confidence level. With `setup` and `teardown` actions.
+</summary>
+</member>
+<member name="M:Expecto.CSharp.Function.IsFasterThan``3(System.Func{``0},System.Func{``0,``1},System.Func{``2},System.Func{``2,``1},System.String,System.String@)">
+<summary>
+ Expects function `f1` is faster than `f2`. Statistical test to 99.99%
+ confidence level. With `setup` funcs.
+</summary>
+</member>
+<member name="M:Expecto.CSharp.Function.IsFasterThan``1(System.Action,System.Func{``0},System.Action,System.Func{``0},System.String,System.String@)">
+<summary>
+ Expects function `f1` is faster than `f2`. Statistical test to 99.99%
+ confidence level. With `setup` actions.
+</summary>
+</member>
+<member name="M:Expecto.CSharp.Function.IsFasterThan``1(System.Func{``0},System.Func{``0},System.String,System.String@)">
+<summary>
+ Expects function `f1` is faster than `f2`. Statistical test to 99.99%
+ confidence level.
+</summary>
+</member>
+<member name="M:Expecto.CSharp.Runner.AddPrinter(Expecto.Impl.ExpectoConfig,Expecto.CSharp.ITestPrinter)">
+<summary>
+ Add an additional printer - this does not replace the current one
+</summary>
+</member>
+<member name="M:Expecto.CSharp.Runner.WithPrinter(Expecto.Impl.ExpectoConfig,Expecto.CSharp.ITestPrinter)">
+<summary>
+ Set the printer - this replaces the current one
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isFasterThan``1(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0})">
+<summary>
+ Expects function `f1` is faster than `f2`. Statistical test to 99.99%
+ confidence level.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isFasterThanSub``1(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0}},``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,``0}},``0})">
+<summary>
+ Expects function `f1` is faster than `f2`. Measurer used to measure only a
+ subset of the functions. Statistical test to 99.99% confidence level.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.streamsEqual(System.String,System.IO.Stream,System.IO.Stream)">
+<summary>
+ Expect the streams to byte-wise equal.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.stringHasLength(System.String,System.Int32,System.String)">
+<summary>
+ Expect the string `subject` to have length equals `length`. If it does not
+ then fail with `format` as an error message together with a description
+ of `subject` and `length`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.stringEnds(System.String,System.String,System.String)">
+<summary>
+ Expect the string `subject` to end with `suffix`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `suffix`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.stringStarts(System.String,System.String,System.String)">
+<summary>
+ Expect the string `subject` to start with `prefix`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `prefix`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.stringContains(System.String,System.String,System.String)">
+<summary>
+ Expect the string `subject` to contain `substring` as part of itself.
+ If it does not, then fail with `format` and `subject` and `substring`
+ as part of the error message.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isDescending``1(System.String,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect the sequence `subject` to be descending. If it does not
+ then fail with `message` as an error message.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isAscending``1(System.String,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect the sequence `subject` to be ascending. If it does not
+ then fail with `message` as an error message.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.sequenceStarts``1(System.String,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect the sequence `subject` to start with `prefix`. If it does not
+ then fail with `message` as an error message together with a description
+ of `subject` and `prefix`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.sequenceContainsOrder``1(System.String,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect the sequence `actual` to contains elements from sequence `expected` in the right order.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.sequenceEqual``1(System.String,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expects the `actual` sequence to equal the `expected` one.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.distribution``1(System.String,Microsoft.FSharp.Collections.FSharpMap{``0,System.UInt32},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expects the `actual` sequence to contain all elements from `expected` map,
+ first element in every tuple from `expected` map means item which should be
+ presented in `actual` sequence, the second element means an expected number of occurrences
+ of this item in sequence.
+ Function is not taking into account an order of elements.
+ Calling this function will enumerate both sequences; they have to be finite.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.containsAll``1(System.String,System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expects the `actual` sequence to contain all elements from `expected`
+ it doesn&apos;t take into account number of occurances of characters
+ sequence (not taking into account an order of elements). Calling this
+ function will enumerate both sequences; they have to be finite.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.contains``1(System.String,``0,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expects the `sequence` to contain the `element`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.allEqual``1(System.String,``0,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect that all elements from `actual` are equal to `equalTo`
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.all``1(System.String,Microsoft.FSharp.Core.FSharpFunc{``0,System.Boolean},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect that all elements from `actual` satisfies the given `asserter`
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.exists``1(System.String,Microsoft.FSharp.Core.FSharpFunc{``0,System.Boolean},System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect that some element from `actual` satisfies the given `asserter`
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isTrue(System.String,System.Boolean)">
+<summary>
+ Expects the value to be true.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isFalse(System.String,System.Boolean)">
+<summary>
+ Expects the value to be false.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.notEqual``1(System.String,``0,``0)">
+<summary>
+ Expects the two values not to equal each other.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotRegexMatch(System.String,System.Text.RegularExpressions.Regex,System.String)">
+<summary>
+ Expects that actual not matches regex.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotMatch(System.String,System.String,System.String)">
+<summary>
+ Expects that actual not matches pattern.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isMatchRegexGroups(System.String,Microsoft.FSharp.Core.FSharpFunc{System.Text.RegularExpressions.GroupCollection,System.Boolean},System.Text.RegularExpressions.Regex,System.String)">
+<summary>
+ Expects that matched groups (from a regex match) match with matches operator
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isMatchGroups(System.String,Microsoft.FSharp.Core.FSharpFunc{System.Text.RegularExpressions.GroupCollection,System.Boolean},System.String,System.String)">
+<summary>
+ Expects that matched groups (from a pattern match) match with matches operator
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isRegexMatch(System.String,System.Text.RegularExpressions.Regex,System.String)">
+<summary>
+ Expects that actual matches regex.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isMatch(System.String,System.String,System.String)">
+<summary>
+ Expects that actual matches pattern.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.equal``1(System.String,``0,``0)">
+<summary>
+ Expects the two values to equal each other.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotWhitespace(System.String,System.String)">
+<summary>
+ Expect the passed string is not whitespace
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.hasCountOf``1(System.String,Microsoft.FSharp.Core.FSharpFunc{``0,System.Boolean},System.UInt32,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect that the counts of the found value occurrences in sequence equals the expected.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNonEmpty``1(System.String,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect the passed sequence not to be empty.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isEmpty``1(System.String,System.Collections.Generic.IEnumerable{``0})">
+<summary>
+ Expect the passed sequence to be empty.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotEmpty(System.String,System.String)">
+<summary>
+ Expect the passed string not to be empty.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotInfinity(System.String,System.Double)">
+<summary>
+ Expect the passed float not to be infinity.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotNegativeInfinity(System.String,System.Double)">
+<summary>
+ Expect the passed float not to be negative infinity.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotPositiveInfinity(System.String,System.Double)">
+<summary>
+ Expect the passed float not to be positive infinity.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotNaN(System.String,System.Double)">
+<summary>
+ Expect the passed float to be a number.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.floatGreaterThanOrClose(System.String,Expecto.Accuracy,System.Double,System.Double)">
+<summary>
+ Expects `actual` to be greater than `expected` or to be within a
+ given `accuracy`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.floatLessThanOrClose(System.String,Expecto.Accuracy,System.Double,System.Double)">
+<summary>
+ Expects `actual` to be less than `expected` or to be within a
+ given `accuracy`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.floatClose(System.String,Expecto.Accuracy,System.Double,System.Double)">
+<summary>
+ Expects `actual` and `expected` (that are both floats) to be within a
+ given `accuracy`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isGreaterThanOrEqual``1(System.String,``0,``0)">
+<summary>
+ Expects `a` &gt;= `b`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isGreaterThan``1(System.String,``0,``0)">
+<summary>
+ Expects `a` &gt; `b`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isLessThanOrEqual``1(System.String,``0,``0)">
+<summary>
+ Expects `a` &lt;= `b`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isLessThan``1(System.String,``0,``0)">
+<summary>
+ Expects `a` to be less than `b`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNull``1(System.String,``0)">
+<summary>
+ Expects the value to be null.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNotNull``1(System.String,``0)">
+<summary>
+ Expects the value not to be null.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isError``2(System.String,Microsoft.FSharp.Core.FSharpResult{``0,``1})">
+<summary>
+ Expects the value to be a Result.Error value.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isOk``2(System.String,Microsoft.FSharp.Core.FSharpResult{``0,``1})">
+<summary>
+ Expects the value to be a Result.Ok value.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isChoice2Of2``2(System.String,Microsoft.FSharp.Core.FSharpChoice{``0,``1})">
+<summary>
+ Expects the value to be a Choice2Of2 value.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isChoice1Of2``2(System.String,Microsoft.FSharp.Core.FSharpChoice{``0,``1})">
+<summary>
+ Expects the value to be a Choice1Of2 value.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isSome``1(System.String,Microsoft.FSharp.Core.FSharpOption{``0})">
+<summary>
+ Expects the value to be a Some _ value.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.isNone``1(System.String,Microsoft.FSharp.Core.FSharpOption{``0})">
+<summary>
+ Expects the value to be a None value.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.throwsT``1(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Expects the passed function to throw `&apos;texn`.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.throwsC``1(Microsoft.FSharp.Core.FSharpFunc{System.Exception,``0},Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Expects f to throw, and calls `cont` with its exception.
+</summary>
+</member>
+<member name="M:Expecto.Flip.Expect.throws(System.String,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">
+<summary>
+ Expects f to throw an exception.
+</summary>
+</member>
+</members>
+</doc>
