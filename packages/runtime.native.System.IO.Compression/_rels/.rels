@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/runtime.native.System.IO.Compression.nuspec" Id="R9850f506e29b43ae" />
-  <Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/5157d01e6d634ad784a50bb07541abb8.psmdcp" Id="Rc69d34535f454691" />
-</Relationships>

@@ -9,7 +9,6 @@
   <ItemGroup>
     <Compile Include="Sample.fs" />
     <Compile Include="Main.fs" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Expecto" Version="8.*" />
     <PackageReference Include="FSharp.Core" Version="4.*" />

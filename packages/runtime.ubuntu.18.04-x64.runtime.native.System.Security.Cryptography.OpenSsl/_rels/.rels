@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/runtime.ubuntu.18.04-x64.runtime.native.System.Security.Cryptography.OpenSsl.nuspec" Id="Rd4206dd35dbd4972" />
-  <Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/3dc657daf004434f92e08b1c69be1cd2.psmdcp" Id="R39168579ce8b4609" />
-</Relationships>

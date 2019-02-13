@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/System.Diagnostics.DiagnosticSource.nuspec" Id="R8c34c5b036f24b79" />
-  <Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/19234d51e1b84b87a71770fa1d3e5a78.psmdcp" Id="R06e2f3ccac684785" />
-</Relationships>
