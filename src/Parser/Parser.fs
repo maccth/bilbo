@@ -2,6 +2,8 @@ module Bilbo.Parser.Parser
 open FParsec
 open Ast
 
+let qp x = printfn "%A" x
+
 let keywords =
     [
         "type"
@@ -18,7 +20,7 @@ let stre s = pstring s
 
 let pnKeyword : Parser<unit, unit> =
     let kws = Set.toList keywords
-    let pKws = List.map str kws
+    let pKws = kws |> List.map str |> List.toSeq 
     notFollowedBy (choice pKws)
 
 let id : Parser<string, unit> =
@@ -28,7 +30,9 @@ let id : Parser<string, unit> =
     let lastChar = (str "'" <|> str "")
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
-let csvIds1 = sepBy1 id (str ",")
+
+let csvIds1 =
+        sepBy1 id (str ",")
 
 let pTypeDeclaration =
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDeclaration
@@ -36,11 +40,13 @@ let pTypeDeclaration =
 
 let pStrLiteral : Parser<Literal, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
-    between (stre "\"") (stre "\"") chars |>> StringLiteral
+    between (stre "\"") (str "\"") chars |>> StringLiteral
 
-let pIntLiteral : Parser<Literal, unit> = pint32 |>> int |>> IntLiteral
+let pIntLiteral : Parser<Literal, unit> =
+    pint32 .>> notFollowedBy (stre ".") .>> ws |>> int |>> IntLiteral
 
-let pFloatLiteral : Parser<Literal, unit> = pfloat |>> FloatLiteral
+let pFloatLiteral : Parser<Literal, unit> =
+    pfloat .>> ws |>> FloatLiteral
 
 let pBoolLiteral : Parser<Literal, unit> =
     (str "True" <|> str "False")
@@ -49,23 +55,27 @@ let pBoolLiteral : Parser<Literal, unit> =
         | _ -> false
     |>> BoolLiteral
 
-let pLiteral = choice [pStrLiteral; pFloatLiteral; pIntLiteral; pBoolLiteral] |>> LiteralExpression
+let pLiteral =
+    choice [pBoolLiteral; pStrLiteral; attempt pIntLiteral; pFloatLiteral] |>> LiteralExpression
 
-let pExpression = choice [pLiteral]
+let pExpression =
+    choice [pLiteral]
 
-let pAssignmentExpression  =
+let pAssignmentExpression =
     let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpression
     pipe3 id (str "=") pExpression ctor
 
 // Top level parsers
 
-let pExpressionStatement = choice [pAssignmentExpression] |>> ExpressionStatement
+let pExpressionStatement =
+    choice [pAssignmentExpression] |>> ExpressionStatement
 
-let pStatement = choice [pTypeDeclaration; pExpressionStatement] |>> Statement
+let pStatement =
+    choice [pExpressionStatement; pTypeDeclaration] |>> Statement
 
-let pProgramUnit = pStatement
+let pProgramUnit = choice [pStatement]
 
-let pProgram =  choice [pProgramUnit] |> many1
+let pProgram = choice [pProgramUnit] |> many1
 
 let pFile = ws >>. pProgram .>> ws .>> eof
 

@@ -17,7 +17,8 @@ let main (argv : string []) =
         match result with
         | Success(res, _s, _p) ->
             printf "The AST of the input file is:\n%A\n" res
-        | Failure(msg, err, _u) ->
+        | Failure(msg, err, u) ->
             printfn "%s" msg
             printfn "%A" err 
+            printfn "%A" u
         0
