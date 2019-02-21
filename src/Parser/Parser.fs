@@ -1,6 +1,8 @@
 module Bilbo.Parser.Parser
 open FParsec
 open Ast
+open System.Linq.Expressions
+open Bilbo.Parser
 
 let qp x = printfn "%A" x
 
@@ -9,13 +11,10 @@ let keywords =
         "type"
     ] |> Set.ofList
 
-
-let isKeyword w = keywords.Contains w
-
 let ws = spaces
 
 let str s = pstring s .>> spaces
-/// Exact version of str, no spaces consumed.
+/// Exact version of str. `stre s` parses the string `s` with no spaces after.
 let stre s = pstring s
 
 let pnKeyword : Parser<unit, unit> =
@@ -29,7 +28,6 @@ let id : Parser<string, unit> =
     let upToLastChar = many1Satisfy2 firstChar middleChar
     let lastChar = (str "'" <|> str "")
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
-
 
 let csvIds1 =
         sepBy1 id (str ",")
@@ -58,8 +56,14 @@ let pBoolLiteral : Parser<Literal, unit> =
 let pLiteral =
     choice [pBoolLiteral; pStrLiteral; attempt pIntLiteral; pFloatLiteral] |>> LiteralExpression
 
-let pExpression =
-    choice [pLiteral]
+let pExpression, pExpressionRef = createParserForwardedToRef()
+
+let pObjectInstantiation =
+    let csvExpr = sepBy1 pExpression (str ",")
+    id .>>. (between (str "(") (str ")") csvExpr) |>> ObjectInstantiation |>> ObjectExpression
+
+do pExpressionRef :=
+    choice [pLiteral; pObjectInstantiation]
 
 let pAssignmentExpression =
     let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpression

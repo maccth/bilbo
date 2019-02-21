@@ -15,7 +15,10 @@ and ExpressionStatement =
 
 and Expression =
     | LiteralExpression of Literal
-  
+    | ObjectExpression of ObjectInstantiation
+ 
+and ObjectInstantiation = TypeName * Expression list
+
 and Literal =
     | StringLiteral of string
     | FloatLiteral of float
