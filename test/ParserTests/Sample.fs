@@ -1,4 +1,4 @@
-module Tests.ParserTests.Sample
+module Bilbo.Tests.ParserTests.Sample
 
 open Expecto
 

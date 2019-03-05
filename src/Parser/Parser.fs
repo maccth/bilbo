@@ -1,7 +1,6 @@
 module Bilbo.Parser.Parser
 open FParsec
 open Ast
-open System.Linq.Expressions
 open Bilbo.Parser
 
 let qp x = printfn "%A" x
@@ -29,10 +28,8 @@ let id : Parser<string, unit> =
     let lastChar = (str "'" <|> str "")
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
-let csvIds1 =
-        sepBy1 id (str ",")
-
 let pTypeDeclaration =
+    let csvIds1 = sepBy1 id (str ",")
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDeclaration
     pipe4 (str "type") id (str "=") csvIds1 ctor
 
