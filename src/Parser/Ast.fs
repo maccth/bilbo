@@ -1,5 +1,4 @@
 module Bilbo.Parser.Ast
-open System.Linq.Expressions
 
 type Program = ProgramUnit list
 
@@ -8,16 +7,26 @@ and ProgramUnit =
 
 and Statement =
     | TypeDeclaration of TypeName * Attribute list
-    | ExpressionStatement of ExpressionStatement
+    | ExprStatement of ExprStatement
 
-and ExpressionStatement =
-    | AssignmentExpression of VariableIdentifier * Expression
+and ExprStatement =
+    | AssignmentExpr of VariableIdentifier * Expr
 
-and Expression =
-    | LiteralExpression of Literal
-    | ObjectExpression of ObjectInstantiation
+and Expr =
+    | BinaryExpr of BinaryExpr
+    | LiteralExpr of Literal
+    | ObjectExpr of ObjectInstantiation
+
+
+and BinaryExpr = Expr * BinaryOperator * Expr 
  
-and ObjectInstantiation = TypeName * Expression list
+and ObjectInstantiation = TypeName * Expr list
+
+and BinaryOperator =
+  | Plus
+  | Minus
+  | Times
+  | Divide
 
 and Literal =
     | StringLiteral of string

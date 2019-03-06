@@ -1,7 +1,14 @@
 module Bilbo.Parser.Parser
+
 open FParsec
 open Ast
 open Bilbo.Parser
+open FParsec
+open FParsec.Primitives
+open FParsec
+open Bilbo.Parser.Ast
+open FParsec
+open FParsec
 
 let qp x = printfn "%A" x
 
@@ -51,34 +58,49 @@ let pBoolLiteral : Parser<Literal, unit> =
     |>> BoolLiteral
 
 let pLiteral =
-    choice [pBoolLiteral; pStrLiteral; attempt pIntLiteral; pFloatLiteral] |>> LiteralExpression
+    choice [pBoolLiteral; pStrLiteral; attempt pIntLiteral; pFloatLiteral] |>> LiteralExpr 
 
-let pExpression, pExpressionRef = createParserForwardedToRef()
+let exprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+
+let pExpr = exprOpp.ExpressionParser
+
+let pAssignmentExpr =
+    let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
+    pipe3 id (str "=") pExpr ctor
 
 let pObjectInstantiation =
-    let csvExpr = sepBy1 pExpression (str ",")
-    id .>>. (between (str "(") (str ")") csvExpr) |>> ObjectInstantiation |>> ObjectExpression
+    let csvExpr = sepBy1 pExpr (str ",")
+    id .>>. (between (str "(") (str ")") csvExpr) |>> ObjectInstantiation |>> ObjectExpr
 
-do pExpressionRef :=
+let pSimpleExpr =
     choice [pLiteral; pObjectInstantiation]
 
-let pAssignmentExpression =
-    let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpression
-    pipe3 id (str "=") pExpression ctor
+exprOpp.TermParser <- pSimpleExpr
+
+exprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x, Plus, y) |> BinaryExpr))
+exprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x, Minus, y) |> BinaryExpr))
+exprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, fun x y -> (x, Times, y) |> BinaryExpr))
+exprOpp.AddOperator(InfixOperator("/", ws, 3, Associativity.Right, fun x y -> (x, Divide, y) |> BinaryExpr))
 
 // Top level parsers
 
-let pExpressionStatement =
-    choice [pAssignmentExpression] |>> ExpressionStatement
+let pExprStatement =
+    choice [pAssignmentExpr] |>> ExprStatement
 
 let pStatement =
-    choice [pExpressionStatement; pTypeDeclaration] |>> Statement
+    choice [pExprStatement; pTypeDeclaration] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 
-let pProgram = choice [pProgramUnit] |> many1
+let pProgram = ws >>. choice [pProgramUnit] |> many1 .>> ws
 
-let pFile = ws >>. pProgram .>> ws .>> eof
+let pFile = pProgram .>> eof
 
-let pBilbo file encoding =
+let pBilboFile file encoding =
     runParserOnFile pFile () file encoding
+
+let pBilboStrE str eStream =
+    runParserOnString pProgram () eStream str 
+
+let pBilboStr str =
+    pBilboStrE str ""
