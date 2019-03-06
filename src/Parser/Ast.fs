@@ -15,18 +15,22 @@ and ExprStatement =
 and Expr =
     | BinExpr of BinExpr
     | LitExpr of Literal
-    | ObjExpr of ObjInstantiation
-
+    | ObjExpr of ObjExpr
+    | NegExpr of Expr
 
 and BinExpr = Expr * BinOp * Expr 
  
-and ObjInstantiation = TypeName * Expr list
+and ObjExpr =
+    | Var of VarId
+    | DotAccess of VarId * VarId
+    | ObjInstan of TypeName * Expr list
 
 and BinOp =
   | Plus
   | Minus
   | Times
   | Divide
+  | Pow
 
 and Literal =
     | StrLit of string

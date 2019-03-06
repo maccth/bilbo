@@ -3,12 +3,7 @@ module Bilbo.Parser.Parser
 open FParsec
 open Ast
 open Bilbo.Parser
-open FParsec
-open FParsec.Primitives
-open FParsec
 open Bilbo.Parser.Ast
-open FParsec
-open FParsec
 
 let qp x = printfn "%A" x
 
@@ -61,27 +56,49 @@ let pLiteral =
     choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> LitExpr 
 
 let exprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-
 let pExpr = exprOpp.ExpressionParser
 
 let pAssignmentExpr =
     let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
     pipe3 pVarId (str "=") pExpr ctor
 
-let pObjectInstantiation =
+let pObjInstan =
     let csvExpr = sepBy1 pExpr (str ",")
-    pVarId .>>. (between (str "(") (str ")") csvExpr) |>> ObjInstantiation |>> ObjExpr
+    pVarId .>>. (between (str "(") (str ")") csvExpr) |>> ObjInstan
+
+let pVar =
+    pVarId |>> Var
+
+let pObjExpr =
+    choice [pObjInstan; pVar] |>> ObjExpr
+
+// Not used yet
+// let objInstan =
+//     let csvExpr = sepBy1 pExpr (str ",")
+//     csvExpr |>> (fun attrs tName -> (tName, attrs) |> ObjInstan)
+
+// let dotAccess =
+//     pVarId |>> (fun attr obj -> (obj, attr) |> DotAccess)
+   
+// let postVar = choice [objInstan; dotAccess]
+
+// let postVarExprs =
+//     pipe2 pVarId postVar
+//         (fun var post -> post)
 
 let pSimpleExpr =
-    choice [pLiteral; pObjectInstantiation]
+    choice [pLiteral; pObjExpr]
 
-exprOpp.TermParser <- pSimpleExpr
+exprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pExpr
 
 let consBinExpr op l r = (l,op,r) |> BinExpr
 exprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, consBinExpr Plus))
 exprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, consBinExpr Minus))
 exprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, consBinExpr Times))
 exprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr Divide))
+exprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
+exprOpp.AddOperator(PrefixOperator("-", ws, 4, true, NegExpr))
+
 
 // Top level parsers
 
