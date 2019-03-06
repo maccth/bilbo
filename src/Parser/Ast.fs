@@ -8,32 +8,32 @@ and ProgramUnit =
 and Statement =
     | TypeDeclaration of TypeName * Attribute list
     | ExprStatement of ExprStatement
-
+    
 and ExprStatement =
-    | AssignmentExpr of VariableIdentifier * Expr
+    | AssignmentExpr of VarId * Expr
 
 and Expr =
-    | BinaryExpr of BinaryExpr
-    | LiteralExpr of Literal
-    | ObjectExpr of ObjectInstantiation
+    | BinExpr of BinExpr
+    | LitExpr of Literal
+    | ObjExpr of ObjInstantiation
 
 
-and BinaryExpr = Expr * BinaryOperator * Expr 
+and BinExpr = Expr * BinOp * Expr 
  
-and ObjectInstantiation = TypeName * Expr list
+and ObjInstantiation = TypeName * Expr list
 
-and BinaryOperator =
+and BinOp =
   | Plus
   | Minus
   | Times
   | Divide
 
 and Literal =
-    | StringLiteral of string
-    | FloatLiteral of float
-    | IntLiteral of int
-    | BoolLiteral of bool
+    | StrLit of string
+    | FloatLit of float
+    | IntLit of int
+    | BoolLit of bool
       
-and VariableIdentifier = string
+and VarId = string
 and TypeName = string
 and Attribute = string 
