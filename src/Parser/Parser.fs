@@ -4,16 +4,6 @@ open FParsec
 open Ast
 open Bilbo.Parser
 open Bilbo.Parser.Ast
-open FParsec
-open FParsec
-open FParsec
-open FParsec
-open FParsec
-open FParsec
-open FParsec
-open FParsec
-open FParsec
-open FParsec
 
 let qp x = printfn "%A" x
 
@@ -41,9 +31,10 @@ let pId : Parser<string, unit> =
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
 let pTypeDeclaration =
-    let csvIds1 = sepBy1 pId (str ",")
+    let csvIds = sepBy1 pId (str ",") 
+    let bracIds = between (str "(") (str ")") csvIds
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDeclaration
-    pipe4 (str "type") pId (str "=") csvIds1 ctor
+    pipe4 (str "type") pId (str "=") (bracIds <|> csvIds) ctor
 
 let pStrLit : Parser<Literal, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
@@ -105,7 +96,7 @@ exprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, consBinExpr M
 exprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, consBinExpr Times))
 exprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr Divide))
 exprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
-exprOpp.AddOperator(PrefixOperator("-", ws, 4, true, NegExpr))
+// exprOpp.AddOperator(PrefixOperator("-", ws, 4, true, NegExpr))
 
 // Top level parsers
 

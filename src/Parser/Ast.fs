@@ -15,9 +15,9 @@ and ExprStatement =
 and Expr =
     | Var of Id
     | BinExpr of BinExpr
-    | LitExpr of Literal
     | ObjExpr of ObjExpr
-    | NegExpr of Expr
+    | LitExpr of Literal
+    // | NegExpr of Expr
 
 and BinExpr = Expr * BinOp * Expr 
  
