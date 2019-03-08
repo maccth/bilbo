@@ -4,6 +4,16 @@ open FParsec
 open Ast
 open Bilbo.Parser
 open Bilbo.Parser.Ast
+open FParsec
+open FParsec
+open FParsec
+open FParsec
+open FParsec
+open FParsec
+open FParsec
+open FParsec
+open FParsec
+open FParsec
 
 let qp x = printfn "%A" x
 
@@ -23,7 +33,7 @@ let pnKeyword : Parser<unit, unit> =
     let pKws = kws |> List.map str |> List.toSeq 
     notFollowedBy (choice pKws)
 
-let pVarId : Parser<string, unit> =
+let pId : Parser<string, unit> =
     let firstChar c = isLetter c || c = '_'
     let middleChar c = firstChar c || isDigit c
     let upToLastChar = many1Satisfy2 firstChar middleChar
@@ -31,9 +41,9 @@ let pVarId : Parser<string, unit> =
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
 let pTypeDeclaration =
-    let csvIds1 = sepBy1 pVarId (str ",")
+    let csvIds1 = sepBy1 pId (str ",")
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDeclaration
-    pipe4 (str "type") pVarId (str "=") csvIds1 ctor
+    pipe4 (str "type") pId (str "=") csvIds1 ctor
 
 let pStrLit : Parser<Literal, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
@@ -60,31 +70,29 @@ let pExpr = exprOpp.ExpressionParser
 
 let pAssignmentExpr =
     let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
-    pipe3 pVarId (str "=") pExpr ctor
-
-let pObjInstan =
-    let csvExpr = sepBy1 pExpr (str ",")
-    pVarId .>>. (between (str "(") (str ")") csvExpr) |>> ObjInstan
+    pipe3 pId (str "=") pExpr ctor
 
 let pVar =
-    pVarId |>> Var
+    pId |>> Var
+
+let pDotAccess =
+    let attrs = (str ".") >>. sepBy1 pId (str ".")
+    let consDot aLst var = List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> Var) aLst 
+    attrs |>> consDot
+
+let pObjInstan =
+    let attrs = (sepBy1 pExpr (str ",")) |> between (str "(") (str ")") 
+    let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr
+    attrs |>> consObj
+
+let posts = choice [pDotAccess; pObjInstan]
 
 let pObjExpr =
-    choice [pObjInstan; pVar] |>> ObjExpr
-
-// Not used yet
-// let objInstan =
-//     let csvExpr = sepBy1 pExpr (str ",")
-//     csvExpr |>> (fun attrs tName -> (tName, attrs) |> ObjInstan)
-
-// let dotAccess =
-//     pVarId |>> (fun attr obj -> (obj, attr) |> DotAccess)
-   
-// let postVar = choice [objInstan; dotAccess]
-
-// let postVarExprs =
-//     pipe2 pVarId postVar
-//         (fun var post -> post)
+    let checkPosts s p =
+        match p with
+        | Some p' -> p' s
+        | None -> Var s
+    pipe2 pId (opt posts) checkPosts 
 
 let pSimpleExpr =
     choice [pLiteral; pObjExpr]
@@ -98,7 +106,6 @@ exprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, consBinExpr T
 exprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr Divide))
 exprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
 exprOpp.AddOperator(PrefixOperator("-", ws, 4, true, NegExpr))
-
 
 // Top level parsers
 

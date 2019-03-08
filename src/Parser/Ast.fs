@@ -10,9 +10,10 @@ and Statement =
     | ExprStatement of ExprStatement
     
 and ExprStatement =
-    | AssignmentExpr of VarId * Expr
+    | AssignmentExpr of Id * Expr
 
 and Expr =
+    | Var of Id
     | BinExpr of BinExpr
     | LitExpr of Literal
     | ObjExpr of ObjExpr
@@ -21,8 +22,7 @@ and Expr =
 and BinExpr = Expr * BinOp * Expr 
  
 and ObjExpr =
-    | Var of VarId
-    | DotAccess of VarId * VarId
+    | DotAccess of Expr * Id
     | ObjInstan of TypeName * Expr list
 
 and BinOp =
@@ -38,6 +38,6 @@ and Literal =
     | IntLit of int
     | BoolLit of bool
       
-and VarId = string
+and Id = string
 and TypeName = string
 and Attribute = string 
