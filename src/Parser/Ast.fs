@@ -17,7 +17,22 @@ and Expr =
     | BinExpr of BinExpr
     | ObjExpr of ObjExpr
     | LitExpr of Literal
+    | PathExpr of PathExpr
     // | NegExpr of Expr
+
+and PathExpr =
+    | Path of PathElem list
+
+and PathElem =
+    // Not correct, will need to be node expr for Bilbo :: operator
+    | Node of Expr
+    | Edge of EdgeOp    
+
+and EdgeOp =
+    // Edges can be weighted or unweighted
+    | Right of Expr option
+    | Left of Expr Option
+    | Bidir of Expr Option
 
 and BinExpr = Expr * BinOp * Expr 
  

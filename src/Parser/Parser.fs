@@ -85,8 +85,57 @@ let pObjExpr =
         | None -> Var s
     pipe2 pId (opt posts) checkPosts 
 
+/// Left and bidirectional edge operators `>`, `e>`, `<>` `<e>`
+let pLeftEdgeOps =
+    tuple3 (str "<") (opt pExpr) (opt (str ">"))
+    |>> function
+    | l, e, Some r -> e |> Bidir
+    | l, e, None -> e |> Left
+
+/// Right edge operators `<`, `<e`
+let pRightEdgeOps =
+    tuple2 (opt pExpr) (str ">") |>> fst |>> Right
+
+let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) 
+
+// Not correct, will need to be node expr for Bilbo :: operator
+let pNode = pVar |>> Node
+
+// let pPathExpr =
+//     let pElem = pNode .>>. opt ((str ",") >>. pEdgeOp .>>. pNode)
+//     let path = (sepBy pElem (str ",")) |> between (str "[") (str "]")
+//     // Prepending faster than using @, but :: can't be used as infix function
+//     let prep e lst = e :: lst
+//     let folder elems el =
+//         match el with
+//         | n, Some (e, n2) ->
+//             // Doing this explicitly is faster than doing the fold
+//             elems
+//             |> prep n
+//             |> prep (e|> Edge)
+//             |> prep n2 
+//         | n, None  -> prep n elems
+//     path
+//     |>> List.fold folder []
+//     |>> List.rev
+//     |>> Path
+//     |>> PathExpr
+
+let pPathExpr2 =
+    let pElem = (attempt (pEdgeOp |>> Edge)) <|> pNode
+    let path = sepBy pElem (str ",") |> between (str "[") (str "]")
+    path
+    |>> Path
+    |>> PathExpr
+    // Still need to check for [a, >, >, b], can use many
+    // let pairPath = path |>> List.pairwise 
+    // pairPath 
+    // |>> List.exists (function | Edge x, Edge y -> true | _ -> false)
+
+ 
+
 let pSimpleExpr =
-    choice [pLiteral; pObjExpr]
+    choice [pLiteral; pObjExpr; pPathExpr2]
 
 exprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pExpr
 
@@ -98,7 +147,9 @@ exprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr D
 exprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
 // exprOpp.AddOperator(PrefixOperator("-", ws, 4, true, NegExpr))
 
-// Top level parsers
+   
+
+// // Top level parsers
 
 let pExprStatement =
     choice [pAssignmentExpr] |>> ExprStatement
