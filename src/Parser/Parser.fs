@@ -101,9 +101,9 @@ let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 // Not correct, will need to be node expr for Bilbo :: operator
 let pNode = pVar |>> Node
 
-// The problem is with the commas in the a,>,b vs a,b
 let pPathExpr =
     let edge = (str ",") >>. (pipe3 pEdgeOp (str ",") pNode (fun e c n -> e,n))
+    let edge2 = pEdgeOp .>> followedBy (str "," .>>. pNode)
     let elem = pNode .>>. choice [attempt edge |>> Some; preturn None]
     let path = (sepBy elem (str ",")) |> between (str "[") (str "]")
     // Prepending faster than using @, but :: can't be used as infix function
@@ -111,7 +111,6 @@ let pPathExpr =
     let folder elems el =
         match el with
         | n, Some (e, n2) ->
-            // Doing this explicitly is faster than doing the fold
             elems
             |> prep n
             |> prep (e|> Edge)
@@ -123,11 +122,26 @@ let pPathExpr =
     |>> Path
     |>> PathExpr
 
-let pElem = pNode .>>. choice [(str ",") >>? (tuple3 pEdgeOp (str ",") pNode) |>> Some; preturn None ]
-    
+let pPathExpr2 =
+    let edge = pEdgeOp .>> followedBy (str (",") .>>. pNode)
+    let commaEdge = str "," >>. edge
+    let elem = pNode .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
+    let path = sepBy elem (str ",") |> between (str "[") (str "]")
+    let cons e lst = e :: lst
+    let folder elems el =
+        match el with
+        | n, Some e ->
+            // Doing this explicitly is faster than doing the fold
+            elems |> cons n |> cons (e |> Edge)
+        | n, None -> cons n elems
+    path
+    |>> List.fold folder []
+    |>> List.rev
+    |>> Path
+    |>> PathExpr
 
 let pSimpleExpr =
-    choice [pLiteral; pObjExpr; pPathExpr]
+    choice [pLiteral; pObjExpr; pPathExpr2]
 
 exprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pExpr
 
