@@ -27,7 +27,7 @@ let pId : Parser<string, unit> =
     let firstChar c = isLetter c || c = '_'
     let middleChar c = firstChar c || isDigit c
     let upToLastChar = many1Satisfy2 firstChar middleChar
-    let lastChar = (str "'" <|> str "")
+    let lastChar = manyChars (pchar ''') .>> ws
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
 let pTypeDeclaration =
@@ -101,41 +101,33 @@ let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 // Not correct, will need to be node expr for Bilbo :: operator
 let pNode = pVar |>> Node
 
-// let pPathExpr =
-//     let pElem = pNode .>>. opt ((str ",") >>. pEdgeOp .>>. pNode)
-//     let path = (sepBy pElem (str ",")) |> between (str "[") (str "]")
-//     // Prepending faster than using @, but :: can't be used as infix function
-//     let prep e lst = e :: lst
-//     let folder elems el =
-//         match el with
-//         | n, Some (e, n2) ->
-//             // Doing this explicitly is faster than doing the fold
-//             elems
-//             |> prep n
-//             |> prep (e|> Edge)
-//             |> prep n2 
-//         | n, None  -> prep n elems
-//     path
-//     |>> List.fold folder []
-//     |>> List.rev
-//     |>> Path
-//     |>> PathExpr
-
-let pPathExpr2 =
-    let pElem = (attempt (pEdgeOp |>> Edge)) <|> pNode
-    let path = sepBy pElem (str ",") |> between (str "[") (str "]")
+// The problem is with the commas in the a,>,b vs a,b
+let pPathExpr =
+    let edge = (str ",") >>. (pipe3 pEdgeOp (str ",") pNode (fun e c n -> e,n))
+    let elem = pNode .>>. choice [attempt edge |>> Some; preturn None]
+    let path = (sepBy elem (str ",")) |> between (str "[") (str "]")
+    // Prepending faster than using @, but :: can't be used as infix function
+    let prep e lst = e :: lst
+    let folder elems el =
+        match el with
+        | n, Some (e, n2) ->
+            // Doing this explicitly is faster than doing the fold
+            elems
+            |> prep n
+            |> prep (e|> Edge)
+            |> prep n2 
+        | n, None  -> prep n elems
     path
+    |>> List.fold folder []
+    |>> List.rev
     |>> Path
     |>> PathExpr
-    // Still need to check for [a, >, >, b], can use many
-    // let pairPath = path |>> List.pairwise 
-    // pairPath 
-    // |>> List.exists (function | Edge x, Edge y -> true | _ -> false)
 
- 
+let pElem = pNode .>>. choice [(str ",") >>? (tuple3 pEdgeOp (str ",") pNode) |>> Some; preturn None ]
+    
 
 let pSimpleExpr =
-    choice [pLiteral; pObjExpr; pPathExpr2]
+    choice [pLiteral; pObjExpr; pPathExpr]
 
 exprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pExpr
 
