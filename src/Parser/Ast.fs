@@ -13,32 +13,23 @@ and ExprStatement =
     | AssignmentExpr of Id * Expr
 
 and Expr =
+    | SExpr of SExpr
+    | GExpr of GExpr
+
+and SExpr =
     | Var of Id
     | BinExpr of BinExpr
     | ObjExpr of ObjExpr
     | LitExpr of Literal
-    | PathExpr of PathExpr
-    // | NegExpr of Expr
+    | NodeCons of NodeCons
 
-and PathExpr =
-    | Path of PathElem list
-
-and PathElem =
-    // Not correct, will need to be node expr for Bilbo :: operator
-    | Node of Expr
-    | Edge of EdgeOp    
-
-and EdgeOp =
-    // Edges can be weighted or unweighted
-    | Right of Expr option
-    | Left of Expr Option
-    | Bidir of Expr Option
-
-and BinExpr = Expr * BinOp * Expr 
+and BinExpr = SExpr * BinOp * SExpr 
  
+and NodeCons = SExpr * SExpr
+
 and ObjExpr =
-    | DotAccess of Expr * Id
-    | ObjInstan of TypeName * Expr list
+    | DotAccess of SExpr * Id
+    | ObjInstan of TypeName * SExpr list
 
 and BinOp =
   | Plus
@@ -53,6 +44,29 @@ and Literal =
     | IntLit of int
     | BoolLit of bool
       
+and GExpr =
+    | Var of Id
+    | PathExpr of PathExpr
+
+and PathExpr =
+    | Path of PathElem list
+
+and PathElem =
+    | Node of NodeExpr
+    | Edge of EdgeOp
+    // | Edge of NodeExpr * EdgeOp * NodeExpr
+ 
+and NodeExpr =
+    | Var of Id
+    | NodeCons of NodeCons
+
+and EdgeOp =
+    // Edges can be weighted or unweighted
+    | Right of SExpr option
+    | Left of SExpr Option
+    | Bidir of SExpr Option
+
+// Type definitions
 and Id = string
 and TypeName = string
 and Attribute = string 

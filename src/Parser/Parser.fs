@@ -53,26 +53,19 @@ let pBoolLit : Parser<Literal, unit> =
         | _ -> false
     |>> BoolLit
 
-let pLiteral =
+let pLitExpr =
     choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> LitExpr 
 
-let exprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pExpr = exprOpp.ExpressionParser
-
-let pAssignmentExpr =
-    let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
-    pipe3 pId (str "=") pExpr ctor
-
-let pVar =
-    pId |>> Var
+let sExprOpp = new OperatorPrecedenceParser<SExpr,unit,unit>()
+let pSExpr = sExprOpp.ExpressionParser
 
 let pDotAccess =
     let attrs = (str ".") >>. sepBy1 pId (str ".")
-    let consDot aLst var = List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> Var) aLst 
+    let consDot aLst var = List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> SExpr.Var) aLst 
     attrs |>> consDot
 
 let pObjInstan =
-    let attrs = (sepBy1 pExpr (str ",")) |> between (str "(") (str ")") 
+    let attrs = (sepBy1 pSExpr (str ",")) |> between (str "(") (str ")") 
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr
     attrs |>> consObj
 
@@ -82,81 +75,88 @@ let pObjExpr =
     let checkPosts s p =
         match p with
         | Some p' -> p' s
-        | None -> Var s
-    pipe2 pId (opt posts) checkPosts 
+        | None -> SExpr.Var s
+    pipe2 pId (opt posts) checkPosts
 
-/// Left and bidirectional edge operators `>`, `e>`, `<>` `<e>`
-let pLeftEdgeOps =
-    tuple3 (str "<") (opt pExpr) (opt (str ">"))
+let pSimpleExpr = choice [pLitExpr; pObjExpr;]
+
+sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pSExpr
+
+let consBinExpr op l r = (l,op,r) |> BinExpr
+sExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, consBinExpr Plus))
+sExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, consBinExpr Minus))
+sExprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, consBinExpr Times))
+sExprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr Divide))
+sExprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
+
+let pNodeCons =
+    pipe3 sExprOpp.TermParser (str "::") sExprOpp.TermParser (fun i _ l -> (i,l))
+
+/// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
+let pRightEdgeOps =
+    tuple3 (str "<") (opt pSExpr) (opt (str ">"))
     |>> function
     | l, e, Some r -> e |> Bidir
     | l, e, None -> e |> Left
 
-/// Right edge operators `<`, `<e`
-let pRightEdgeOps =
-    tuple2 (opt pExpr) (str ">") |>> fst |>> Right
+/// Right edge operators `>`, `e>`
+let pLeftEdgeOps =
+    tuple2 (opt pSExpr) (str ">") |>> fst |>> Right
 
 let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) 
 
-// Not correct, will need to be node expr for Bilbo :: operator
-let pNode = pVar |>> Node
+// // Not correct, will need to be node expr for Bilbo :: operator
+let pNodeExpr = choice [attempt pNodeCons |>> NodeCons; pId |>> Var]
 
 let pPathExpr =
-    let edge = (str ",") >>. (pipe3 pEdgeOp (str ",") pNode (fun e c n -> e,n))
-    let edge2 = pEdgeOp .>> followedBy (str "," .>>. pNode)
-    let elem = pNode .>>. choice [attempt edge |>> Some; preturn None]
-    let path = (sepBy elem (str ",")) |> between (str "[") (str "]")
-    // Prepending faster than using @, but :: can't be used as infix function
-    let prep e lst = e :: lst
-    let folder elems el =
-        match el with
-        | n, Some (e, n2) ->
-            elems
-            |> prep n
-            |> prep (e|> Edge)
-            |> prep n2 
-        | n, None  -> prep n elems
-    path
-    |>> List.fold folder []
-    |>> List.rev
-    |>> Path
-    |>> PathExpr
-
-let pPathExpr2 =
-    let edge = pEdgeOp .>> followedBy (str (",") .>>. pNode)
+    let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
     let commaEdge = str "," >>. edge
-    let elem = pNode .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
+    let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
     let path = sepBy elem (str ",") |> between (str "[") (str "]")
     let cons e lst = e :: lst
     let folder elems el =
         match el with
         | n, Some e ->
             // Doing this explicitly is faster than doing the fold
-            elems |> cons n |> cons (e |> Edge)
-        | n, None -> cons n elems
+            elems |> cons (n |> Node) |> cons (e |> Edge)
+        | n, None -> cons (n |> Node) elems
     path
     |>> List.fold folder []
     |>> List.rev
     |>> Path
     |>> PathExpr
 
-let pSimpleExpr =
-    choice [pLiteral; pObjExpr; pPathExpr2]
+// TODO: Join this and the above together, by parsing the known correct lists
+// let pPathExpr =
+//     let edge = pipe3 pEdgeOp (str ",") pNodeExpr (fun e _ n -> e,n)
+//     let commaEdge = str "," >>. edge
+//     let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
+//     let path = sepBy elem (str ",") |> between (str "[") (str "]")
+//     let cons e lst = e :: lst
+//     let folder elems el =
+//         match el with
+//         | n, Some(e, n2) ->
+//             // Doing this explicitly is faster than doing the fold
+//             ((n,e,n2) |> Edge) :: elems 
+//         | n, None -> (Node n) :: elems
+//     path
+//     |>> List.fold folder []
+//     |>> List.rev
+//     |>> Path
+//     |>> PathExpr
 
-exprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pExpr
+let pExpr =
+    choice [
+        attempt pNodeCons |>> SExpr.NodeCons |>> SExpr;
+        pSExpr |>> SExpr;
+        pPathExpr |>> GExpr;
+    ]
 
-let consBinExpr op l r = (l,op,r) |> BinExpr
-exprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, consBinExpr Plus))
-exprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, consBinExpr Minus))
-exprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, consBinExpr Times))
-exprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr Divide))
-exprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
-// exprOpp.AddOperator(PrefixOperator("-", ws, 4, true, NegExpr))
+let pAssignmentExpr =
+    let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
+    pipe3 pId (str "=") pExpr ctor
 
-   
-
-// // Top level parsers
-
+// Top level parsers
 let pExprStatement =
     choice [pAssignmentExpr] |>> ExprStatement
 
