@@ -17,13 +17,13 @@ and Expr =
     | GExpr of GExpr
 
 and SExpr =
-    | Var of Id
-    | BinExpr of BinExpr
+    | SVar of Id
+    | BinExpr of SBinExpr
     | ObjExpr of ObjExpr
     | LitExpr of Literal
     | NodeCons of NodeCons
 
-and BinExpr = SExpr * BinOp * SExpr 
+and SBinExpr = SExpr * SBinOp * SExpr 
  
 and NodeCons = SExpr * SExpr
 
@@ -31,7 +31,7 @@ and ObjExpr =
     | DotAccess of SExpr * Id
     | ObjInstan of TypeName * SExpr list
 
-and BinOp =
+and SBinOp =
   | Plus
   | Minus
   | Times
@@ -45,8 +45,13 @@ and Literal =
     | BoolLit of bool
       
 and GExpr =
-    | Var of Id
+    | GVar of Id
     | PathExpr of PathExpr
+    | BinExpr of GExpr * GBinOp * GExpr
+
+and GBinOp =
+    | Plus
+    | Minus
 
 and PathExpr =
     | Path of PathElem list
@@ -56,7 +61,7 @@ and PathElem =
     | Edge of NodeExpr * EdgeOp * NodeExpr
  
 and NodeExpr =
-    | Var of Id
+    | NVar of Id
     | NodeCons of NodeCons
 
 and EdgeOp =

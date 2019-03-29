@@ -14,7 +14,7 @@ let keywords =
 
 let ws = spaces
 
-let str s = pstring s .>> spaces
+let str s = pstring s .>> ws
 /// Exact version of str. `stre s` parses the string `s` with no spaces after.
 let stre s = pstring s
 
@@ -61,7 +61,7 @@ let pSExpr = sExprOpp.ExpressionParser
 
 let pDotAccess =
     let attrs = (str ".") >>. sepBy1 pId (str ".")
-    let consDot aLst var = List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> SExpr.Var) aLst 
+    let consDot aLst var = List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> SVar) aLst 
     attrs |>> consDot
 
 let pObjInstan =
@@ -75,19 +75,28 @@ let pObjExpr =
     let checkPosts s p =
         match p with
         | Some p' -> p' s
-        | None -> SExpr.Var s
+        | None -> SVar s
     pipe2 pId (opt posts) checkPosts
-
+    
 let pSimpleExpr = choice [pLitExpr; pObjExpr;]
 
 sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pSExpr
 
-let consBinExpr op l r = (l,op,r) |> BinExpr
-sExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, consBinExpr Plus))
-sExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, consBinExpr Minus))
-sExprOpp.AddOperator(InfixOperator("*", ws, 2, Associativity.Right, consBinExpr Times))
-sExprOpp.AddOperator(InfixOperator("/", ws, 2, Associativity.Right, consBinExpr Divide))
-sExprOpp.AddOperator(InfixOperator("^", ws, 3, Associativity.Right, consBinExpr Pow))
+let sExprOps = [
+    "+", 1, Associativity.Right, SBinOp.Plus;
+    "-", 1, Associativity.Right, SBinOp.Minus;
+    "*", 2, Associativity.Right, SBinOp.Times;
+    "/", 2, Associativity.Right, SBinOp.Divide;
+    "^", 3, Associativity.Right, SBinOp.Pow;
+]
+
+let consBinExpr op l r = (l,op,r) |> SExpr.BinExpr
+
+let addSExprOp info =
+    let op, prec, assoc, astOp = info
+    sExprOpp.AddOperator(InfixOperator(op, ws, prec, assoc, consBinExpr astOp))
+
+List.map addSExprOp sExprOps |> ignore
 
 let pNodeCons =
     pipe3 sExprOpp.TermParser (str "::") sExprOpp.TermParser (fun i _ l -> (i,l))
@@ -103,18 +112,17 @@ let pRightEdgeOps =
 let pLeftEdgeOps =
     tuple2 (opt pSExpr) (str ">") |>> fst |>> Right
 
-let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) 
+let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 
-let pNodeExpr = choice [attempt pNodeCons |>> NodeCons; pId |>> Var]
+let pNodeExpr = choice [attempt pNodeCons |>> NodeCons; pId |>> NVar]
 
 let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
     let commaEdge = str "," >>. edge
     let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
     let path = sepBy elem (str ",") |> between (str "[") (str "]")
-
     let folder (elems,prevEdge) (el : NodeExpr * EdgeOp option) =
-        // n2 (prevEdge) n1 (nextEdge) 
+        // n2 <--prevEdge--> n1 <--nextEdge--> 
         // prevEdge is the incoming edge operator from n1 to n1
         // nextEdge is the outgoing edge operator from n1
         let n1, nextEdge = el
@@ -123,22 +131,32 @@ let pPathExpr =
             match elems with
             | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
             | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
-            | [] -> failwith "Should not happen. First element cannot have incoming edge."
+            | [] -> failwith "Will not happen. First element cannot have incoming edge."
         | None -> ((n1 |> Node) :: elems), nextEdge
     path
     |>> List.fold folder ([],None)
     |>> function
         | (lst, None) -> lst
-        | (lst, Some e) -> failwith "Should not happen. Final element cannot be an edge operators."
+        | (lst, Some e) -> failwith "Will not happen. Final element cannot have outgoing edge."
     |>> List.rev
     |>> Path
     |>> PathExpr
+
+let pGVar = pId |>> GVar
+
+let pGraphExprs = choice[pGVar; pPathExpr]
+
+let gExprOpp = new OperatorPrecedenceParser<GExpr,unit,unit>()
+let pGExpr = gExprOpp.ExpressionParser
+gExprOpp.TermParser <- pGraphExprs <|> between (str "(") (str ")") pGExpr
+gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> BinExpr))
+gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> BinExpr))
 
 let pExpr =
     choice [
         attempt pNodeCons |>> SExpr.NodeCons |>> SExpr;
         pSExpr |>> SExpr;
-        pPathExpr |>> GExpr;
+        pGExpr |>> GExpr;
     ]
 
 let pAssignmentExpr =
