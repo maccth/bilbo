@@ -186,7 +186,7 @@ let pBilboFile file encoding =
     runParserOnFile pFile () file encoding
 
 let pBilboStr' str stream =
-    runParserOnString pProgram () stream str 
+    runParserOnString pFile () stream str 
 
 let pBilboStr str =
     pBilboStr' str "user input string"
