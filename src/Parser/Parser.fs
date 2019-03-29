@@ -57,7 +57,7 @@ let pLit =
     choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> Literal 
 
 let sExprOpp = new OperatorPrecedenceParser<SExpr,unit,unit>()
-let pSExpr = sExprOpp.ExpressionParser
+let sExpr = sExprOpp.ExpressionParser
 
 let pDotAccess =
     let attrs = (str ".") >>. sepBy1 pId (str ".")
@@ -65,7 +65,7 @@ let pDotAccess =
     attrs |>> consDot
 
 let pObjInstan =
-    let attrs = (sepBy1 pSExpr (str ",")) |> between (str "(") (str ")") 
+    let attrs = (sepBy1 sExpr (str ",")) |> between (str "(") (str ")") 
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr
     attrs |>> consObj
 
@@ -80,7 +80,7 @@ let pObjExpr =
     
 let pSimpleExpr = choice [pLit; pObjExpr;]
 
-sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pSExpr
+sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") sExpr
 
 let sExprOps = [
     "+", 1, Associativity.Right, SBinOp.Plus;
@@ -100,17 +100,23 @@ List.map addSExprOp sExprOps |> ignore
 
 let pNodeCons =
     pipe3 sExprOpp.TermParser (str "::") sExprOpp.TermParser (fun i _ l -> (i,l))
+ 
+let sExprs = choice [ attempt pNodeCons |>> SExpr.NodeCons; sExpr]
+let pSExpr = pipe2 (opt (str "*")) sExprs <| fun star expr ->
+    match star with
+    | Some _ -> NodeId expr
+    | None -> expr
 
 /// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
 let pRightEdgeOps =
-    tuple3 (str "<") (opt pSExpr) (opt (str ">"))
+    tuple3 (str "<") (opt sExpr) (opt (str ">"))
     |>> function
     | l, e, Some r -> e |> Bidir
     | l, e, None -> e |> Left
 
 /// Right edge operators `>`, `e>`
 let pLeftEdgeOps =
-    tuple2 (opt pSExpr) (str ">") |>> fst |>> Right
+    tuple2 (opt sExpr) (str ">") |>> fst |>> Right
 
 let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 
@@ -152,9 +158,9 @@ gExprOpp.TermParser <- pGraphExprs <|> between (str "(") (str ")") pGExpr
 gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> BinExpr))
 gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> BinExpr))
 
+
 let pExpr =
     choice [
-        attempt pNodeCons |>> SExpr.NodeCons |>> SExpr;
         pSExpr |>> SExpr;
         pGExpr |>> GExpr;
     ]

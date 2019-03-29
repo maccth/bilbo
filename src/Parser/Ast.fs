@@ -22,6 +22,9 @@ and SExpr =
     | ObjExpr of ObjExpr
     | Literal of Literal
     | NodeCons of NodeCons
+    // This can only be a var or NodeCons.
+    // Errors will be found by semantic analyser
+    | NodeId of SExpr
 
 and SBinExpr = SExpr * SBinOp * SExpr 
  
