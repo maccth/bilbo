@@ -53,8 +53,7 @@ and PathExpr =
 
 and PathElem =
     | Node of NodeExpr
-    | Edge of EdgeOp
-    // | Edge of NodeExpr * EdgeOp * NodeExpr
+    | Edge of NodeExpr * EdgeOp * NodeExpr
  
 and NodeExpr =
     | Var of Id

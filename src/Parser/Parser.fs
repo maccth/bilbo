@@ -105,7 +105,6 @@ let pLeftEdgeOps =
 
 let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) 
 
-// // Not correct, will need to be node expr for Bilbo :: operator
 let pNodeExpr = choice [attempt pNodeCons |>> NodeCons; pId |>> Var]
 
 let pPathExpr =
@@ -113,37 +112,27 @@ let pPathExpr =
     let commaEdge = str "," >>. edge
     let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
     let path = sepBy elem (str ",") |> between (str "[") (str "]")
-    let cons e lst = e :: lst
-    let folder elems el =
-        match el with
-        | n, Some e ->
-            // Doing this explicitly is faster than doing the fold
-            elems |> cons (n |> Node) |> cons (e |> Edge)
-        | n, None -> cons (n |> Node) elems
+
+    let folder (elems,prevEdge) (el : NodeExpr * EdgeOp option) =
+        // n2 (prevEdge) n1 (nextEdge) 
+        // prevEdge is the incoming edge operator from n1 to n1
+        // nextEdge is the outgoing edge operator from n1
+        let n1, nextEdge = el
+        match prevEdge with
+        | Some e ->
+            match elems with
+            | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
+            | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
+            | [] -> failwith "Should not happen. First element cannot have incoming edge."
+        | None -> ((n1 |> Node) :: elems), nextEdge
     path
-    |>> List.fold folder []
+    |>> List.fold folder ([],None)
+    |>> function
+        | (lst, None) -> lst
+        | (lst, Some e) -> failwith "Should not happen. Final element cannot be an edge operators."
     |>> List.rev
     |>> Path
     |>> PathExpr
-
-// TODO: Join this and the above together, by parsing the known correct lists
-// let pPathExpr =
-//     let edge = pipe3 pEdgeOp (str ",") pNodeExpr (fun e _ n -> e,n)
-//     let commaEdge = str "," >>. edge
-//     let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
-//     let path = sepBy elem (str ",") |> between (str "[") (str "]")
-//     let cons e lst = e :: lst
-//     let folder elems el =
-//         match el with
-//         | n, Some(e, n2) ->
-//             // Doing this explicitly is faster than doing the fold
-//             ((n,e,n2) |> Edge) :: elems 
-//         | n, None -> (Node n) :: elems
-//     path
-//     |>> List.fold folder []
-//     |>> List.rev
-//     |>> Path
-//     |>> PathExpr
 
 let pExpr =
     choice [
