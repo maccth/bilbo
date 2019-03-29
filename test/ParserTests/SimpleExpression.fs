@@ -40,7 +40,7 @@ let nodeConsTests = [
     "Var identifier, var load", "a = b::c", "a", SExpr.NodeCons(Var "b", Var "c");
 ]
 
-let binExprTests = [
+let numericBinExprTests = [
     "Int plus", "a=4+5", "a", BE (Int 4) SBinOp.Plus  (Int 5);
     "Int plus, both negative", "a=-4+-5", "a", BE (Int -4) SBinOp.Plus (Int -5);
     "Int plus, first negative", "a=-4+5", "a", BE (Int -4) SBinOp.Plus (Int 5);
@@ -50,6 +50,25 @@ let binExprTests = [
     "Float plus, both negative", "a=-1.23+-4.56", "a", BE (Flt -1.23) SBinOp.Plus (Flt -4.56);
     "Float plus, first negative", "a=-1.23+4.56", "a", BE (Flt -1.23) SBinOp.Plus (Flt 4.56);
     "Float plus, second negative", "a=1.23+-4.56", "a", BE (Flt 1.23) SBinOp.Plus (Flt -4.56);
+
+    "Int minus", "a=4-5", "a", BE (Int 4) SBinOp.Minus  (Int 5);
+    "Int minus, both negative", "a=-4--5", "a", BE (Int -4) SBinOp.Minus (Int -5);
+    "Int minus, first negative", "a=-4-5", "a", BE (Int -4) SBinOp.Minus (Int 5);
+    "Int minus, second negative", "a=4--5", "a", BE (Int 4) SBinOp.Minus (Int -5);
+
+    "Float minus", "a=1.23-4.56", "a", BE (Flt 1.23) SBinOp.Minus  (Flt 4.56);
+    "Float minus, both negative", "a=-1.23--4.56", "a", BE (Flt -1.23) SBinOp.Minus (Flt -4.56);
+    "Float minus, first negative", "a=-1.23-4.56", "a", BE (Flt -1.23) SBinOp.Minus (Flt 4.56);
+    "Float minus, second negative", "a=1.23--4.56", "a", BE (Flt 1.23) SBinOp.Minus (Flt -4.56);
+]
+
+// let binExprTests = [
+// ]
+
+let objExprTests = [
+    "Instantiation, no params", "a = MyType()", "a", ObjExpr(ObjInstan("MyType", []));
+    "Instantiation, params", "a = MyType(p1,p2,p3)", "a", ObjExpr(ObjInstan("MyType", List.map Var ["p1"; "p2"; "p3"]));
+    "Dot access, one", "a = obj.b", "a", ObjExpr(DotAccess(Var "obj", "b"))
 ]
 
 let createTest t =
@@ -65,5 +84,9 @@ let tests2 =
     testList "Node construction tests" (List.map createTest nodeConsTests)
 
 [<Tests>]
-    let tests3 =
-        testList "Binary expression tests" (List.map createTest binExprTests)
+let tests3 =
+    testList "Binary expression tests" (List.map createTest numericBinExprTests)
+
+[<Tests>]
+let tests4 =
+    testList "Object expression tests" (List.map createTest objExprTests)

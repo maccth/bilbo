@@ -23,9 +23,8 @@ let main (argv : string []) =
             let line = Console.ReadLine()
             let result = pBilboStr line
             outputParsedResult result
-        0
     | _ ->
         let file =  argv.[0]
         let result = pBilboFile file System.Text.Encoding.UTF8
         outputParsedResult result
-        0
+    0

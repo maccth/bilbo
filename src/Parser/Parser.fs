@@ -31,10 +31,11 @@ let pId : Parser<string, unit> =
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
 let pTypeDeclaration =
-    let csvIds = sepBy1 pId (str ",") 
+    let csvIds1 = sepBy1 pId (str ",") 
+    let csvIds = sepBy pId (str ",")
     let bracIds = between (str "(") (str ")") csvIds
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDeclaration
-    pipe4 (str "type") pId (str "=") (bracIds <|> csvIds) ctor
+    pipe4 (str "type") pId (str "=") (bracIds <|> csvIds1) ctor
 
 let pStrLit : Parser<Literal, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
@@ -65,7 +66,7 @@ let pDotAccess =
     attrs |>> consDot
 
 let pObjInstan =
-    let attrs = (sepBy1 sExpr (str ",")) |> between (str "(") (str ")") 
+    let attrs = (sepBy sExpr (str ",")) |> between (str "(") (str ")") 
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr
     attrs |>> consObj
 
@@ -158,7 +159,6 @@ gExprOpp.TermParser <- pGraphExprs <|> between (str "(") (str ")") pGExpr
 gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> BinExpr))
 gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> BinExpr))
 
-
 let pExpr =
     choice [
         pSExpr |>> SExpr;
@@ -185,8 +185,8 @@ let pFile = pProgram .>> eof
 let pBilboFile file encoding =
     runParserOnFile pFile () file encoding
 
-let pBilboStrE str stream =
+let pBilboStr' str stream =
     runParserOnString pProgram () stream str 
 
 let pBilboStr str =
-    pBilboStrE str ""
+    pBilboStr' str "user input string"
