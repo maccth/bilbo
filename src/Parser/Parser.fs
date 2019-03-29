@@ -53,8 +53,8 @@ let pBoolLit : Parser<Literal, unit> =
         | _ -> false
     |>> BoolLit
 
-let pLitExpr =
-    choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> LitExpr 
+let pLit =
+    choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> Literal 
 
 let sExprOpp = new OperatorPrecedenceParser<SExpr,unit,unit>()
 let pSExpr = sExprOpp.ExpressionParser
@@ -78,7 +78,7 @@ let pObjExpr =
         | None -> SVar s
     pipe2 pId (opt posts) checkPosts
     
-let pSimpleExpr = choice [pLitExpr; pObjExpr;]
+let pSimpleExpr = choice [pLit; pObjExpr;]
 
 sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") pSExpr
 
@@ -179,8 +179,8 @@ let pFile = pProgram .>> eof
 let pBilboFile file encoding =
     runParserOnFile pFile () file encoding
 
-let pBilboStrE str eStream =
-    runParserOnString pProgram () eStream str 
+let pBilboStrE str stream =
+    runParserOnString pProgram () stream str 
 
 let pBilboStr str =
     pBilboStrE str ""

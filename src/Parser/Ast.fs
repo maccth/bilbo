@@ -20,7 +20,7 @@ and SExpr =
     | SVar of Id
     | BinExpr of SBinExpr
     | ObjExpr of ObjExpr
-    | LitExpr of Literal
+    | Literal of Literal
     | NodeCons of NodeCons
 
 and SBinExpr = SExpr * SBinOp * SExpr 
