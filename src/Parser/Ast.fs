@@ -82,7 +82,7 @@ and MatchStatement =
     GExpr Option * MatchCase list
 
 and MatchCase =
-    MExpr * WhereClause Option * ExprStatement list * TerminatingStatement
+    MExpr * WhereClause Option * ExprStatement list * TerminatingStatement 
 
 and WhereClause = Expr list
     

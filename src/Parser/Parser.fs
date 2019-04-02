@@ -4,7 +4,6 @@ open FParsec
 open Ast
 open Bilbo.Parser
 open Bilbo.Parser.Ast
-open FParsec
 
 let qp x = printfn "%A" x
 
@@ -47,7 +46,8 @@ let pId : Parser<string, unit> =
     let middleChar c = firstChar c || isDigit c
     let upToLastChar = many1Satisfy2 firstChar middleChar
     let lastChar = manyChars (pchar ''') .>> ws
-    pnKeyword >>. (pipe2 upToLastChar lastChar (+))
+    // For the special `++` variable available in match cases
+    (str "++") <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
 
 let pTypeDef =
     let csvIds1 = sepBy1 pId (str ",") 
@@ -193,7 +193,7 @@ gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (
 
 let pExpr =
     choice [
-        pSExpr |>> SExpr;
+        attempt pSExpr |>> SExpr;
         pGExpr |>> Expr.GExpr;
     ]
 
