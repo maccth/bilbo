@@ -105,6 +105,8 @@ sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") sExpr
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
 let sBinExprOps = [
+    "::", 9, Associativity.Right, SBinOp.DblColon;
+
     "^", 8, Associativity.Right, SBinOp.Pow;
 
     "*", 7, Associativity.Right, SBinOp.Times;
@@ -131,18 +133,12 @@ let addSExprBinOp info =
     let op, prec, assoc, astOp = info
     sExprOpp.AddOperator(InfixOperator(op, ws, prec, assoc, consBinExpr astOp))
 
+sExprOpp.AddOperator(PrefixOperator("*", ws, 9, true, fun x -> (SUnaryOp.Star,x) |> SExpr.UnaryExpr))
 sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SUnaryOp.Not,x) |> SExpr.UnaryExpr))
 
 List.map addSExprBinOp sBinExprOps |> ignore
 
-let pNodeCons =
-    pipe3 sExprOpp.TermParser (str "::") sExprOpp.TermParser (fun i _ l -> (i,l))
- 
-let sExprs = choice [attempt pNodeCons |>> SExpr.NodeCons; sExpr]
-let pSExpr = pipe2 (opt (str "*")) sExprs <| fun star expr ->
-    match star with
-    | Some _ -> NodeId expr
-    | None -> expr
+let pSExpr = sExpr
 
 /// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
 let pRightEdgeOps =
@@ -157,7 +153,7 @@ let pLeftEdgeOps =
 
 let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 
-let pNodeExpr = choice [attempt pNodeCons |>> NodeCons; pId |>> NVar]
+let pNodeExpr = pSExpr
 
 let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)

@@ -25,10 +25,6 @@ and SExpr =
     | UnaryExpr of SUnaryOp * SExpr
     | ObjExpr of ObjExpr
     | Literal of Literal
-    | NodeCons of NodeCons
-    // This can only be a var or NodeCons.
-    // Errors will be found by semantic analyser
-    | NodeId of SExpr
 
 and SBinExpr = SExpr * SBinOp * SExpr 
  
@@ -43,9 +39,11 @@ and SBinOp =
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | And | Or
+    | DblColon
  
 and SUnaryOp =
     | Not
+    | Star
 
 and Literal =
     | StrLit of string
@@ -69,9 +67,7 @@ and PathElem =
     | Node of NodeExpr
     | Edge of NodeExpr * EdgeOp * NodeExpr
  
-and NodeExpr =
-    | NVar of Id
-    | NodeCons of NodeCons
+and NodeExpr = SExpr
 
 and EdgeOp =
     // Edges can be weighted or unweighted
