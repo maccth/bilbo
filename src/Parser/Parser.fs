@@ -9,7 +9,10 @@ let qp x = printfn "%A" x
 
 let keywords =
     [
-        "type"
+        "type";
+        "def";
+        "return";
+        "become";
     ] |> Set.ofList
 
 let ws = spaces
@@ -30,11 +33,11 @@ let pId : Parser<string, unit> =
     let lastChar = manyChars (pchar ''') .>> ws
     pnKeyword >>. (pipe2 upToLastChar lastChar (+))
 
-let pTypeDeclaration =
+let pTypeDef =
     let csvIds1 = sepBy1 pId (str ",") 
     let csvIds = sepBy pId (str ",")
     let bracIds = between (str "(") (str ")") csvIds
-    let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDeclaration
+    let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
     pipe4 (str "type") pId (str "=") (bracIds <|> csvIds1) ctor
 
 let pStrLit : Parser<Literal, unit> =
@@ -54,7 +57,7 @@ let pBoolLit : Parser<Literal, unit> =
         | _ -> false
     |>> BoolLit
 
-let pLit =
+let pLiteral =
     choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> Literal 
 
 let sExprOpp = new OperatorPrecedenceParser<SExpr,unit,unit>()
@@ -70,16 +73,16 @@ let pObjInstan =
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr
     attrs |>> consObj
 
-let posts = choice [pDotAccess; pObjInstan]
+let postIds = choice [pDotAccess; pObjInstan]
 
 let pObjExpr =
     let checkPosts s p =
         match p with
         | Some p' -> p' s
         | None -> SVar s
-    pipe2 pId (opt posts) checkPosts
+    pipe2 pId (opt postIds) checkPosts
     
-let pSimpleExpr = choice [pLit; pObjExpr;]
+let pSimpleExpr = choice [pLiteral; pObjExpr;]
 
 sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") sExpr
 
@@ -102,7 +105,7 @@ List.map addSExprOp sExprOps |> ignore
 let pNodeCons =
     pipe3 sExprOpp.TermParser (str "::") sExprOpp.TermParser (fun i _ l -> (i,l))
  
-let sExprs = choice [ attempt pNodeCons |>> SExpr.NodeCons; sExpr]
+let sExprs = choice [attempt pNodeCons |>> SExpr.NodeCons; sExpr]
 let pSExpr = pipe2 (opt (str "*")) sExprs <| fun star expr ->
     match star with
     | Some _ -> NodeId expr
@@ -156,25 +159,41 @@ let pGraphExprs = choice[pGVar; pPathExpr]
 let gExprOpp = new OperatorPrecedenceParser<GExpr,unit,unit>()
 let pGExpr = gExprOpp.ExpressionParser
 gExprOpp.TermParser <- pGraphExprs <|> between (str "(") (str ")") pGExpr
-gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> BinExpr))
-gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> BinExpr))
+gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GExpr.BinExpr))
+gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GExpr.BinExpr))
 
 let pExpr =
     choice [
         pSExpr |>> SExpr;
-        pGExpr |>> GExpr;
+        pGExpr |>> Expr.GExpr;
     ]
 
 let pAssignmentExpr =
     let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
     pipe3 pId (str "=") pExpr ctor
 
+let pReturn = str "return" >>. pExpr |>> Return
+let pBecome = str "Become" >>. pExpr |>> Become
+
+// let pTransformDef =
+//     let paramCsv = sepBy pId (str ",")
+//     let paramBrac = between (str "(") (str ")") paramCsv <|> paramCsv 
+//     let exprs = many pAssignmentExpr .>>. pReturn
+//     pipe5 (str "def") pId paramBrac (str "=") exprs <|
+//         fun def fName paramLst eq exprs ->
+//             let exprs' = List.collect id ([fst exprs; [snd exprs]]) 
+//             (fName, paramLst, exprs') |> TransformDef
+
+// let pMatchStatement =
+
+// let pMatchCase = 
+
 // Top level parsers
 let pExprStatement =
-    choice [pAssignmentExpr] |>> ExprStatement
+    choice [pAssignmentExpr;]
 
 let pStatement =
-    choice [pExprStatement; pTypeDeclaration] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 

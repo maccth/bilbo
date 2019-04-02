@@ -6,12 +6,15 @@ and ProgramUnit =
     | Statement of Statement
 
 and Statement =
-    | TypeDeclaration of TypeName * Attribute list
+    | TypeDef of TypeDef
+    | TransformDef of TransformDef
     | ExprStatement of ExprStatement
+
+and TypeDef = TypeName * Attribute list
     
 and ExprStatement =
     | AssignmentExpr of Id * Expr
-
+    
 and Expr =
     | SExpr of SExpr
     | GExpr of GExpr
@@ -73,7 +76,30 @@ and EdgeOp =
     | Left of SExpr Option
     | Bidir of SExpr Option
 
-// Type definitions
+
+and TransformDef =
+    Id * (Param list) * (ExprStatement list) * MatchStatement
+
+and MatchStatement =
+    Option<GExpr> * MatchCase list
+
+and MatchCase =
+    MExpr * ExprStatement list * TerminatingStatement
+
+and MExpr =
+    | GExpr of GExpr
+    | BinExpr of MExpr * MBinOp * MExpr
+
+and MBinOp =
+    | Not // Prefix
+    | And // Infix
+
+and TerminatingStatement =
+    | Return of Expr
+    | Become of Expr
+
+// Helpful type definitions to increase AST readability
 and Id = string
+and Param = string
 and TypeName = string
 and Attribute = string 
