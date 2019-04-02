@@ -23,6 +23,7 @@ and Expr =
 and SExpr =
     | SVar of Id
     | BinExpr of SBinExpr
+    | UnaryExpr of SUnaryOp * SExpr
     | ObjExpr of ObjExpr
     | Literal of Literal
     | NodeCons of NodeCons
@@ -39,11 +40,13 @@ and ObjExpr =
     | ObjInstan of TypeName * SExpr list
 
 and SBinOp =
-  | Plus
-  | Minus
-  | Times
-  | Divide
-  | Pow
+    | Pow | Times | Divide | Plus | Minus 
+    | LessThan | LessThanEq | GreaterThan | GreaterThanEq
+    | Equal | NotEqual
+    | And | Or
+ 
+and SUnaryOp =
+    | Not
 
 and Literal =
     | StrLit of string
@@ -84,8 +87,10 @@ and MatchStatement =
     Option<GExpr> * MatchCase list
 
 and MatchCase =
-    MExpr * ExprStatement list * TerminatingStatement
+    MExpr * Option<WhereClause> * ExprStatement list * TerminatingStatement
 
+and WhereClause = Expr list
+    
 and MExpr =
     | MExpr of GExpr
     | UnaryExpr of MUnaryOp * MExpr
@@ -105,4 +110,4 @@ and TerminatingStatement =
 and Id = string
 and Param = string
 and TypeName = string
-and Attribute = string 
+and Attribute = string

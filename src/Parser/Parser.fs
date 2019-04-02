@@ -16,6 +16,7 @@ let keywords =
         "become";
         "and";
         "not";
+        "where";
     ] |> Set.ofList
 
 let ws = spaces
@@ -90,21 +91,38 @@ let pSimpleExpr = choice [pLiteral; pObjExpr;]
 
 sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") sExpr
 
-let sExprOps = [
-    "+", 1, Associativity.Right, SBinOp.Plus;
-    "-", 1, Associativity.Right, SBinOp.Minus;
-    "*", 2, Associativity.Right, SBinOp.Times;
-    "/", 2, Associativity.Right, SBinOp.Divide;
-    "^", 3, Associativity.Right, SBinOp.Pow;
+// Vaguely based on Python 3 operator precedence
+// https://docs.python.org/3/reference/expressions.html#operator-precedence
+let sBinExprOps = [
+    "^", 8, Associativity.Right, SBinOp.Pow;
+
+    "*", 7, Associativity.Right, SBinOp.Times;
+    "/", 7, Associativity.Right, SBinOp.Divide;
+
+    "+", 6, Associativity.Right, SBinOp.Plus;
+    "-", 6, Associativity.Right, SBinOp.Minus;
+
+    "<", 5, Associativity.Right, SBinOp.LessThan;
+    "<=", 5, Associativity.Right, SBinOp.LessThanEq;
+    ">", 5, Associativity.Right, SBinOp.GreaterThan;
+    ">=", 5, Associativity.Right, SBinOp.GreaterThanEq;
+    "==", 5, Associativity.Right, SBinOp.Equal;
+    "!=", 5, Associativity.Right, SBinOp.NotEqual;
+
+    // "not" has precedence 4, but is prefix (unary)
+    "and", 3, Associativity.Right, SBinOp.And;
+    "or", 2, Associativity.Right, SBinOp.Or;
 ]
 
 let consBinExpr op l r = (l,op,r) |> SExpr.BinExpr
 
-let addSExprOp info =
+let addSExprBinOp info =
     let op, prec, assoc, astOp = info
     sExprOpp.AddOperator(InfixOperator(op, ws, prec, assoc, consBinExpr astOp))
 
-List.map addSExprOp sExprOps |> ignore
+sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SUnaryOp.Not,x) |> SExpr.UnaryExpr))
+
+List.map addSExprBinOp sBinExprOps |> ignore
 
 let pNodeCons =
     pipe3 sExprOpp.TermParser (str "::") sExprOpp.TermParser (fun i _ l -> (i,l))
@@ -200,9 +218,11 @@ mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Right, fun x y ->
 mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> UnaryExpr))
 
 let pMatchCase =
-    let cons lhs _arrow rhs term = (lhs,rhs,term) |> MatchCase
+    let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
     // TODO: Change this to str "->" if possible, will require adding look-ahead in OPP
-    pipe4 pMExpr (str "=>") (many pExprStatement) pTerminatingStatement cons
+    let body = many pExprStatement
+    let whereClause = (str "where") >>. many pExpr
+    pipe5 pMExpr (opt whereClause) (str "=>") body pTerminatingStatement cons
 
 // Top level parsers
 let pStatement =
