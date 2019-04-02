@@ -7,7 +7,8 @@ and ProgramUnit =
 
 and Statement =
     | TypeDef of TypeDef
-    | TransformDef of TransformDef
+    // | TransformDef of TransformDef
+    | MatchCase of MatchCase
     | ExprStatement of ExprStatement
 
 and TypeDef = TypeName * Attribute list
@@ -76,7 +77,6 @@ and EdgeOp =
     | Left of SExpr Option
     | Bidir of SExpr Option
 
-
 and TransformDef =
     Id * (Param list) * (ExprStatement list) * MatchStatement
 
@@ -87,12 +87,15 @@ and MatchCase =
     MExpr * ExprStatement list * TerminatingStatement
 
 and MExpr =
-    | GExpr of GExpr
+    | MExpr of GExpr
+    | UnaryExpr of MUnaryOp * MExpr
     | BinExpr of MExpr * MBinOp * MExpr
 
 and MBinOp =
-    | Not // Prefix
     | And // Infix
+
+and MUnaryOp =
+    | Not // Prefix
 
 and TerminatingStatement =
     | Return of Expr

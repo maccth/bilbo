@@ -4,6 +4,7 @@ open FParsec
 open Ast
 open Bilbo.Parser
 open Bilbo.Parser.Ast
+open FParsec
 
 let qp x = printfn "%A" x
 
@@ -13,11 +14,14 @@ let keywords =
         "def";
         "return";
         "become";
+        "and";
+        "not";
     ] |> Set.ofList
 
 let ws = spaces
 
 let str s = pstring s .>> ws
+
 /// Exact version of str. `stre s` parses the string `s` with no spaces after.
 let stre s = pstring s
 
@@ -172,8 +176,12 @@ let pAssignmentExpr =
     let ctor = fun var _ expr ->  (var, expr) |> AssignmentExpr
     pipe3 pId (str "=") pExpr ctor
 
+let pExprStatement =
+    choice [pAssignmentExpr;]
+
 let pReturn = str "return" >>. pExpr |>> Return
-let pBecome = str "Become" >>. pExpr |>> Become
+let pBecome = str "become" >>. pExpr |>> Become
+let pTerminatingStatement = (pReturn <|> pBecome) 
 
 // let pTransformDef =
 //     let paramCsv = sepBy pId (str ",")
@@ -184,16 +192,21 @@ let pBecome = str "Become" >>. pExpr |>> Become
 //             let exprs' = List.collect id ([fst exprs; [snd exprs]]) 
 //             (fName, paramLst, exprs') |> TransformDef
 
-// let pMatchStatement =
+let mExprOpp = new OperatorPrecedenceParser<MExpr,unit,unit>()
+let pMExpr = mExprOpp.ExpressionParser
+let pMatchExprs = pGExpr |>> MExpr.MExpr
+mExprOpp.TermParser <- pMatchExprs <|> between (str "(") (str ")") pMExpr
+mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Right, fun x y -> (x,And,y) |> MExpr.BinExpr))
+mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> UnaryExpr))
 
-// let pMatchCase = 
+let pMatchCase =
+    let cons lhs _arrow rhs term = (lhs,rhs,term) |> MatchCase
+    // TODO: Change this to str "->" if possible, will require adding look-ahead in OPP
+    pipe4 pMExpr (str "=>") (many pExprStatement) pTerminatingStatement cons
 
 // Top level parsers
-let pExprStatement =
-    choice [pAssignmentExpr;]
-
 let pStatement =
-    choice [pExprStatement |>> ExprStatement; pTypeDef] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef; pMatchCase] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 
