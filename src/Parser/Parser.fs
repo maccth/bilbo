@@ -8,6 +8,16 @@ open FParsec
 
 let qp x = printfn "%A" x
 
+// Extensions to FParsec
+let tuple6 a b c d e f =
+    pipe2 (tuple5 a b c d e) f
+        (fun (a',b',c',d',e') f' -> a',b',c',d',e',f')
+
+let pipe6 a b c d e f func =
+    tuple6 a b c d e f
+    |>> func
+
+// Parser
 let keywords =
     [
         "type";
@@ -16,6 +26,7 @@ let keywords =
         "become";
         "and";
         "not";
+        "match";
         "where";
     ] |> Set.ofList
 
@@ -201,15 +212,6 @@ let pReturn = str "return" >>. pExpr |>> Return
 let pBecome = str "become" >>. pExpr |>> Become
 let pTerminatingStatement = (pReturn <|> pBecome) 
 
-// let pTransformDef =
-//     let paramCsv = sepBy pId (str ",")
-//     let paramBrac = between (str "(") (str ")") paramCsv <|> paramCsv 
-//     let exprs = many pAssignmentExpr .>>. pReturn
-//     pipe5 (str "def") pId paramBrac (str "=") exprs <|
-//         fun def fName paramLst eq exprs ->
-//             let exprs' = List.collect id ([fst exprs; [snd exprs]]) 
-//             (fName, paramLst, exprs') |> TransformDef
-
 let mExprOpp = new OperatorPrecedenceParser<MExpr,unit,unit>()
 let pMExpr = mExprOpp.ExpressionParser
 let pMatchExprs = pGExpr |>> MExpr.MExpr
@@ -224,9 +226,22 @@ let pMatchCase =
     let whereClause = (str "where") >>. many pExpr
     pipe5 pMExpr (opt whereClause) (str "=>") body pTerminatingStatement cons
 
+let pMatchStatement =
+    let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
+    pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
+    
+let pTransformDef =
+    let paramCsv = sepBy pId (str ",")
+    let paramBrac = between (str "(") (str ")") paramCsv <|> paramCsv 
+    let exprs = many pExprStatement
+    let matches = pMatchStatement
+    let cons (def, tName, paramLst, eq, exprs, matches) =
+        (tName, paramLst, exprs, matches) |> TransformDef
+    pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
+
 // Top level parsers
 let pStatement =
-    choice [pExprStatement |>> ExprStatement; pTypeDef; pMatchCase] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 

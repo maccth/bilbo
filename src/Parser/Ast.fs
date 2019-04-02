@@ -7,8 +7,7 @@ and ProgramUnit =
 
 and Statement =
     | TypeDef of TypeDef
-    // | TransformDef of TransformDef
-    | MatchCase of MatchCase
+    | TransformDef of TransformDef
     | ExprStatement of ExprStatement
 
 and TypeDef = TypeName * Attribute list
@@ -76,18 +75,18 @@ and NodeExpr =
 
 and EdgeOp =
     // Edges can be weighted or unweighted
-    | Right of SExpr option
+    | Right of SExpr Option
     | Left of SExpr Option
     | Bidir of SExpr Option
 
 and TransformDef =
-    Id * (Param list) * (ExprStatement list) * MatchStatement
+    Id * (string list) * (ExprStatement list) * MatchStatement
 
 and MatchStatement =
-    Option<GExpr> * MatchCase list
+    GExpr Option * MatchCase list
 
 and MatchCase =
-    MExpr * Option<WhereClause> * ExprStatement list * TerminatingStatement
+    MExpr * WhereClause Option * ExprStatement list * TerminatingStatement
 
 and WhereClause = Expr list
     
