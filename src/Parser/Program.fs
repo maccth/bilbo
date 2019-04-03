@@ -18,11 +18,21 @@ let main (argv : string []) =
     match argv.Length with
     | l when l <> 1 ->
         printfn "Starting parsing REPL"
+        let mutable codeIn = ""
+        let mutable stillReading = false
         while true do
-            printf "\n~> "
+            match stillReading with
+            | false -> printf "\n~> "
+            | true -> printf "   "
             let line = Console.ReadLine()
-            let result = pBilboStr line
-            outputParsedResult result
+            codeIn <- codeIn + "\n" + line.Replace(";", "")
+            if line.EndsWith ";" then
+                let result = pBilboStr codeIn
+                outputParsedResult result
+                codeIn <- ""
+                stillReading <- false
+            else
+                stillReading <- true
     | _ ->
         let file =  argv.[0]
         let result = pBilboFile file System.Text.Encoding.UTF8
