@@ -6,15 +6,15 @@ open Bilbo.Parser.Parser
 open FParsec
 
 let sExprAssignAst var rhs =
-    Statement(ExprStatement(AssignmentExpr(var, SExpr(rhs))))
+    Statement(ExprStatement(AssignmentExpr(var, (rhs))))
 
 // Helper functions to make AST construction quicker
 let Int x = Literal(IntLit(x))
 let Str x = Literal(StrLit(x))
 let Flt x = Literal(FloatLit(x))
 let Bool x = Literal(BoolLit(x))
-let Var x = SExpr.SVar(x)
-let BE x op y = SBinExpr(x, op, y) |> SBinExpr |> SExpr.BinExpr 
+let Var x = Var(x)
+let BE x op y = (x, op, y) |> SBinExpr
 
 let sExprAssignTest codeStr var rhs =
     let expAst = [sExprAssignAst var rhs]

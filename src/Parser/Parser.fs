@@ -49,6 +49,8 @@ let pId : Parser<string, unit> =
     // For the special `++` variable available in match cases
     (str "++") <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
 
+// let pVar = pId |>> Var
+
 let pTypeDef =
     let csvIds1 = sepBy1 pId (str ",") 
     let csvIds = sepBy pId (str ",")
@@ -76,12 +78,12 @@ let pBoolLit : Parser<Literal, unit> =
 let pLiteral =
     choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> Literal 
 
-let sExprOpp = new OperatorPrecedenceParser<SExpr,unit,unit>()
+let sExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let sExpr = sExprOpp.ExpressionParser
 
 let pDotAccess =
     let attrs = (str ".") >>. sepBy1 pId (str ".")
-    let consDot aLst var = List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> SVar) aLst 
+    let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAccess |> ObjExpr) (var |> Var) 
     attrs |>> consDot
 
 let pObjInstan =
@@ -95,7 +97,7 @@ let pObjExpr =
     let checkPosts s p =
         match p with
         | Some p' -> p' s
-        | None -> SVar s
+        | None -> Var s
     pipe2 pId (opt postIds) checkPosts
     
 let pSimpleExpr = choice [pLiteral; pObjExpr;]
@@ -127,14 +129,14 @@ let sBinExprOps = [
     "or", 2, Associativity.Right, SBinOp.Or;
 ]
 
-let consBinExpr op l r = (l,op,r) |> SExpr.BinExpr
+let consSBinExpr op l r = (l,op,r) |> SBinExpr
 
 let addSExprBinOp info =
     let op, prec, assoc, astOp = info
-    sExprOpp.AddOperator(InfixOperator(op, ws, prec, assoc, consBinExpr astOp))
+    sExprOpp.AddOperator(InfixOperator(op, ws, prec, assoc, consSBinExpr astOp))
 
-sExprOpp.AddOperator(PrefixOperator("*", ws, 9, true, fun x -> (SPreOp.Star,x) |> SExpr.PrefixExpr))
-sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SPreOp.Not,x) |> SExpr.PrefixExpr))
+sExprOpp.AddOperator(PrefixOperator("*", ws, 9, true, fun x -> (SPreOp.Star,x) |> SPrefixExpr))
+sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr))
 
 List.map addSExprBinOp sBinExprOps |> ignore
 
@@ -160,7 +162,7 @@ let pPathExpr =
     let commaEdge = str "," >>. edge
     let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
     let path = sepBy elem (str ",") |> between (str "[") (str "]")
-    let folder (elems,prevEdge) (el : NodeExpr * EdgeOp option) =
+    let folder (elems,prevEdge) (el : Expr * EdgeOp option) =
         // n2 <--prevEdge--> n1 <--nextEdge--> 
         // prevEdge is the incoming edge operator from n1 to n1
         // nextEdge is the outgoing edge operator from n1
@@ -181,20 +183,20 @@ let pPathExpr =
     |>> Path
     |>> PathExpr
 
-let pGVar = pId |>> GVar
+let pGVar = pId |>> Var
 
 let pGraphExprs = choice[pGVar; pPathExpr]
 
-let gExprOpp = new OperatorPrecedenceParser<GExpr,unit,unit>()
+let gExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pGExpr = gExprOpp.ExpressionParser
 gExprOpp.TermParser <- pGraphExprs <|> between (str "(") (str ")") pGExpr
-gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GExpr.BinExpr))
-gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GExpr.BinExpr))
+gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GBinExpr))
+gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GBinExpr))
 
 let pExpr =
     choice [
-        attempt pSExpr |>> SExpr;
-        pGExpr |>> Expr.GExpr;
+        attempt pSExpr;
+        pGExpr;
     ]
 
 let pAssignmentExpr =
@@ -208,12 +210,12 @@ let pReturn = str "return" >>. pExpr |>> Return
 let pBecome = str "become" >>. pExpr |>> Become
 let pTerminatingStatement = (pReturn <|> pBecome) 
 
-let mExprOpp = new OperatorPrecedenceParser<MExpr,unit,unit>()
+let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pMExpr = mExprOpp.ExpressionParser
-let pMatchExprs = pGExpr |>> MExpr.MExpr
+let pMatchExprs = pGExpr
 mExprOpp.TermParser <- pMatchExprs <|> between (str "(") (str ")") pMExpr
-mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Right, fun x y -> (x,And,y) |> MExpr.BinExpr))
-mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MExpr.PrefixExpr))
+mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Right, fun x y -> (x,And,y) |> MBinExpr))
+mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MPrefixExpr))
 
 let pMatchCase =
     let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
@@ -236,10 +238,10 @@ let pTransformDef =
     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
 
 
-let aExprOpp = new OperatorPrecedenceParser<AExpr,unit,unit>()
-let pAExpr = aExprOpp.ExpressionParser
-let pAVar = pId |>> AVar
-aExprOpp.TermParser <- pAVar <|> between (str "(") (str ")") pAExpr
+// let aExprOpp = new OperatorPrecedenceParser<AExpr,unit,unit>()
+// let pAExpr = aExprOpp.ExpressionParser
+// let pAVar = pId |>> AVar
+// aExprOpp.TermParser <- pAVar <|> between (str "(") (str ")") pAExpr
 // aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GExpr.BinExpr))
 // gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GExpr.BinExpr))
 

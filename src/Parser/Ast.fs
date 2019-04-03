@@ -16,23 +16,26 @@ and ExprStatement =
     | AssignmentExpr of Id * Expr
     
 and Expr =
-    | SExpr of SExpr
-    | GExpr of GExpr
-
-and SExpr =
-    | SVar of Id
-    | BinExpr of SBinExpr
-    | PrefixExpr of SPreOp * SExpr
+    | Var   of Id
+    // Simple expressions
+    | SBinExpr of SBinExpr
+    | SPrefixExpr of SPreOp * Expr
     | ObjExpr of ObjExpr
     | Literal of Literal
+    // Graph expressions
+    | PathExpr of PathExpr
+    | GBinExpr of Expr * GBinOp * Expr
+    // Match expressions
+    | MPrefixExpr of MPreOp * Expr
+    | MBinExpr of Expr * MBinOp * Expr
 
-and SBinExpr = SExpr * SBinOp * SExpr 
+and SBinExpr = Expr * SBinOp * Expr 
  
-and NodeCons = SExpr * SExpr
+and NodeCons = Expr * Expr
 
 and ObjExpr =
-    | DotAccess of SExpr * Id
-    | ObjInstan of TypeName * SExpr list
+    | DotAccess of Expr * Id
+    | ObjInstan of TypeName * Expr list
 
 and SBinOp =
     | Pow | Times | Divide | Plus | Minus 
@@ -51,11 +54,6 @@ and Literal =
     | IntLit of int
     | BoolLit of bool
       
-and GExpr =
-    | GVar of Id
-    | PathExpr of PathExpr
-    | BinExpr of GExpr * GBinOp * GExpr
-
 and GBinOp =
     | Plus
     | Minus
@@ -64,32 +62,25 @@ and PathExpr =
     | Path of PathElem list
 
 and PathElem =
-    | Node of NodeExpr
-    | Edge of NodeExpr * EdgeOp * NodeExpr
+    | Node of Expr
+    | Edge of Expr * EdgeOp * Expr
  
-and NodeExpr = SExpr
-
 and EdgeOp =
     // Edges can be weighted or unweighted
-    | Right of SExpr Option
-    | Left of SExpr Option
-    | Bidir of SExpr Option
+    | Right of Expr Option
+    | Left of Expr Option
+    | Bidir of Expr Option
 
 and TransformDef =
     Id * (string list) * (ExprStatement list) * MatchStatement
 
 and MatchStatement =
-    GExpr Option * MatchCase list
+    Expr Option * MatchCase list
 
 and MatchCase =
-    MExpr * WhereClause Option * ExprStatement list * TerminatingStatement 
+    Expr * WhereClause Option * ExprStatement list * TerminatingStatement 
 
 and WhereClause = Expr list
-    
-and MExpr =
-    | MExpr of GExpr
-    | PrefixExpr of MPreOp * MExpr
-    | BinExpr of MExpr * MBinOp * MExpr
 
 and MBinOp =
     | And // Infix
@@ -107,23 +98,22 @@ and Param = string
 and TypeName = string
 and Attribute = string
 
-type AExpr =
-    | AVar of Id
-    | BinExpr of AExpr * ABinOp * AExpr
-    | PrefixExpr of APreOp * AExpr
-    | PostficExpr of AExpr * APostOp
+// type AExpr =
+//     | BinExpr of AExpr * ABinOp * AExpr
+//     | PrefixExpr of APreOp * AExpr
+//     | PostficExpr of AExpr * APostOp
 
-and ABinOp =
-    | Pipe
-    | ChoicePipe
+// and ABinOp =
+//     | Pipe
+//     | ChoicePipe
 
-and APreOp =
-    | Dollar
+// and APreOp =
+//     | Dollar
  
-and APostOp =
-    // `**`
-    | DblTimes
-    // As-long-as-possible application `!`
-    | ALAPApp
+// and APostOp =
+//     // `**
+//     | DblTimes
+//     // As-long-as-possible application `!`
+//     | ALAPApp
 
 
