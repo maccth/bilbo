@@ -22,7 +22,7 @@ and Expr =
 and SExpr =
     | SVar of Id
     | BinExpr of SBinExpr
-    | UnaryExpr of SUnaryOp * SExpr
+    | PrefixExpr of SPreOp * SExpr
     | ObjExpr of ObjExpr
     | Literal of Literal
 
@@ -39,9 +39,9 @@ and SBinOp =
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | And | Or
-    | DblColon
+    | NodeCons
  
-and SUnaryOp =
+and SPreOp =
     | Not
     | Star
 
@@ -88,13 +88,13 @@ and WhereClause = Expr list
     
 and MExpr =
     | MExpr of GExpr
-    | UnaryExpr of MUnaryOp * MExpr
+    | PrefixExpr of MPreOp * MExpr
     | BinExpr of MExpr * MBinOp * MExpr
 
 and MBinOp =
     | And // Infix
 
-and MUnaryOp =
+and MPreOp =
     | Not // Prefix
 
 and TerminatingStatement =
@@ -106,3 +106,24 @@ and Id = string
 and Param = string
 and TypeName = string
 and Attribute = string
+
+type AExpr =
+    | AVar of Id
+    | BinExpr of AExpr * ABinOp * AExpr
+    | PrefixExpr of APreOp * AExpr
+    | PostficExpr of AExpr * APostOp
+
+and ABinOp =
+    | Pipe
+    | ChoicePipe
+
+and APreOp =
+    | Dollar
+ 
+and APostOp =
+    // `**`
+    | DblTimes
+    // As-long-as-possible application `!`
+    | ALAPApp
+
+

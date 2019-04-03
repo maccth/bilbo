@@ -105,7 +105,7 @@ sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") sExpr
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
 let sBinExprOps = [
-    "::", 9, Associativity.Right, SBinOp.DblColon;
+    "::", 9, Associativity.Right, SBinOp.NodeCons;
 
     "^", 8, Associativity.Right, SBinOp.Pow;
 
@@ -133,8 +133,8 @@ let addSExprBinOp info =
     let op, prec, assoc, astOp = info
     sExprOpp.AddOperator(InfixOperator(op, ws, prec, assoc, consBinExpr astOp))
 
-sExprOpp.AddOperator(PrefixOperator("*", ws, 9, true, fun x -> (SUnaryOp.Star,x) |> SExpr.UnaryExpr))
-sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SUnaryOp.Not,x) |> SExpr.UnaryExpr))
+sExprOpp.AddOperator(PrefixOperator("*", ws, 9, true, fun x -> (SPreOp.Star,x) |> SExpr.PrefixExpr))
+sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SPreOp.Not,x) |> SExpr.PrefixExpr))
 
 List.map addSExprBinOp sBinExprOps |> ignore
 
@@ -213,7 +213,7 @@ let pMExpr = mExprOpp.ExpressionParser
 let pMatchExprs = pGExpr |>> MExpr.MExpr
 mExprOpp.TermParser <- pMatchExprs <|> between (str "(") (str ")") pMExpr
 mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Right, fun x y -> (x,And,y) |> MExpr.BinExpr))
-mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> UnaryExpr))
+mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MExpr.PrefixExpr))
 
 let pMatchCase =
     let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
@@ -234,6 +234,16 @@ let pTransformDef =
     let cons (def, tName, paramLst, eq, exprs, matches) =
         (tName, paramLst, exprs, matches) |> TransformDef
     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
+
+
+let aExprOpp = new OperatorPrecedenceParser<AExpr,unit,unit>()
+let pAExpr = aExprOpp.ExpressionParser
+let pAVar = pId |>> AVar
+aExprOpp.TermParser <- pAVar <|> between (str "(") (str ")") pAExpr
+// aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GExpr.BinExpr))
+// gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GExpr.BinExpr))
+
+
 
 // Top level parsers
 let pStatement =
