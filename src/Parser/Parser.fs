@@ -49,7 +49,7 @@ let pId : Parser<string, unit> =
     // For the special `++` variable available in match cases
     (str "++") <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
 
-// let pVar = pId |>> Var
+let pVar = pId |>> Var
 
 let pTypeDef =
     let csvIds1 = sepBy1 pId (str ",") 
@@ -100,7 +100,7 @@ let pObjExpr =
         | None -> Var s
     pipe2 pId (opt postIds) checkPosts
     
-let pSimpleExpr = choice [pLiteral; pObjExpr;]
+let pSimpleExpr = choice [pLiteral; pObjExpr; pVar;]
 
 sExprOpp.TermParser <- pSimpleExpr <|> between (str "(") (str ")") sExpr
 
@@ -183,9 +183,7 @@ let pPathExpr =
     |>> Path
     |>> PathExpr
 
-let pGVar = pId |>> Var
-
-let pGraphExprs = choice[pGVar; pPathExpr]
+let pGraphExprs = choice[pVar; pPathExpr]
 
 let gExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pGExpr = gExprOpp.ExpressionParser
@@ -193,10 +191,19 @@ gExprOpp.TermParser <- pGraphExprs <|> between (str "(") (str ")") pGExpr
 gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GBinExpr))
 gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GBinExpr))
 
+let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+let pAExpr = aExprOpp.ExpressionParser
+aExprOpp.TermParser <- choice [attempt pSExpr; attempt pGExpr] <|> between (str "(") (str ")") pAExpr
+aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Left, fun x y -> (x,ABinOp.Pipe,y) |> ABinExpr))
+aExprOpp.AddOperator(InfixOperator("<|>", ws, 2, Associativity.Right, fun x y -> (x,ABinOp.OrPipe,y) |> ABinExpr))
+aExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (APreOp.Dollar,x) |> APrefixExpr))
+aExprOpp.AddOperator(PostfixOperator("!", ws, 9, true, fun x -> (x, APostOp.ALAPApp) |> APostfixExpr))
+
 let pExpr =
     choice [
+        attempt pAExpr;
         attempt pSExpr;
-        pGExpr;
+        attempt pGExpr;
     ]
 
 let pAssignmentExpr =
@@ -236,15 +243,6 @@ let pTransformDef =
     let cons (def, tName, paramLst, eq, exprs, matches) =
         (tName, paramLst, exprs, matches) |> TransformDef
     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
-
-
-// let aExprOpp = new OperatorPrecedenceParser<AExpr,unit,unit>()
-// let pAExpr = aExprOpp.ExpressionParser
-// let pAVar = pId |>> AVar
-// aExprOpp.TermParser <- pAVar <|> between (str "(") (str ")") pAExpr
-// aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GExpr.BinExpr))
-// gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GExpr.BinExpr))
-
 
 
 // Top level parsers

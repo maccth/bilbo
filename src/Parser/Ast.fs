@@ -16,7 +16,7 @@ and ExprStatement =
     | AssignmentExpr of Id * Expr
     
 and Expr =
-    | Var   of Id
+    | Var of Id
     // Simple expressions
     | SBinExpr of SBinExpr
     | SPrefixExpr of SPreOp * Expr
@@ -28,6 +28,10 @@ and Expr =
     // Match expressions
     | MPrefixExpr of MPreOp * Expr
     | MBinExpr of Expr * MBinOp * Expr
+    // Application expressions
+    | ABinExpr of Expr * ABinOp * Expr
+    | APrefixExpr of APreOp * Expr
+    | APostfixExpr of Expr * APostOp
 
 and SBinExpr = Expr * SBinOp * Expr 
  
@@ -92,28 +96,23 @@ and TerminatingStatement =
     | Return of Expr
     | Become of Expr
 
+and ABinOp =
+    | Pipe
+    | OrPipe
+
+and APreOp =
+    | Dollar
+ 
+and APostOp =
+    // `**
+    // | DblTimes
+    // As-long-as-possible application `!`
+    | ALAPApp
+
 // Helpful type definitions to increase AST readability
 and Id = string
 and Param = string
 and TypeName = string
 and Attribute = string
-
-// type AExpr =
-//     | BinExpr of AExpr * ABinOp * AExpr
-//     | PrefixExpr of APreOp * AExpr
-//     | PostficExpr of AExpr * APostOp
-
-// and ABinOp =
-//     | Pipe
-//     | ChoicePipe
-
-// and APreOp =
-//     | Dollar
- 
-// and APostOp =
-//     // `**
-//     | DblTimes
-//     // As-long-as-possible application `!`
-//     | ALAPApp
 
 
