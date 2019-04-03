@@ -25,19 +25,16 @@ let chance pLst =
         |> List.rev
     |> choice
     
-    
-
 // Parser
 let keywords =
     [
         "type";
         "def";
-        "return";
-        "become";
-        "and";
-        "not";
+        "return"; "become";
+        "is"; "and"; "not";
         "match";
         "where";
+        "True"; "False";
     ] |> Set.ofList
 
 let ws = spaces
@@ -181,7 +178,7 @@ let pNodeCons =
 
 let pNodeExpr =
     // TODO: Add transform application expressions
-    choice [attempt pNodeCons; pVar]
+    chance [attempt pNodeCons; pVar]
 
 let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
@@ -228,10 +225,9 @@ gExprOpp.AddOperator(InfixOperator("-", ws, 1, Associativity.Right, fun x y -> (
 
 let exprs = [(*attempt pAExpr;*) pSExpr; pGExpr]
 
-do pExprRef := choice (pNodeCons :: exprs)
+do pExprRef := chance (pNodeCons :: exprs)
 
-do pExprNoNCRef := choice exprs
-
+do pExprNoNCRef := chance exprs
 
 let pAssignmentExpr =
     let ctor var _ expr  =  (var, expr) |> AssignmentExpr
@@ -270,7 +266,6 @@ let pTransformDef =
     let cons (def, tName, paramLst, eq, exprs, matches) =
         (tName, paramLst, exprs, matches) |> TransformDef
     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
-
 
 // Top level parsers
 let pStatement =
