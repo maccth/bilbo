@@ -35,9 +35,9 @@ let basicLiteralTests = [
 ]
 
 let nodeConsTests = [
-    "String identifier, int load", "a = \"NodeId\"::-10", "a", BE (Str "NodeId") DblColon (Int -10);
-    "Int identifier, bool load", "a = 0::True", "a", BE (Int 0) DblColon (Bool true);
-    "Var identifier, var load", "a = b::c", "a", BE (Var "b") DblColon (Var "c");
+    "String identifier, int load", "a = \"NodeId\"::-10", "a", BE (Str "NodeId") NodeCons (Int -10);
+    "Int identifier, bool load", "a = 0::True", "a", BE (Int 0) NodeCons (Bool true);
+    "Var identifier, var load", "a = b::c", "a", BE (Var "b") NodeCons (Var "c");
 ]
 
 let numericBinExprTests = [
