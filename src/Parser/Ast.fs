@@ -17,26 +17,34 @@ and ExprStatement =
     
 and Expr =
     | Var of Id
-    // Simple expressions
+    | SExpr of SExpr
+    | GExpr of GExpr
+    | MExpr of MExpr
+    | NodeCons of NodeCons
+
+and SExpr =
     | SBinExpr of SBinExpr
     | SPrefixExpr of SPreOp * Expr
     | ObjExpr of ObjExpr
     | Literal of Literal
-    // Graph expressions
+
+and GExpr =
     | PathExpr of PathExpr
     | GBinExpr of Expr * GBinOp * Expr
-    // Match expressions
+
+and MExpr =
     | MPrefixExpr of MPreOp * Expr
     | MBinExpr of Expr * MBinOp * Expr
-    // Application expressions
+
+and NodeCons = Expr * Expr
+
+and AExpr =
     | ABinExpr of Expr * ABinOp * Expr
     | APrefixExpr of APreOp * Expr
     | APostfixExpr of Expr * APostOp
 
 and SBinExpr = Expr * SBinOp * Expr 
  
-and NodeCons = Expr * Expr
-
 and ObjExpr =
     | DotAccess of Expr * Id
     | ObjInstan of TypeName * Expr list
@@ -45,9 +53,9 @@ and SBinOp =
     | Pow | Times | Divide | Plus | Minus 
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
+    | Is
     | And | Or
-    | NodeCons
- 
+
 and SPreOp =
     | Not
     | Star
@@ -87,10 +95,10 @@ and MatchCase =
 and WhereClause = Expr list
 
 and MBinOp =
-    | And // Infix
+    | And
 
 and MPreOp =
-    | Not // Prefix
+    | Not
 
 and TerminatingStatement =
     | Return of Expr
@@ -104,15 +112,13 @@ and APreOp =
     | Dollar
  
 and APostOp =
-    // `**
-    // | DblTimes
     // As-long-as-possible application `!`
     | ALAPApp
+    // TODO: add *! operator
+    // | AppUpto
 
 // Helpful type definitions to increase AST readability
 and Id = string
 and Param = string
 and TypeName = string
 and Attribute = string
-
-
