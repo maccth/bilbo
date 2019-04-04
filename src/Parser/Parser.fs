@@ -116,38 +116,39 @@ sExprOpp.TermParser <- sExprTerms <|> between (str "(") (str ")") sExpr
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
 let sBinExprOps1 =
+    let al = Associativity.Left
     let ar = Associativity.Right
     [
         "^", 8, ar, SBinOp.Pow;
 
         // Times is defined below
-        "/", 7, ar, SBinOp.Divide;
+        "/", 7, al, SBinOp.Divide;
 
-        "+", 6, ar, SBinOp.Plus;
+        "+", 6, al, SBinOp.Plus;
         // Minus is defined below
 
-        "<", 5, ar, SBinOp.LessThan;
-        "<=", 5, ar, SBinOp.LessThanEq;
+        "<", 5, al, SBinOp.LessThan;
+        "<=", 5, al, SBinOp.LessThanEq;
         // Greater than is defined below
-        ">=", 5, ar, SBinOp.GreaterThanEq;
-        "==", 5, ar, SBinOp.Equal;
-        "is", 5, ar, SBinOp.Is;
-        "!=", 5, ar, SBinOp.NotEqual;
+        ">=", 5, al, SBinOp.GreaterThanEq;
+        "==", 5, al, SBinOp.Equal;
+        "is", 5, al, SBinOp.Is;
+        "!=", 5, al, SBinOp.NotEqual;
 
         // "not" has precedence 4, but is prefix (unary)
-        "and", 3, ar, SBinOp.And;
-        "or", 2, ar, SBinOp.Or;
+        "and", 3, al, SBinOp.And;
+        "or", 2, al, SBinOp.Or;
     ] |> List.map (fun (op, prec, assoc, astOp) -> (op, prec, None, assoc, astOp))
 
 let sBinExprOps2 =
-    let ar = Associativity.Right
+    let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 7, (str "*") <|> (str "!") , ar, SBinOp.Times;
+        "*", 7, (str "*") <|> (str "!") , al, SBinOp.Times;
         // Stops conflicts with `->`
-        "-", 6, str ">", ar, SBinOp.Minus;
+        "-", 6, str ">", al, SBinOp.Minus;
         // Stops conflicts with `x>,y` in path expressions
-        ">", 5, str ",", ar, SBinOp.GreaterThan;
+        ">", 5, str ",", al, SBinOp.GreaterThan;
 
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
 
@@ -230,8 +231,8 @@ let gExprTerms = chance[pPathExpr; pVar]
 let gExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pGExpr = gExprOpp.ExpressionParser
 gExprOpp.TermParser <- gExprTerms <|> between (str "(") (str ")") pGExpr
-gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Right, fun x y -> (x,Plus,y) |> GBinExpr |> GExpr))
-gExprOpp.AddOperator(InfixOperator("-", notFollowedBy (str ">") >>. ws, 1, Associativity.Right, fun x y -> (x,Minus,y) |> GBinExpr |> GExpr))
+gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Left, fun x y -> (x,Plus,y) |> GBinExpr |> GExpr))
+gExprOpp.AddOperator(InfixOperator("-", notFollowedBy (str ">") >>. ws, 1, Associativity.Left, fun x y -> (x,Minus,y) |> GBinExpr |> GExpr))
 
 // let pTTerm = pId |>> TExpr.TTerm |>> TExpr
 let tExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
@@ -287,7 +288,7 @@ tExprOpp.AddOperator(InfixOperator("*!*", ws, 7, Associativity.Left, fun x y -> 
 //     | (AExpr (ATerm l')), (AExpr (ATerm r')) -> (l', op, r') |> ABinExpr |> AExpr
 //     | _ -> failwith "Will not happen. All AExpr terms are ATerms."
 // aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Left, consABinExpr Pipe))
-// aExprOpp.AddOperator(InfixOperator("<|>", ws, 2, Associativity.Right, consABinExpr ABinOp.OrPipe))
+// aExprOpp.AddOperator(InfixOperator("<|>", ws, 2, Associativity.Left, consABinExpr ABinOp.OrPipe))
 // aExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (APreOp.Dollar,x) |> APrefixExpr))
 // aExprOpp.AddOperator(PostfixOperator("!", ws, 9, true, fun x -> (x, APostOp.ALAPApp) |> APostfixExpr))
 
@@ -312,7 +313,7 @@ let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pMExpr = mExprOpp.ExpressionParser
 let mExprTerms = pGExpr
 mExprOpp.TermParser <- mExprTerms <|> between (str "(") (str ")") pMExpr
-mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Right, fun x y -> (x,And,y) |> MBinExpr |> MExpr))
+mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Left, fun x y -> (x,And,y) |> MBinExpr |> MExpr))
 mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MPrefixExpr |> MExpr))
 
 let pMatchCase =
