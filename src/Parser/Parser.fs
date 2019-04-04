@@ -108,7 +108,6 @@ let pObjExpr =
         | None -> Var s
     pipe2 pId (opt postIds) checkPosts
     
-// TODO: set to choice
 let sExprTerms = chance [pVar; pLiteral; pObjExpr;]
 
 sExprOpp.TermParser <- sExprTerms <|> between (str "(") (str ")") sExpr
@@ -248,52 +247,16 @@ tExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (TPreOp.Dollar,x)
 tExprOpp.AddOperator(InfixOperator("**", ws, 7, Associativity.Left, fun x y -> (x, MulApp, y) |> TBinExpr |> TExpr)) 
 tExprOpp.AddOperator(InfixOperator("*!*", ws, 7, Associativity.Left, fun x y -> (x, UpToApp, y) |> TBinExpr |> TExpr)) 
 
-// let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-// let pAExpr = aExprOpp.ExpressionParser
+let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+let pAExpr = aExprOpp.ExpressionParser
+// TODO: extend for param lists
+let aExprTerms = chance [pTExpr; pGExpr]
+aExprOpp.TermParser <- (attempt aExprTerms) <|> between (str "(") (str ")") pAExpr
+aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Left, fun x y -> (x,Pipe,y) |> ABinExpr |> AExpr))
+aExprOpp.AddOperator(InfixOperator("<|>", ws, 2, Associativity.Left, fun x y -> (x,OrPipe,y) |> ABinExpr |> AExpr))
 
-// let aPreOps =
-//     [
-//         str "$", Dollar
-//     ] |> List.map (fun (p,op) -> p |>> fun _ -> op)
-
-// let pAPreOp = choice aPreOps |> many
-
-// // Application expression postfix operators that don't have an expression following them
-// let aPostOps1 =
-//     [
-//         str "!", ALAPApp;
-//         str "?", MaybeApp
-//     ] |> List.map (fun (p,op) -> p |>> fun _ -> op)
-
-// // Application expression postfix operators that do have an expression following them
-// let aPostOps2 =
-//     [
-//         str "**", MulApp;
-//         str "*!*", UpToApp;
-//     ] |> List.map (fun (p,op) -> pipe2 p pExpr (fun _p e -> op e))
-
-// let aPostOps = List.append aPostOps1 aPostOps2
-
-// let pAPostOp =
-//     choice aPostOps |> many
-    
-// let aExprTerms =
-//     tuple3 (opt pAPreOp) (chance [pSExpr; pGExpr]) (opt pAPostOp)
-//     |>> ATerm
-//     |>> AExpr
-
-// aExprOpp.TermParser <- (attempt aExprTerms) <|> between (str "(") (str ")") pAExpr
-// let consABinExpr op lhs rhs =
-//     match (lhs, rhs) with
-//     | (AExpr (ATerm l')), (AExpr (ATerm r')) -> (l', op, r') |> ABinExpr |> AExpr
-//     | _ -> failwith "Will not happen. All AExpr terms are ATerms."
-// aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Left, consABinExpr Pipe))
-// aExprOpp.AddOperator(InfixOperator("<|>", ws, 2, Associativity.Left, consABinExpr ABinOp.OrPipe))
-// aExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (APreOp.Dollar,x) |> APrefixExpr))
-// aExprOpp.AddOperator(PostfixOperator("!", ws, 9, true, fun x -> (x, APostOp.ALAPApp) |> APostfixExpr))
-
-
-let exprs = [pTExpr; pSExpr; pGExpr (*pAExpr;*)]
+// If parser X is defined in terms of parser Y then X must precede Y in this list
+let exprs = [pAExpr; pTExpr; pSExpr; pGExpr]
 
 do pExprNoNCRef := chance exprs
 do pExprRef := chance (pNodeCons :: exprs)

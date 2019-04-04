@@ -20,7 +20,7 @@ and Expr =
     | SExpr of SExpr
     | GExpr of GExpr
     | MExpr of MExpr
-    // | AExpr of AExpr
+    | AExpr of AExpr
     | TExpr of TExpr
     | NodeCons of NodeCons
 
@@ -29,6 +29,7 @@ and SExpr =
     | SPrefixExpr of SPreOp * Expr
     | ObjExpr of ObjExpr
     | Literal of Literal
+    // TODO: add param lists for (a,b,c) |> t
 
 and GExpr =
     | PathExpr of PathExpr
@@ -125,37 +126,13 @@ and TPostOp =
 and TPreOp =
     | Dollar
 
-// and APreOp =
-//     | Dollar
- 
-// and APostOp =
-//     // As-long-as-possible application `!`
-//     | ALAPApp
-//     // Maybe application `?`
-//     | MaybeApp
+and AExpr =
+    | ATerm of Expr
+    | ABinExpr of Expr * ABinOp * Expr
 
-// and AExpr =
-//     | ATerm of ATerm
-//     | ABinExpr of ATerm * ABinOp * ATerm
-
-// and ATerm = (APreOp list) Option * Expr * (APostOp list) Option
-
-// and ABinOp =
-//     | Pipe
-//     | OrPipe
-
-// and APreOp =
-//     | Dollar
- 
-// and APostOp =
-//     // As-long-as-possible application `!`
-//     | ALAPApp
-//     // Maybe application `?`
-//     | MaybeApp
-//     // Multiple application  `** 5`
-//     | MulApp of Expr
-//     // Up-to application `*!* 7`
-//     | UpToApp of Expr
+and ABinOp =
+    | Pipe
+    | OrPipe
 
 // Helpful type definitions to increase AST readability
 and Id = string
