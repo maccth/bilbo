@@ -20,6 +20,8 @@ and Expr =
     | SExpr of SExpr
     | GExpr of GExpr
     | MExpr of MExpr
+    // | AExpr of AExpr
+    | TExpr of TExpr
     | NodeCons of NodeCons
 
 and SExpr =
@@ -38,11 +40,6 @@ and MExpr =
 
 and NodeCons = Expr * Expr
 
-and AExpr =
-    | ABinExpr of Expr * ABinOp * Expr
-    | APrefixExpr of APreOp * Expr
-    | APostfixExpr of Expr * APostOp
-
 and SBinExpr = Expr * SBinOp * Expr 
  
 and ObjExpr =
@@ -58,7 +55,7 @@ and SBinOp =
 
 and SPreOp =
     | Not
-    | Star
+    | Amp
 
 and Literal =
     | StrLit of string
@@ -104,18 +101,58 @@ and TerminatingStatement =
     | Return of Expr
     | Become of Expr
 
-and ABinOp =
-    | Pipe
-    | OrPipe
+and TExpr =
+    | TTerm of Expr
+    | TBinExpr of Expr * TBinOp * Expr
+    | TPrefixExpr of TPreOp * Expr
+    | TPostfixExpr of Expr * TPostOp
 
-and APreOp =
-    | Dollar
- 
-and APostOp =
+and TBinOp =
+    // Multiple application  `**`
+    | MulApp 
+    // Up-to application `*!*`
+    | UpToApp
+
+and TPostOp =
     // As-long-as-possible application `!`
     | ALAPApp
-    // TODO: add *! operator
-    // | AppUpto
+    // Maybe application `?`
+    | MaybeApp
+
+and TPreOp =
+    | Dollar
+
+// and APreOp =
+//     | Dollar
+ 
+// and APostOp =
+//     // As-long-as-possible application `!`
+//     | ALAPApp
+//     // Maybe application `?`
+//     | MaybeApp
+
+// and AExpr =
+//     | ATerm of ATerm
+//     | ABinExpr of ATerm * ABinOp * ATerm
+
+// and ATerm = (APreOp list) Option * Expr * (APostOp list) Option
+
+// and ABinOp =
+//     | Pipe
+//     | OrPipe
+
+// and APreOp =
+//     | Dollar
+ 
+// and APostOp =
+//     // As-long-as-possible application `!`
+//     | ALAPApp
+//     // Maybe application `?`
+//     | MaybeApp
+//     // Multiple application  `** 5`
+//     | MulApp of Expr
+//     // Up-to application `*!* 7`
+//     | UpToApp of Expr
 
 // Helpful type definitions to increase AST readability
 and Id = string
