@@ -102,10 +102,13 @@ and TerminatingStatement =
     | Become of Expr
 
 and TExpr =
-    | TTerm of Expr
+    // | TTerm of TTerm
     | TBinExpr of Expr * TBinOp * Expr
     | TPrefixExpr of TPreOp * Expr
     | TPostfixExpr of Expr * TPostOp
+
+// Extend this for PExprs {a,b,c...}
+and TTerm = Id
 
 and TBinOp =
     // Multiple application  `**`
