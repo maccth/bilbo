@@ -299,9 +299,9 @@ let pAssignmentExpr =
 let pExprStatement =
     choice [pAssignmentExpr;]
 
-// let pReturn = str "return" >>. pExpr |>> Return
-// let pBecome = str "become" >>. pExpr |>> Become
-// let pTerminatingStatement = (pReturn <|> pBecome) 
+let pReturn = str "return" >>. pExprOpp |>> Return
+let pBecome = str "become" >>. pExprOpp |>> Become
+let pTerminatingStatement = (pReturn <|> pBecome) 
 
 // let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 // let pMExpr = mExprOpp.ExpressionParser
@@ -310,29 +310,28 @@ let pExprStatement =
 // mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Left, fun x y -> (x,And,y) |> MBinExpr |> MExpr))
 // mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MPrefixExpr |> MExpr))
 
-// let pMatchCase =
-//     let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
-//     let body = many pExprStatement
-//     let whereClause = (str "where") >>. many pExpr
-//     pipe5 pMExpr (opt whereClause) (str "->") body pTerminatingStatement cons
+let pMatchCase =
+    let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
+    let body = many pExprStatement
+    let whereClause = (str "where") >>. many pExprOpp
+    pipe5 pExprOpp (opt whereClause) (str "->") body pTerminatingStatement cons
 
-// let pMatchStatement =
-//     let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
-//     pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
+let pMatchStatement =
+    let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
+    pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
     
-// let pTransformDef =
-//     let paramCsv = sepBy pId (str ",")
-//     let paramBrac = brackets paramCsv <|> paramCsv 
-//     let exprs = many pExprStatement
-//     let matches = pMatchStatement
-//     let cons (def, tName, paramLst, eq, exprs, matches) =
-//         (tName, paramLst, exprs, matches) |> TransformDef
-//     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
+let pTransformDef =
+    let paramCsv = sepBy pId (str ",")
+    let paramBrac = brackets paramCsv <|> paramCsv 
+    let exprs = many pExprStatement
+    let matches = pMatchStatement
+    let cons (def, tName, paramLst, eq, exprs, matches) =
+        (tName, paramLst, exprs, matches) |> TransformDef
+    pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
 
 // Top level parsers
 let pStatement =
-    // choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef] |>> Statement
-    choice [pExprStatement |>> ExprStatement; pTypeDef] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 
