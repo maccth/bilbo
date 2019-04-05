@@ -22,9 +22,10 @@ and Expr =
     | VExpr of VExpr
     | SExpr of SExpr
     | GExpr of GExpr
+    // TODO: These types will allow for better domain modelling in the ASG
     // | MExpr of MExpr
-    | AExpr of AExpr
-    | TExpr of TExpr
+    // | AExpr of AExpr
+    // | TExpr of TExpr
     | NodeCons of NodeCons
     | BinExpr of Expr * BinOp * Expr
     | PrefixExpr of PreOp  * Expr
@@ -37,80 +38,52 @@ and VExpr =
 and SExpr =
     | ObjExpr of ObjExpr
     | Literal of Literal
-    // | SBinExpr of SBinExpr
-    // | SPrefixExpr of SPreOp * Expr
     // TODO: add param lists for (a,b,c) |> t
 
 and GExpr =
     | PathExpr of PathExpr
-    // | GBinExpr of Expr * GBinOp * Expr
 
 // and MExpr =
     // | MPrefixExpr of MPreOp * Expr
     // | MBinExpr of Expr * MBinOp * Expr
 
 and NodeCons = Expr * Expr
-
-// and SBinExpr = Expr * SBinOp * Expr 
  
 and ObjExpr =
     | ObjInstan of TypeName * Expr list
 
 and BinOp =
     // Simple
-    // ======
-    // Originally simple, when life was complicated...
-    //  and I was trying to parse-time semantic analysis
     | Pow | Times | Divide | Plus | Minus 
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
-    | Is
     | And | Or
+    | Is
     // | Dot
-
     // Application
-    // ===========
-    | Pipe
-    | OrPipe
-
+    | Pipe | OrPipe
     // Transform
-    // ===========
-    // **, *!*
-    | MulApp 
-    | UpToApp
-
+    | MulApp | UpToApp
+    
     // Graph
-    // =====
     // | GAdd
     // | GSub
 
     // Match
-    // =====
     // | And
 
 and PreOp =
     // Simple
-    // ======
-    | Not
-    | Amp
-
+    | Not | Amp
     // Transform
-    // =========
     | Dollar
-
     // Match
-    // =====
     // | Not
 
 and PostOp =
     // Transform
-    // =========
     | ALAPApp
     | MaybeApp
-
-
-
-
 
 and Literal =
     | StrLit of string
@@ -145,19 +118,6 @@ and WhereClause = Expr list
 and TerminatingStatement =
     | Return of Expr
     | Become of Expr
-
-and TExpr =
-    | TTerm of TTerm
-    // | TBinExpr of Expr * TBinOp * Expr
-    // | TPrefixExpr of TPreOp * Expr
-    // | TPostfixExpr of Expr * TPostOp
-
-// Extend this for PExprs {a,b,c...}
-and TTerm = Id
-
-and AExpr =
-    | ATerm of Expr
-    // | ABinExpr of Expr * ABinOp * Expr
 
 // Helpful type definitions to increase AST readability
 and Id = string
