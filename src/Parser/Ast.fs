@@ -13,16 +13,23 @@ and Statement =
 and TypeDef = TypeName * Attribute list
     
 and ExprStatement =
-    | AssignmentExpr of Id * Expr
+    // Having an Expr on the LHS of assignement makes parsing easier.
+    //  In particular, one need not distinguish between field access
+    //  and field assignment
+    | AssignmentExpr of Expr * Expr
     
 and Expr =
-    | Var of Id
+    | VExpr of VExpr
     | SExpr of SExpr
     | GExpr of GExpr
     | MExpr of MExpr
     | AExpr of AExpr
     | TExpr of TExpr
     | NodeCons of NodeCons
+
+and VExpr =
+    | Var of Id
+    | DotAccess of Expr * Id
 
 and SExpr =
     | SBinExpr of SBinExpr
@@ -44,7 +51,6 @@ and NodeCons = Expr * Expr
 and SBinExpr = Expr * SBinOp * Expr 
  
 and ObjExpr =
-    | DotAccess of Expr * Id
     | ObjInstan of TypeName * Expr list
 
 and SBinOp =
@@ -65,8 +71,8 @@ and Literal =
     | BoolLit of bool
       
 and GBinOp =
-    | Plus
-    | Minus
+    | GAdd
+    | GSub
 
 and PathExpr =
     | Path of PathElem list
@@ -82,7 +88,7 @@ and EdgeOp =
     | Bidir of Expr Option
 
 and TransformDef =
-    Id * (string list) * (ExprStatement list) * MatchStatement
+    Id * (Param list) * (ExprStatement list) * MatchStatement
 
 and MatchStatement =
     Expr Option * MatchCase list
