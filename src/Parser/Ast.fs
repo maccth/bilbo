@@ -13,27 +13,24 @@ and Statement =
 and TypeDef = TypeName * Attribute list
     
 and ExprStatement =
-    // Having an Expr on the LHS of assignement makes parsing easier.
-    //  In particular, one need not distinguish between field access
-    //  and field assignment
     | AssignmentExpr of Expr * Expr
     
 and Expr =
     | VExpr of VExpr
     | SExpr of SExpr
     | GExpr of GExpr
+    | BinExpr of Expr * BinOp * Expr
+    | PrefixExpr of PreOp  * Expr
+    | PostfixExpr of Expr * PostOp
     // TODO: These types will allow for better domain modelling in the ASG
     // | MExpr of MExpr
     // | AExpr of AExpr
     // | TExpr of TExpr
-    | NodeCons of NodeCons
-    | BinExpr of Expr * BinOp * Expr
-    | PrefixExpr of PreOp  * Expr
-    | PostfixExpr of Expr * PostOp
+    // | NodeCons of Expr * Expr
 
 and VExpr =
     | Var of Id
-    | DotAccess of Expr * Id
+    | DotAssign of Expr * Id
 
 and SExpr =
     | ObjExpr of ObjExpr
@@ -46,25 +43,24 @@ and GExpr =
 // and MExpr =
     // | MPrefixExpr of MPreOp * Expr
     // | MBinExpr of Expr * MBinOp * Expr
-
-and NodeCons = Expr * Expr
  
 and ObjExpr =
     | ObjInstan of TypeName * Expr list
 
 and BinOp =
+    | NodeCons
+    | Dot
     // Simple
     | Pow | Times | Divide | Plus | Minus 
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | And | Or
     | Is
-    // | Dot
     // Application
     | Pipe | OrPipe
     // Transform
     | MulApp | UpToApp
-    
+
     // Graph
     // | GAdd
     // | GSub

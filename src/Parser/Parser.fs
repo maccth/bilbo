@@ -91,17 +91,13 @@ let pExpr = exprOpp.ExpressionParser
 let pExprTerm, pExprTermRef = createParserForwardedToRef()
 exprOpp.TermParser <- pExprTerm <|> brackets pExpr;
 
-let pDotAccess' =
-    let attrs = (str ".") >>. sepBy1 pId (str ".")
-    let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAccess |> VExpr) (var |> Var |> VExpr) 
-    attrs |>> consDot
-
 let pObjInstan' =
     let attrs = (sepBy pExpr (str ",")) |> brackets
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr |> SExpr
     attrs |>> consObj
 
-let postIds = choice [pDotAccess'; pObjInstan']
+// TODO: potentially add object field indexing obj["field1"]
+let postIds = pObjInstan'
 
 // Parses things that appear after IDs, object instantiation (MyT(p1,p2,p3)) and dot access (myObj.a)
 let pPostIds =
@@ -110,12 +106,8 @@ let pPostIds =
         | Some p' -> p' s
         | None -> s |> Var |> VExpr
     pipe2 pId (opt postIds) checkPosts
-    
-// let sExprTerms = chance [pPostIds; pVar; pLiteral]
 
 let pSExpr = choice [pPostIds; pLiteral;]
-
-// sExprOpp.TermParser <- sExprTerms <|> brackets sExpr
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
@@ -123,7 +115,9 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        // ".", 9, al, SBinOp.Dot
+        "::", 9, ar, NodeCons;
+        ".", 9, al, Dot
+
         "^", 8, ar, Pow;
 
         "**", 7, al, MulApp;
@@ -182,9 +176,6 @@ exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> Pref
 
 List.map addBinOp binExprOps |> ignore
 
-// let pSExpr = sExpr
-
-// TODO: Maybe pExpr is more appropriate here
 let weight = pExpr
 
 /// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
@@ -200,15 +191,7 @@ let pRightEdgeOps =
 
 let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 
-// Eliminate implicit left recursion for NodeCons expressions
-let pExprNoNC, pExprNoNCRef = createParserForwardedToRef()
-
-let pNodeCons =
-    pipe3 pExprNoNC (str "::") pExprNoNC <| fun i _  l -> (i,l) |> NodeCons
-
-let pNodeExpr =
-    // TODO: Add transform application expressions
-    chance [attempt pNodeCons; pVar]
+let pNodeExpr = pExpr
 
 let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
@@ -240,12 +223,18 @@ let pPathExpr =
 let pGExpr = pPathExpr
 
 let exprs = [pSExpr; pVar; pGExpr;]
+do pExprTermRef := chance exprs
 
-do pExprNoNCRef := chance exprs
-do pExprTermRef := chance (pNodeCons :: exprs)
+// This allows differentiation between field access (xyz = a.b) and
+//  field assignement (a.b = xyz). Furthermore, that only valid LHSs
+//  will be parsed
+let pDotAssign' =
+    let attrs = (str ".") >>. sepBy1 pId (str ".")
+    let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAssign |> VExpr) (var |> Var |> VExpr) 
+    attrs |>> consDot
 
 let pVExpr =
-    pId .>>. opt pDotAccess' |>>
+    pId .>>. opt pDotAssign' |>>
     function
     | v, Some d -> d v
     | v, None -> v |> Var |> VExpr
