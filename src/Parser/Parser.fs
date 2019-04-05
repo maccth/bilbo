@@ -92,8 +92,11 @@ let pBoolLit : Parser<Literal, unit> =
 let pLiteral =
     choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> Literal |>> SExpr 
 
-let sExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let sExpr = sExprOpp.ExpressionParser
+let exprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+let pExprOpp = exprOpp.ExpressionParser
+
+let pExpr, pExprRef = createParserForwardedToRef()
+exprOpp.TermParser <- pExpr <|> brackets pExprOpp;
 
 let pDotAccess' =
     let attrs = (str ".") >>. sepBy1 pId (str ".")
@@ -101,7 +104,7 @@ let pDotAccess' =
     attrs |>> consDot
 
 let pObjInstan' =
-    let attrs = (sepBy sExpr (str ",")) |> brackets
+    let attrs = (sepBy pExprOpp (str ",")) |> brackets
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr |> SExpr
     attrs |>> consObj
 
@@ -115,72 +118,81 @@ let pPostIds =
         | None -> s |> Var |> VExpr
     pipe2 pId (opt postIds) checkPosts
     
-let sExprTerms = chance [pPostIds; pVar; pLiteral]
+// let sExprTerms = chance [pPostIds; pVar; pLiteral]
 
-sExprOpp.TermParser <- sExprTerms <|> brackets sExpr
+let pSExpr = choice [pPostIds; pLiteral;]
+
+// sExprOpp.TermParser <- sExprTerms <|> brackets sExpr
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
-let sBinExprOps1 =
+let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
         // ".", 9, al, SBinOp.Dot
-        "^", 8, ar, SBinOp.Pow;
+        "^", 8, ar, Pow;
 
+        "**", 7, al, MulApp;
+        "*!*", 7, al, UpToApp;
         // Times is defined below
-        "/", 7, al, SBinOp.Divide;
+        "/", 7, al, Divide;
 
-        "+", 6, al, SBinOp.Plus;
+        "+", 6, al, Plus;
         // Minus is defined below
 
-        "<", 5, al, SBinOp.LessThan;
-        "<=", 5, al, SBinOp.LessThanEq;
+        "<", 5, al, LessThan;
+        "<=", 5, al, LessThanEq;
         // Greater than is defined below
-        ">=", 5, al, SBinOp.GreaterThanEq;
-        "==", 5, al, SBinOp.Equal;
-        "is", 5, al, SBinOp.Is;
-        "!=", 5, al, SBinOp.NotEqual;
+        ">=", 5, al, GreaterThanEq;
+        "==", 5, al, Equal;
+        "is", 5, al, Is;
+        "!=", 5, al, NotEqual;
 
         // "not" has precedence 4, but is prefix (unary)
-        "and", 3, al, SBinOp.And;
-        "or", 2, al, SBinOp.Or;
+        "and", 3, al, And;
+        "or", 2, al, Or;
+
+        "<|>", 3, al, OrPipe;
+        "|>", 2, al, Pipe;
     ] |> List.map (fun (op, prec, assoc, astOp) -> (op, prec, None, assoc, astOp))
 
-let sBinExprOps2 =
+let binExprOps2 =
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 7, (str "*") <|> (str "!") , al, SBinOp.Times;
+        "*", 7, (str "*") <|> (str "!") , al, Times;
         // Stops conflicts with `->`
-        "-", 6, str ">", al, SBinOp.Minus;
+        "-", 6, str ">", al, Minus;
         // Stops conflicts with `x>,y` in path expressions
-        ">", 5, str ",", al, SBinOp.GreaterThan;
-
+        ">", 5, str ",", al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
 
-let sBinExprOps = List.append sBinExprOps1 sBinExprOps2
+let binExprOps = List.append binExprOps1 binExprOps2
 
-let addSExprBinOp (op, prec, nf, assoc, astOp) =
-    let cons op l r = (l,op,r) |> SBinExpr |> SExpr
+let addBinOp (op, prec, nf, assoc, astOp) =
+    let cons op l r = (l,op,r) |> BinExpr 
     let inOp =
         match nf with
         | Some nf' ->
             InfixOperator(op, notFollowedBy (nf') >>. ws, prec, assoc, (astOp |> cons))
         | None ->
             InfixOperator(op, ws, prec, assoc, (astOp |> cons))
-    sExprOpp.AddOperator(inOp)
+    exprOpp.AddOperator(inOp)
 
-sExprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (SPreOp.Amp,x) |> SPrefixExpr |> SExpr))
-sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr |> SExpr))
+exprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
 
-List.map addSExprBinOp sBinExprOps |> ignore
+exprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, MaybeApp) |> PostfixExpr))
+exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> PrefixExpr))
 
-let pSExpr = sExpr
+List.map addBinOp binExprOps |> ignore
 
-let pExpr, pExprRef = createParserForwardedToRef()
+// let pSExpr = sExpr
 
-let weight = pExpr
+// TODO: Maybe pExpr is more appropriate here
+let weight = pExprOpp
 
 /// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
 let pLeftEdgeOps =
@@ -232,40 +244,44 @@ let pPathExpr =
     |>> PathExpr
     |>> GExpr
 
-let gExprTerms = chance[pPathExpr; pVar]
+let pGExpr = pPathExpr
 
-let gExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pGExpr = gExprOpp.ExpressionParser
-gExprOpp.TermParser <- gExprTerms <|> brackets pGExpr
-gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Left, fun x y -> (x,GAdd,y) |> GBinExpr |> GExpr))
-gExprOpp.AddOperator(InfixOperator("-", notFollowedBy (str ">") >>. ws, 1, Associativity.Left, fun x y -> (x,GSub,y) |> GBinExpr |> GExpr))
+// let gExprTerms = chance[pPathExpr; pVar]
+
+// let gExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+// let pGExpr = gExprOpp.ExpressionParser
+// gExprOpp.TermParser <- gExprTerms <|> brackets pGExpr
+// gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Left, fun x y -> (x,Plus,y) |> BinExpr))
+// gExprOpp.AddOperator(InfixOperator("-", notFollowedBy (str ">") >>. ws, 1, Associativity.Left, fun x y -> (x,Minus,y))
 
 // let pTTerm = pId |>> TExpr.TTerm |>> TExpr
-let tExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pTExpr = tExprOpp.ExpressionParser
-let tExprTerms = chance [pSExpr]
+// let tExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+// let pTExpr = tExprOpp.ExpressionParser
+// let tExprTerms = chance [pSExpr]
 // TODO: Refactor attempt out
-tExprOpp.TermParser <- (tExprTerms) <|> brackets pTExpr
-tExprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, TPostOp.ALAPApp) |> TPostfixExpr |> TExpr))
-tExprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, TPostOp.MaybeApp) |> TPostfixExpr |> TExpr))
-tExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (TPreOp.Dollar,x) |> TPrefixExpr |> TExpr))
-tExprOpp.AddOperator(InfixOperator("**", ws, 7, Associativity.Left, fun x y -> (x, MulApp, y) |> TBinExpr |> TExpr)) 
-tExprOpp.AddOperator(InfixOperator("*!*", ws, 7, Associativity.Left, fun x y -> (x, UpToApp, y) |> TBinExpr |> TExpr)) 
+// tExprOpp.TermParser <- (tExprTerms) <|> brackets pTExpr
+// tExprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, TPostOp.ALAPApp) |> TPostfixExpr |> TExpr))
+// tExprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, TPostOp.MaybeApp) |> TPostfixExpr |> TExpr))
+// tExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (TPreOp.Dollar,x) |> TPrefixExpr |> TExpr))
+// tExprOpp.AddOperator(InfixOperator("**", ws, 7, Associativity.Left, fun x y -> (x, MulApp, y) |> TBinExpr |> TExpr)) 
+// tExprOpp.AddOperator(InfixOperator("*!*", ws, 7, Associativity.Left, fun x y -> (x, UpToApp, y) |> TBinExpr |> TExpr)) 
 
-let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pAExpr = aExprOpp.ExpressionParser
+// let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+// let pAExpr = aExprOpp.ExpressionParser
 // TODO: Extend for param lists
-let aExprTerms = chance [pTExpr; pGExpr]
-aExprOpp.TermParser <- (attempt aExprTerms) <|> brackets pAExpr
-aExprOpp.AddOperator(InfixOperator("|>", ws, 2, Associativity.Left, fun x y -> (x,Pipe,y) |> ABinExpr |> AExpr))
-aExprOpp.AddOperator(InfixOperator("<|>", ws, 3, Associativity.Left, fun x y -> (x,OrPipe,y) |> ABinExpr |> AExpr))
+// let aExprTerms = chance [pTExpr; pGExpr]
+// aExprOpp.TermParser <- (attempt aExprTerms) <|> brackets pAExpr
+// aExprOpp.AddOperator(InfixOperator("|>", ws, 2, Associativity.Left, fun x y -> (x,Pipe,y) |> ABinExpr |> AExpr))
+// aExprOpp.AddOperator(InfixOperator("<|>", ws, 3, Associativity.Left, fun x y -> (x,OrPipe,y) |> ABinExpr |> AExpr))
 // TODO: Refactor. This is a code smell, adding operators for second time
 // aExprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (SPreOp.Amp,x) |> SPrefixExpr |> SExpr))
 // aExprOpp.AddOperator(PrefixOperator("not", ws, 1, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr |> SExpr))
 
 
 // If parser X is defined in terms of parser Y then X must precede Y in this list
-let exprs = [pAExpr; pTExpr; pSExpr; pGExpr]
+// let exprs = [pAExpr; pTExpr; pSExpr; pGExpr]
+
+let exprs = [pSExpr; pVar; pGExpr;]
 
 do pExprNoNCRef := chance exprs
 do pExprRef := chance (pNodeCons :: exprs)
@@ -278,44 +294,45 @@ let pVExpr =
 
 let pAssignmentExpr =
     let ctor var _ expr  =  (var, expr) |> AssignmentExpr
-    pipe3 pVExpr (str "=") pExpr ctor
+    pipe3 pVExpr (str "=") pExprOpp ctor
 
 let pExprStatement =
     choice [pAssignmentExpr;]
 
-let pReturn = str "return" >>. pExpr |>> Return
-let pBecome = str "become" >>. pExpr |>> Become
-let pTerminatingStatement = (pReturn <|> pBecome) 
+// let pReturn = str "return" >>. pExpr |>> Return
+// let pBecome = str "become" >>. pExpr |>> Become
+// let pTerminatingStatement = (pReturn <|> pBecome) 
 
-let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pMExpr = mExprOpp.ExpressionParser
-let mExprTerms = pGExpr
-mExprOpp.TermParser <- mExprTerms <|> brackets pMExpr
-mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Left, fun x y -> (x,And,y) |> MBinExpr |> MExpr))
-mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MPrefixExpr |> MExpr))
+// let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+// let pMExpr = mExprOpp.ExpressionParser
+// let mExprTerms = pGExpr
+// mExprOpp.TermParser <- mExprTerms <|> brackets pMExpr
+// mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Left, fun x y -> (x,And,y) |> MBinExpr |> MExpr))
+// mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MPrefixExpr |> MExpr))
 
-let pMatchCase =
-    let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
-    let body = many pExprStatement
-    let whereClause = (str "where") >>. many pExpr
-    pipe5 pMExpr (opt whereClause) (str "->") body pTerminatingStatement cons
+// let pMatchCase =
+//     let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
+//     let body = many pExprStatement
+//     let whereClause = (str "where") >>. many pExpr
+//     pipe5 pMExpr (opt whereClause) (str "->") body pTerminatingStatement cons
 
-let pMatchStatement =
-    let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
-    pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
+// let pMatchStatement =
+//     let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
+//     pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
     
-let pTransformDef =
-    let paramCsv = sepBy pId (str ",")
-    let paramBrac = brackets paramCsv <|> paramCsv 
-    let exprs = many pExprStatement
-    let matches = pMatchStatement
-    let cons (def, tName, paramLst, eq, exprs, matches) =
-        (tName, paramLst, exprs, matches) |> TransformDef
-    pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
+// let pTransformDef =
+//     let paramCsv = sepBy pId (str ",")
+//     let paramBrac = brackets paramCsv <|> paramCsv 
+//     let exprs = many pExprStatement
+//     let matches = pMatchStatement
+//     let cons (def, tName, paramLst, eq, exprs, matches) =
+//         (tName, paramLst, exprs, matches) |> TransformDef
+//     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
 
 // Top level parsers
 let pStatement =
-    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef] |>> Statement
+    // choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 

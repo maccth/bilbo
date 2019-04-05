@@ -22,38 +22,45 @@ and Expr =
     | VExpr of VExpr
     | SExpr of SExpr
     | GExpr of GExpr
-    | MExpr of MExpr
+    // | MExpr of MExpr
     | AExpr of AExpr
     | TExpr of TExpr
     | NodeCons of NodeCons
+    | BinExpr of Expr * BinOp * Expr
+    | PrefixExpr of PreOp  * Expr
+    | PostfixExpr of Expr * PostOp
 
 and VExpr =
     | Var of Id
     | DotAccess of Expr * Id
 
 and SExpr =
-    | SBinExpr of SBinExpr
-    | SPrefixExpr of SPreOp * Expr
     | ObjExpr of ObjExpr
     | Literal of Literal
+    // | SBinExpr of SBinExpr
+    // | SPrefixExpr of SPreOp * Expr
     // TODO: add param lists for (a,b,c) |> t
 
 and GExpr =
     | PathExpr of PathExpr
-    | GBinExpr of Expr * GBinOp * Expr
+    // | GBinExpr of Expr * GBinOp * Expr
 
-and MExpr =
-    | MPrefixExpr of MPreOp * Expr
-    | MBinExpr of Expr * MBinOp * Expr
+// and MExpr =
+    // | MPrefixExpr of MPreOp * Expr
+    // | MBinExpr of Expr * MBinOp * Expr
 
 and NodeCons = Expr * Expr
 
-and SBinExpr = Expr * SBinOp * Expr 
+// and SBinExpr = Expr * SBinOp * Expr 
  
 and ObjExpr =
     | ObjInstan of TypeName * Expr list
 
-and SBinOp =
+and BinOp =
+    // Simple
+    // ======
+    // Originally simple, when life was complicated...
+    //  and I was trying to parse-time semantic analysis
     | Pow | Times | Divide | Plus | Minus 
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
@@ -61,20 +68,56 @@ and SBinOp =
     | And | Or
     // | Dot
 
-and SPreOp =
+    // Application
+    // ===========
+    | Pipe
+    | OrPipe
+
+    // Transform
+    // ===========
+    // **, *!*
+    | MulApp 
+    | UpToApp
+
+    // Graph
+    // =====
+    // | GAdd
+    // | GSub
+
+    // Match
+    // =====
+    // | And
+
+and PreOp =
+    // Simple
+    // ======
     | Not
     | Amp
+
+    // Transform
+    // =========
+    | Dollar
+
+    // Match
+    // =====
+    // | Not
+
+and PostOp =
+    // Transform
+    // =========
+    | ALAPApp
+    | MaybeApp
+
+
+
+
 
 and Literal =
     | StrLit of string
     | FloatLit of float
     | IntLit of int
     | BoolLit of bool
-      
-and GBinOp =
-    | GAdd
-    | GSub
-
+     
 and PathExpr =
     | Path of PathElem list
 
@@ -99,47 +142,22 @@ and MatchCase =
 
 and WhereClause = Expr list
 
-and MBinOp =
-    | And
-
-and MPreOp =
-    | Not
-
 and TerminatingStatement =
     | Return of Expr
     | Become of Expr
 
 and TExpr =
-    // | TTerm of TTerm
-    | TBinExpr of Expr * TBinOp * Expr
-    | TPrefixExpr of TPreOp * Expr
-    | TPostfixExpr of Expr * TPostOp
+    | TTerm of TTerm
+    // | TBinExpr of Expr * TBinOp * Expr
+    // | TPrefixExpr of TPreOp * Expr
+    // | TPostfixExpr of Expr * TPostOp
 
 // Extend this for PExprs {a,b,c...}
 and TTerm = Id
 
-and TBinOp =
-    // Multiple application  `**`
-    | MulApp 
-    // Up-to application `*!*`
-    | UpToApp
-
-and TPostOp =
-    // As-long-as-possible application `!`
-    | ALAPApp
-    // Maybe application `?`
-    | MaybeApp
-
-and TPreOp =
-    | Dollar
-
 and AExpr =
     | ATerm of Expr
-    | ABinExpr of Expr * ABinOp * Expr
-
-and ABinOp =
-    | Pipe
-    | OrPipe
+    // | ABinExpr of Expr * ABinOp * Expr
 
 // Helpful type definitions to increase AST readability
 and Id = string
