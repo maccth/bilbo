@@ -115,7 +115,7 @@ let pPostIds =
         | None -> s |> Var |> VExpr
     pipe2 pId (opt postIds) checkPosts
     
-let sExprTerms = chance [pPostIds; pVar; pLiteral;]
+let sExprTerms = chance [pPostIds; pVar; pLiteral]
 
 sExprOpp.TermParser <- sExprTerms <|> brackets sExpr
 
@@ -125,6 +125,7 @@ let sBinExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
+        // ".", 9, al, SBinOp.Dot
         "^", 8, ar, SBinOp.Pow;
 
         // Times is defined below
@@ -253,11 +254,15 @@ tExprOpp.AddOperator(InfixOperator("*!*", ws, 7, Associativity.Left, fun x y -> 
 
 let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pAExpr = aExprOpp.ExpressionParser
-// TODO: extend for param lists
+// TODO: Extend for param lists
 let aExprTerms = chance [pTExpr; pGExpr]
 aExprOpp.TermParser <- (attempt aExprTerms) <|> brackets pAExpr
-aExprOpp.AddOperator(InfixOperator("|>", ws, 1, Associativity.Left, fun x y -> (x,Pipe,y) |> ABinExpr |> AExpr))
-aExprOpp.AddOperator(InfixOperator("<|>", ws, 2, Associativity.Left, fun x y -> (x,OrPipe,y) |> ABinExpr |> AExpr))
+aExprOpp.AddOperator(InfixOperator("|>", ws, 2, Associativity.Left, fun x y -> (x,Pipe,y) |> ABinExpr |> AExpr))
+aExprOpp.AddOperator(InfixOperator("<|>", ws, 3, Associativity.Left, fun x y -> (x,OrPipe,y) |> ABinExpr |> AExpr))
+// TODO: Refactor. This is a code smell, adding operators for second time
+// aExprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (SPreOp.Amp,x) |> SPrefixExpr |> SExpr))
+// aExprOpp.AddOperator(PrefixOperator("not", ws, 1, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr |> SExpr))
+
 
 // If parser X is defined in terms of parser Y then X must precede Y in this list
 let exprs = [pAExpr; pTExpr; pSExpr; pGExpr]

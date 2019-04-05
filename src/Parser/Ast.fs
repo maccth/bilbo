@@ -59,6 +59,7 @@ and SBinOp =
     | Equal | NotEqual
     | Is
     | And | Or
+    // | Dot
 
 and SPreOp =
     | Not
