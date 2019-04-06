@@ -43,7 +43,11 @@ let chance pLst =
 
 /// Parses `p` between `(` and `)` with white space consumed after either bracket
 let brackets p = between (str "(") (str ")") p
-    
+
+/// `csv p` is equivalent to `sepBy p (str ",")`
+let csv p = sepBy p (str ",") 
+/// `csv1 p` is equivalent to `sepBy1 p (str ",")`
+let csv1 p = sepBy p (str ",")
     
 // Parser
 // ======
@@ -102,7 +106,7 @@ let pExprTerm, pExprTermRef = createParserForwardedToRef()
 exprOpp.TermParser <- pExprTerm <|> brackets pExpr;
 
 let pObjInstan' =
-    let attrs = (sepBy pExpr (str ",")) |> brackets
+    let attrs = (csv pExpr) |> brackets
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr |> SExpr
     attrs |>> consObj
 
@@ -117,7 +121,9 @@ let pPostIds =
         | None -> s |> Var |> VExpr
     pipe2 pId (opt postIds) checkPosts
 
-let pSExpr = choice [pPostIds; pLiteral;]
+let pParamList = pExpr |> csv |> brackets |>> ParamList |>> SExpr
+
+let pSExpr = choice [pParamList; pPostIds; pLiteral;]
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
@@ -207,7 +213,7 @@ let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
     let commaEdge = str "," >>. edge
     let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
-    let path = sepBy elem (str ",") |> between (str "[") (str "]")
+    let path = csv elem |> between (str "[") (str "]")
     let folder (elems,prevEdge) (el : Expr * EdgeOp option) =
         // n2 <--prevEdge--> n1 <--nextEdge--> 
         // prevEdge is the incoming edge operator from n1 to n1
@@ -271,7 +277,7 @@ let pMatchStatement =
     pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
     
 let pTransformDef =
-    let paramCsv = sepBy pId (str ",")
+    let paramCsv = csv pId
     let paramBrac = brackets paramCsv <|> paramCsv 
     let exprs = many pExprStatement
     let matches = pMatchStatement
@@ -280,8 +286,8 @@ let pTransformDef =
     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
 
 let pTypeDef =
-    let csvIds1 = sepBy1 pId (str ",") 
-    let csvIds = sepBy pId (str ",")
+    let csvIds1 = csv1 pId
+    let csvIds = csv pId
     let bracIds = brackets csvIds
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
     pipe4 (str "type") pId (str "=") (bracIds <|> csvIds1) ctor

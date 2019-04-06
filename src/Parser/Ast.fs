@@ -35,7 +35,7 @@ and VExpr =
 and SExpr =
     | ObjExpr of ObjExpr
     | Literal of Literal
-    // TODO: add param lists for (a,b,c) |> t
+    | ParamList of Expr list
 
 and GExpr =
     | PathExpr of PathExpr
