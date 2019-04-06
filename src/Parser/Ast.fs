@@ -13,42 +13,36 @@ and Statement =
 and TypeDef = TypeName * Attribute list
     
 and ExprStatement =
-    // Having an Expr on the LHS of assignement makes parsing easier.
-    //  In particular, one need not distinguish between field access
-    //  and field assignment
     | AssignmentExpr of Expr * Expr
     
 and Expr =
     | VExpr of VExpr
     | SExpr of SExpr
     | GExpr of GExpr
-    | MExpr of MExpr
-    | AExpr of AExpr
-    | TExpr of TExpr
-    | NodeCons of NodeCons
+    | BinExpr of Expr * BinOp * Expr
+    | PrefixExpr of PreOp  * Expr
+    | PostfixExpr of Expr * PostOp
+    // TODO: These types will allow for better domain modelling in the ASG
+    // | MExpr of MExpr
+    // | AExpr of AExpr
+    // | TExpr of TExpr
+    // | NodeCons of Expr * Expr
 
 and VExpr =
     | Var of Id
-    | DotAccess of Expr * Id
+    | DotAssign of Expr * Id
 
 and SExpr =
-    | SBinExpr of SBinExpr
-    | SPrefixExpr of SPreOp * Expr
     | ObjExpr of ObjExpr
     | Literal of Literal
     // TODO: add param lists for (a,b,c) |> t
 
 and GExpr =
     | PathExpr of PathExpr
-    | GBinExpr of Expr * GBinOp * Expr
 
-and MExpr =
-    | MPrefixExpr of MPreOp * Expr
-    | MBinExpr of Expr * MBinOp * Expr
-
-and NodeCons = Expr * Expr
-
-and SBinExpr = Expr * SBinOp * Expr 
+// and MExpr =
+    // | MPrefixExpr of MPreOp * Expr
+    // | MBinExpr of Expr * MBinOp * Expr
  
 and ObjExpr =
     | ObjInstan of TypeName * Expr list
@@ -57,9 +51,10 @@ and BinOp =
     | NodeCons
     | Dot
     // Simple
-    | Pow | Times | Divide | Percent | Plus | Minus 
+    | Pow | Times | Divide | Plus | Minus 
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
+    | And | Or
     | Is
     // Application
     | Pipe | OrPipe
@@ -75,26 +70,23 @@ and BinOp =
 
 and PreOp =
     // Simple
-    | Not | Amp | DblAmp
+    | Not | Amp
     // Transform
     | Dollar
     // Match
     // | Not
 
-and SPreOp =
-    | Not
-    | Amp
+and PostOp =
+    // Transform
+    | ALAPApp
+    | MaybeApp
 
 and Literal =
     | StrLit of string
     | FloatLit of float
     | IntLit of int
     | BoolLit of bool
-      
-and GBinOp =
-    | GAdd
-    | GSub
-
+     
 and PathExpr =
     | Path of PathElem list
 
@@ -119,47 +111,9 @@ and MatchCase =
 
 and WhereClause = Expr list
 
-and MBinOp =
-    | And
-
-and MPreOp =
-    | Not
-
 and TerminatingStatement =
     | Return of Expr
     | Become of Expr
-
-and TExpr =
-    // | TTerm of TTerm
-    | TBinExpr of Expr * TBinOp * Expr
-    | TPrefixExpr of TPreOp * Expr
-    | TPostfixExpr of Expr * TPostOp
-
-// Extend this for PExprs {a,b,c...}
-and TTerm = Id
-
-and TBinOp =
-    // Multiple application  `**`
-    | MulApp 
-    // Up-to application `*!*`
-    | UpToApp
-
-and TPostOp =
-    // As-long-as-possible application `!`
-    | ALAPApp
-    // Maybe application `?`
-    | MaybeApp
-
-and TPreOp =
-    | Dollar
-
-and AExpr =
-    | ATerm of Expr
-    | ABinExpr of Expr * ABinOp * Expr
-
-and ABinOp =
-    | Pipe
-    | OrPipe
 
 // Helpful type definitions to increase AST readability
 and Id = string

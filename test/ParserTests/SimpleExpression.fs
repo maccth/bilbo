@@ -23,37 +23,36 @@ let objExprTests = [
 ]
 
 let prefixOpExprTests = [
-    "a = &b", "a", SPE Amp (VAR "b"), "Get id var";
-    "a = not b", "a", SPE Amp (VAR "b"), "Not var";
-    "a = not True", "a", SPE SPreOp.Not (true |> BOOL |> SExpr), "Not bool, true";
-    "a = not False", "a", SPE SPreOp.Not (false |> BOOL |> SExpr), "Not bool, false";
+    "a = &b", "a", PE Amp (VAR "b"), "Get id var";
+    "a = not b", "a", PE Amp (VAR "b"), "Not var";
+    "a = not True", "a", PE Not (true |> BOOL |> SExpr), "Not bool, true";
+    "a = not False", "a", PE Not (false |> BOOL |> SExpr), "Not bool, false";
 ]
 
 let numericBinExprTests = [
-    "a=4+5", "a", SBE (INT 4) Plus  (INT 5), "Int plus";
-    "a=-4+-5", "a", SBE (INT -4) Plus (INT -5), "Int plus, both negative";
-    "a=-4+5", "a", SBE (INT -4) Plus (INT 5), "Int plus, first negative";
-    "a=4+-5", "a", SBE (INT 4) Plus (INT -5), "Int plus, second negative";
+    "a=4+5", "a", BE (INT 4) Plus  (INT 5), "Int plus";
+    "a=-4+-5", "a", BE (INT -4) Plus (INT -5), "Int plus, both negative";
+    "a=-4+5", "a", BE (INT -4) Plus (INT 5), "Int plus, first negative";
+    "a=4+-5", "a", BE (INT 4) Plus (INT -5), "Int plus, second negative";
 
-    "a=1.23+4.56", "a", SBE (FLT 1.23) Plus  (FLT 4.56), "Float plus";
-    "a=-1.23+-4.56", "a", SBE (FLT -1.23) Plus (FLT -4.56), "Float plus, both negative";
-    "a=-1.23+4.56", "a", SBE (FLT -1.23) Plus (FLT 4.56), "Float plus, first negative";
-    "a=1.23+-4.56", "a", SBE (FLT 1.23) Plus (FLT -4.56), "Float plus, second negative";
+    "a=1.23+4.56", "a", BE (FLT 1.23) Plus  (FLT 4.56), "Float plus";
+    "a=-1.23+-4.56", "a", BE (FLT -1.23) Plus (FLT -4.56), "Float plus, both negative";
+    "a=-1.23+4.56", "a", BE (FLT -1.23) Plus (FLT 4.56), "Float plus, first negative";
+    "a=1.23+-4.56", "a", BE (FLT 1.23) Plus (FLT -4.56), "Float plus, second negative";
 
-    "a=4-5", "a", SBE (INT 4) Minus  (INT 5), "Int minus";
-    "a=-4--5", "a", SBE (INT -4) Minus (INT -5), "Int minus, both negative";
-    "a=-4-5", "a", SBE (INT -4) Minus (INT 5), "Int minus, first negative";
-    "a=4--5", "a", SBE (INT 4) Minus (INT -5), "Int minus, second negative";
+    "a=4-5", "a", BE (INT 4) Minus  (INT 5), "Int minus";
+    "a=-4--5", "a", BE (INT -4) Minus (INT -5), "Int minus, both negative";
+    "a=-4-5", "a", BE (INT -4) Minus (INT 5), "Int minus, first negative";
+    "a=4--5", "a", BE (INT 4) Minus (INT -5), "Int minus, second negative";
 
-    "a=1.23-4.56", "a", SBE (FLT 1.23) Minus  (FLT 4.56), "Float minus";
-    "a=-1.23--4.56", "a", SBE (FLT -1.23) Minus (FLT -4.56), "Float minus, both negative";
-    "a=-1.23-4.56", "a", SBE (FLT -1.23) Minus (FLT 4.56), "Float minus, first negative";
-    "a=1.23--4.56", "a", SBE (FLT 1.23) Minus (FLT -4.56), "Float minus, second negative";
+    "a=1.23-4.56", "a", BE (FLT 1.23) Minus  (FLT 4.56), "Float minus";
+    "a=-1.23--4.56", "a", BE (FLT -1.23) Minus (FLT -4.56), "Float minus, both negative";
+    "a=-1.23-4.56", "a", BE (FLT -1.23) Minus (FLT 4.56), "Float minus, first negative";
+    "a=1.23--4.56", "a", BE (FLT 1.23) Minus (FLT -4.56), "Float minus, second negative";
 ]
 
-
-
 let sExprTest = consAssignTest SExpr
+let exprTest = consAssignTest (fun x -> x)
 
 [<Tests>]
 let tests =
@@ -65,5 +64,5 @@ let tests2 =
 
 [<Tests>]
 let tests3 =
-    testList "Binary expression tests" (List.map sExprTest numericBinExprTests)
+    testList "Binary expression tests" (List.map exprTest numericBinExprTests)
    
