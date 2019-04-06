@@ -53,13 +53,33 @@ and SBinExpr = Expr * SBinOp * Expr
 and ObjExpr =
     | ObjInstan of TypeName * Expr list
 
-and SBinOp =
-    | Pow | Times | Divide | Plus | Minus 
+and BinOp =
+    | NodeCons
+    | Dot
+    // Simple
+    | Pow | Times | Divide | Percent | Plus | Minus 
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | Is
-    | And | Or
-    // | Dot
+    // Application
+    | Pipe | OrPipe
+    // Transform
+    | MulApp | UpToApp
+
+    // Graph
+    // | GAdd
+    // | GSub
+
+    // Match
+    // | And
+
+and PreOp =
+    // Simple
+    | Not | Amp | DblAmp
+    // Transform
+    | Dollar
+    // Match
+    // | Not
 
 and SPreOp =
     | Not

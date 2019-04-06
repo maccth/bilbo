@@ -9,7 +9,15 @@ let qp x = printfn "%A" x
 
 // Extensions to FParsec
 // =====================
-let ws = spaces
+let commentLine =
+    skipString "//" .>>. skipManyTill anyChar newline
+
+let commentBlock =
+    skipString "/*" .>>. skipManyTill anyChar (skipString "*/")
+
+let comment = commentLine <|> commentBlock |>> ignore
+
+let ws = (many (choice [spaces1; comment;]) |>> ignore) <?> "whitespace"
 
 let str s = pstring s .>> ws
 
@@ -61,7 +69,8 @@ let pId : Parser<string, unit> =
     let upToLastChar = many1Satisfy2 firstChar middleChar
     let lastChar = manyChars (pchar ''') .>> ws
     // For the special `++` variable available in match cases
-    (str "++") <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
+    let p = (str "++") <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
+    p <?> "variable identifier"
 
 let pVar = pId |>> Var |>> VExpr
 
@@ -90,10 +99,11 @@ let pBoolLit : Parser<Literal, unit> =
     |>> BoolLit
 
 let pLiteral =
-    choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] |>> Literal |>> SExpr 
+    let p = choice [pBoolLit; pStrLit; attempt pIntLit; pFloatLit] 
+    p <?> "literal" |>> Literal |>> SExpr 
 
-let sExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let sExpr = sExprOpp.ExpressionParser
+let exprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
+let pExpr = exprOpp.ExpressionParser <?> "expression"
 
 let pDotAccess' =
     let attrs = (str ".") >>. sepBy1 pId (str ".")
@@ -129,7 +139,8 @@ let sBinExprOps1 =
         "^", 8, ar, SBinOp.Pow;
 
         // Times is defined below
-        "/", 7, al, SBinOp.Divide;
+        "/", 7, al, Divide;
+        "%", 7, al, Percent;
 
         "+", 6, al, SBinOp.Plus;
         // Minus is defined below
@@ -174,7 +185,9 @@ let addSExprBinOp (op, prec, nf, assoc, astOp) =
 sExprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (SPreOp.Amp,x) |> SPrefixExpr |> SExpr))
 sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr |> SExpr))
 
-List.map addSExprBinOp sBinExprOps |> ignore
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&&", ws, 9, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
 
 let pSExpr = sExpr
 
@@ -232,43 +245,18 @@ let pPathExpr =
     |>> PathExpr
     |>> GExpr
 
-let gExprTerms = chance[pPathExpr; pVar]
+let pGExpr = pPathExpr
 
-let gExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pGExpr = gExprOpp.ExpressionParser
-gExprOpp.TermParser <- gExprTerms <|> brackets pGExpr
-gExprOpp.AddOperator(InfixOperator("+", ws, 1, Associativity.Left, fun x y -> (x,GAdd,y) |> GBinExpr |> GExpr))
-gExprOpp.AddOperator(InfixOperator("-", notFollowedBy (str ">") >>. ws, 1, Associativity.Left, fun x y -> (x,GSub,y) |> GBinExpr |> GExpr))
+let exprs = [pSExpr; pVar; pGExpr;]
+do pExprTermRef := chance exprs
 
-// let pTTerm = pId |>> TExpr.TTerm |>> TExpr
-let tExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pTExpr = tExprOpp.ExpressionParser
-let tExprTerms = chance [pSExpr]
-// TODO: Refactor attempt out
-tExprOpp.TermParser <- (tExprTerms) <|> brackets pTExpr
-tExprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, TPostOp.ALAPApp) |> TPostfixExpr |> TExpr))
-tExprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, TPostOp.MaybeApp) |> TPostfixExpr |> TExpr))
-tExprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (TPreOp.Dollar,x) |> TPrefixExpr |> TExpr))
-tExprOpp.AddOperator(InfixOperator("**", ws, 7, Associativity.Left, fun x y -> (x, MulApp, y) |> TBinExpr |> TExpr)) 
-tExprOpp.AddOperator(InfixOperator("*!*", ws, 7, Associativity.Left, fun x y -> (x, UpToApp, y) |> TBinExpr |> TExpr)) 
-
-let aExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pAExpr = aExprOpp.ExpressionParser
-// TODO: Extend for param lists
-let aExprTerms = chance [pTExpr; pGExpr]
-aExprOpp.TermParser <- (attempt aExprTerms) <|> brackets pAExpr
-aExprOpp.AddOperator(InfixOperator("|>", ws, 2, Associativity.Left, fun x y -> (x,Pipe,y) |> ABinExpr |> AExpr))
-aExprOpp.AddOperator(InfixOperator("<|>", ws, 3, Associativity.Left, fun x y -> (x,OrPipe,y) |> ABinExpr |> AExpr))
-// TODO: Refactor. This is a code smell, adding operators for second time
-// aExprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (SPreOp.Amp,x) |> SPrefixExpr |> SExpr))
-// aExprOpp.AddOperator(PrefixOperator("not", ws, 1, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr |> SExpr))
-
-
-// If parser X is defined in terms of parser Y then X must precede Y in this list
-let exprs = [pAExpr; pTExpr; pSExpr; pGExpr]
-
-do pExprNoNCRef := chance exprs
-do pExprRef := chance (pNodeCons :: exprs)
+// This allows differentiation between field access (xyz = a.b) and
+//  field assignement (a.b = xyz). Furthermore, that only valid LHSs
+//  will be parsed
+let pDotAssign' =
+    let attrs = (str ".") >>. sepBy1 (pId <?> "field identifier") (str ".")
+    let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAssign |> VExpr) (var |> Var |> VExpr) 
+    attrs |>> consDot
 
 let pVExpr =
     pId .>>. opt pDotAccess' |>>
@@ -285,7 +273,7 @@ let pExprStatement =
 
 let pReturn = str "return" >>. pExpr |>> Return
 let pBecome = str "become" >>. pExpr |>> Become
-let pTerminatingStatement = (pReturn <|> pBecome) 
+let pTerminatingStatement = (pReturn <|> pBecome) <?> "terminating statement, `return` or `become`" 
 
 let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
 let pMExpr = mExprOpp.ExpressionParser
