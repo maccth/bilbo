@@ -4,6 +4,7 @@ open FParsec
 open Ast
 open Bilbo.Parser
 open Bilbo.Parser.Ast
+open System.Runtime.InteropServices.ComTypes
 
 let qp x = printfn "%A" x
 
@@ -47,7 +48,7 @@ let brackets p = between (str "(") (str ")") p
 /// `csv p` is equivalent to `sepBy p (str ",")`
 let csv p = sepBy p (str ",") 
 /// `csv1 p` is equivalent to `sepBy1 p (str ",")`
-let csv1 p = sepBy p (str ",")
+let csv1 p = sepBy1 p (str ",")
     
 // Parser
 // ======
@@ -167,8 +168,8 @@ let binExprOps2 =
         "*", 7, (str "*") <|> (str "!") , al, Times;
         // Stops conflicts with `->`
         "-", 6, str ">", al, Minus;
-        // Stops conflicts with `x>,y` in path expressions
-        ">", 5, str ",", al, GreaterThan;
+        // Stops conflicts with `x>,y` in path expressions and `[a>:b,>,c]` in path comprehensions
+        ">", 5, (str ",") <|> (str ":"), al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
 
 let binExprOps = List.append binExprOps1 binExprOps2
@@ -183,7 +184,8 @@ let addBinOp (op, prec, nf, assoc, astOp) =
             InfixOperator(op, ws, prec, assoc, (astOp |> cons))
     exprOpp.AddOperator(inOp)
 
-exprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&&", ws, 9, true, fun x -> (DblAmp,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
 
 exprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
@@ -212,9 +214,20 @@ let pNodeExpr = pExpr
 let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
     let commaEdge = str "," >>. edge
-    let elem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
-    let path = csv elem |> between (str "[") (str "]")
-    let folder (elems,prevEdge) (el : Expr * EdgeOp option) =
+    let pathElem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
+    let compOp =
+        let setId = pipe2 ((notFollowedBy (str "&&")) >>. str "&") (str "=") (fun _ _ -> SetId)
+        let setLoad = pipe3 (str "&&") (str "=") pExpr (fun _ _ e -> e |> SetLoad)
+        let addEdge = pEdgeOp |>> AddEdge
+        choice [setId; setLoad; addEdge]
+    let compOps =
+        pipe3 (followedBy ((csv1 compOp) .>>. str ":")) (csv1 compOp) (str ":") <|
+            fun _ compOps' _ -> compOps'
+    let path =
+         (opt compOps .>>. csv pathElem) |> between (str "[") (str "]")
+           
+
+    let consPathElem (elems,prevEdge) (el : Expr * EdgeOp option) =
         // n2 <--prevEdge--> n1 <--nextEdge--> 
         // prevEdge is the incoming edge operator from n1 to n1
         // nextEdge is the outgoing edge operator from n1
@@ -226,15 +239,26 @@ let pPathExpr =
             | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
             | [] -> failwith "Will not happen. First element cannot have incoming edge."
         | None -> ((n1 |> Node) :: elems), nextEdge
-    path
-    |>> List.fold folder ([],None)
-    |>> function
+
+    let consPath p =
+        List.fold consPathElem ([],None) p
+        |> function
         | (lst, None) -> lst
         | (lst, Some e) -> failwith "Will not happen. Final element cannot have outgoing edge."
-    |>> List.rev
-    |>> Path
+        |> List.rev
+
+    path
+    |>> function
+        | Some compOps, elems ->
+            (compOps, (consPath elems))
+            |> PathComp
+        | None, elems ->
+            elems 
+            |> consPath
+            |> Path
     |>> PathExpr
     |>> GExpr
+
 
 let pGExpr = pPathExpr
 

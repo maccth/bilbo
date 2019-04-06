@@ -23,8 +23,8 @@ let objExprTests = [
 ]
 
 let prefixOpExprTests = [
-    "a = &b", "a", PE Amp (VAR "b"), "Get id var";
-    "a = not b", "a", PE Amp (VAR "b"), "Not var";
+    "a = &b", "a", PE PreOp.Amp (VAR "b"), "Get id var";
+    "a = not b", "a", PE PreOp.Amp (VAR "b"), "Not var";
     "a = not True", "a", PE Not (true |> BOOL |> SExpr), "Not bool, true";
     "a = not False", "a", PE Not (false |> BOOL |> SExpr), "Not bool, false";
 ]

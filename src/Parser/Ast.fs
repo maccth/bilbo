@@ -70,7 +70,7 @@ and BinOp =
 
 and PreOp =
     // Simple
-    | Not | Amp
+    | Not | Amp | DblAmp
     // Transform
     | Dollar
     // Match
@@ -89,10 +89,18 @@ and Literal =
      
 and PathExpr =
     | Path of PathElem list
+    | PathComp of PathCompOp list * PathElem list
 
 and PathElem =
     | Node of Expr
     | Edge of Expr * EdgeOp * Expr
+
+and PathCompOp =
+    | AddEdge of EdgeOp
+    // &&=expr
+    | SetLoad of Expr
+    // &=
+    | SetId
  
 and EdgeOp =
     // Edges can be weighted or unweighted
