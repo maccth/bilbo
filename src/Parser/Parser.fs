@@ -132,7 +132,7 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 9, ar, NodeCons;
+        "::", 9, al, NodeCons;
         ".", 9, al, Dot
 
         "^", 8, ar, Pow;
