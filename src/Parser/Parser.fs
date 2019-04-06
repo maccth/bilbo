@@ -74,13 +74,6 @@ let pId : Parser<string, unit> =
 
 let pVar = pId |>> Var |>> VExpr
 
-let pTypeDef =
-    let csvIds1 = sepBy1 pId (str ",") 
-    let csvIds = sepBy pId (str ",")
-    let bracIds = brackets csvIds
-    let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
-    pipe4 (str "type") pId (str "=") (bracIds <|> csvIds1) ctor
-
 let pStrLit : Parser<Literal, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
     between (stre "\"") (str "\"") chars |>> StrLit
@@ -103,19 +96,18 @@ let pLiteral =
     p <?> "literal" |>> Literal |>> SExpr 
 
 let exprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pExpr = exprOpp.ExpressionParser <?> "expression"
+let pExpr = exprOpp.ExpressionParser
 
-let pDotAccess' =
-    let attrs = (str ".") >>. sepBy1 pId (str ".")
-    let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAccess |> VExpr) (var |> Var |> VExpr) 
-    attrs |>> consDot
+let pExprTerm, pExprTermRef = createParserForwardedToRef()
+exprOpp.TermParser <- pExprTerm <|> brackets pExpr;
 
 let pObjInstan' =
-    let attrs = (sepBy sExpr (str ",")) |> brackets
+    let attrs = (sepBy pExpr (str ",")) |> brackets
     let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr |> SExpr
     attrs |>> consObj
 
-let postIds = choice [pDotAccess'; pObjInstan']
+// TODO: potentially add object field indexing obj["field1"]
+let postIds = pObjInstan'
 
 // Parses things that appear after IDs, object instantiation (MyT(p1,p2,p3)) and dot access (myObj.a)
 let pPostIds =
@@ -124,74 +116,75 @@ let pPostIds =
         | Some p' -> p' s
         | None -> s |> Var |> VExpr
     pipe2 pId (opt postIds) checkPosts
-    
-let sExprTerms = chance [pPostIds; pVar; pLiteral]
 
-sExprOpp.TermParser <- sExprTerms <|> brackets sExpr
+let pSExpr = choice [pPostIds; pLiteral;]
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
-let sBinExprOps1 =
+let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        // ".", 9, al, SBinOp.Dot
-        "^", 8, ar, SBinOp.Pow;
+        "::", 9, ar, NodeCons;
+        ".", 9, al, Dot
 
+        "^", 8, ar, Pow;
+
+        "**", 7, al, MulApp;
+        "*!*", 7, al, UpToApp;
         // Times is defined below
         "/", 7, al, Divide;
-        "%", 7, al, Percent;
 
-        "+", 6, al, SBinOp.Plus;
+        "+", 6, al, Plus;
         // Minus is defined below
 
-        "<", 5, al, SBinOp.LessThan;
-        "<=", 5, al, SBinOp.LessThanEq;
+        "<", 5, al, LessThan;
+        "<=", 5, al, LessThanEq;
         // Greater than is defined below
-        ">=", 5, al, SBinOp.GreaterThanEq;
-        "==", 5, al, SBinOp.Equal;
-        "is", 5, al, SBinOp.Is;
-        "!=", 5, al, SBinOp.NotEqual;
+        ">=", 5, al, GreaterThanEq;
+        "==", 5, al, Equal;
+        "is", 5, al, Is;
+        "!=", 5, al, NotEqual;
 
         // "not" has precedence 4, but is prefix (unary)
-        "and", 3, al, SBinOp.And;
-        "or", 2, al, SBinOp.Or;
+        "and", 3, al, And;
+        "or", 2, al, Or;
+
+        "<|>", 3, al, OrPipe;
+        "|>", 2, al, Pipe;
     ] |> List.map (fun (op, prec, assoc, astOp) -> (op, prec, None, assoc, astOp))
 
-let sBinExprOps2 =
+let binExprOps2 =
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 7, (str "*") <|> (str "!") , al, SBinOp.Times;
+        "*", 7, (str "*") <|> (str "!") , al, Times;
         // Stops conflicts with `->`
-        "-", 6, str ">", al, SBinOp.Minus;
+        "-", 6, str ">", al, Minus;
         // Stops conflicts with `x>,y` in path expressions
-        ">", 5, str ",", al, SBinOp.GreaterThan;
-
+        ">", 5, str ",", al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
 
-let sBinExprOps = List.append sBinExprOps1 sBinExprOps2
+let binExprOps = List.append binExprOps1 binExprOps2
 
-let addSExprBinOp (op, prec, nf, assoc, astOp) =
-    let cons op l r = (l,op,r) |> SBinExpr |> SExpr
+let addBinOp (op, prec, nf, assoc, astOp) =
+    let cons op l r = (l,op,r) |> BinExpr 
     let inOp =
         match nf with
         | Some nf' ->
             InfixOperator(op, notFollowedBy (nf') >>. ws, prec, assoc, (astOp |> cons))
         | None ->
             InfixOperator(op, ws, prec, assoc, (astOp |> cons))
-    sExprOpp.AddOperator(inOp)
+    exprOpp.AddOperator(inOp)
 
-sExprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (SPreOp.Amp,x) |> SPrefixExpr |> SExpr))
-sExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (SPreOp.Not,x) |> SPrefixExpr |> SExpr))
-
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&&", ws, 9, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
 
-let pSExpr = sExpr
+exprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, MaybeApp) |> PostfixExpr))
+exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> PrefixExpr))
 
-let pExpr, pExprRef = createParserForwardedToRef()
+List.map addBinOp binExprOps |> ignore
 
 let weight = pExpr
 
@@ -208,15 +201,7 @@ let pRightEdgeOps =
 
 let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps)
 
-// Eliminate implicit left recursion for NodeCons expressions
-let pExprNoNC, pExprNoNCRef = createParserForwardedToRef()
-
-let pNodeCons =
-    pipe3 pExprNoNC (str "::") pExprNoNC <| fun i _  l -> (i,l) |> NodeCons
-
-let pNodeExpr =
-    // TODO: Add transform application expressions
-    chance [attempt pNodeCons; pVar]
+let pNodeExpr = pExpr
 
 let pPathExpr =
     let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
@@ -254,12 +239,12 @@ do pExprTermRef := chance exprs
 //  field assignement (a.b = xyz). Furthermore, that only valid LHSs
 //  will be parsed
 let pDotAssign' =
-    let attrs = (str ".") >>. sepBy1 (pId <?> "field identifier") (str ".")
+    let attrs = (str ".") >>. sepBy1 pId (str ".")
     let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAssign |> VExpr) (var |> Var |> VExpr) 
     attrs |>> consDot
 
 let pVExpr =
-    pId .>>. opt pDotAccess' |>>
+    pId .>>. opt pDotAssign' |>>
     function
     | v, Some d -> d v
     | v, None -> v |> Var |> VExpr
@@ -275,18 +260,11 @@ let pReturn = str "return" >>. pExpr |>> Return
 let pBecome = str "become" >>. pExpr |>> Become
 let pTerminatingStatement = (pReturn <|> pBecome) <?> "terminating statement, `return` or `become`" 
 
-let mExprOpp = new OperatorPrecedenceParser<Expr,unit,unit>()
-let pMExpr = mExprOpp.ExpressionParser
-let mExprTerms = pGExpr
-mExprOpp.TermParser <- mExprTerms <|> brackets pMExpr
-mExprOpp.AddOperator(InfixOperator("and", ws, 2, Associativity.Left, fun x y -> (x,And,y) |> MBinExpr |> MExpr))
-mExprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not, x) |> MPrefixExpr |> MExpr))
-
 let pMatchCase =
     let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
     let body = many pExprStatement
     let whereClause = (str "where") >>. many pExpr
-    pipe5 pMExpr (opt whereClause) (str "->") body pTerminatingStatement cons
+    pipe5 pExpr (opt whereClause) (str "->") body pTerminatingStatement cons
 
 let pMatchStatement =
     let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
@@ -300,6 +278,13 @@ let pTransformDef =
     let cons (def, tName, paramLst, eq, exprs, matches) =
         (tName, paramLst, exprs, matches) |> TransformDef
     pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
+
+let pTypeDef =
+    let csvIds1 = sepBy1 pId (str ",") 
+    let csvIds = sepBy pId (str ",")
+    let bracIds = brackets csvIds
+    let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
+    pipe4 (str "type") pId (str "=") (bracIds <|> csvIds1) ctor
 
 // Top level parsers
 let pStatement =

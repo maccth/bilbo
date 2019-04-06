@@ -13,10 +13,10 @@ let STR x = x |> StrLit |> Literal
 let FLT x = x |> FloatLit |> Literal 
 let BOOL x = x |> BoolLit |> Literal 
 
-let SBE x op y = (SExpr x, op, SExpr y) |> SBinExpr
-let SPE op x = (op, x) |> SPrefixExpr
+let BE x op y = (SExpr x, op, SExpr y) |> BinExpr
+let PE op x = (op, x) |> PrefixExpr
 let OI t pLst = (t,pLst) |> ObjInstan |> ObjExpr
-let DOT e id = (e,id) |> DotAccess
+let DOT e id = (e,id) |> DotAssign
 
 let runAstTest expAst codeStr =
     let ast = pBilboStr codeStr |> function
