@@ -49,6 +49,9 @@ let brackets p = between (str "(") (str ")") p
 let csv p = sepBy p (str ",") 
 /// `csv1 p` is equivalent to `sepBy1 p (str ",")`
 let csv1 p = sepBy1 p (str ",")
+let csv2 p =
+    let com = str ","
+    pipe3 p com (csv1 p) (fun hd _ rest -> hd::rest)
     
 // Parser
 // ======
@@ -122,7 +125,7 @@ let pPostIds =
         | None -> s |> Var |> VExpr
     pipe2 pId (opt postIds) checkPosts
 
-let pParamList = pExpr |> csv |> brackets |>> ParamList |>> SExpr
+let pParamList = pExpr |> csv2 |> brackets |>> ParamList |>> SExpr
 
 let pSExpr = choice [pParamList; pPostIds; pLiteral;]
 
