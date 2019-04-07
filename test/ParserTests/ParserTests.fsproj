@@ -9,8 +9,9 @@
     <Compile Include="Sample.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="SimpleExpression.fs" />
+    <Compile Include="BinaryExpression.fs" />
+    <Compile Include="PrefixExpression.fs" />
     <Compile Include="VariableExpression.fs" />
-    <Compile Include="NodeCons.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>

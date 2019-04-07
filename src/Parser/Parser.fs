@@ -21,6 +21,8 @@ let comment = commentLine <|> commentBlock |>> ignore
 let ws = (many (choice [spaces1; comment;]) |>> ignore) <?> "whitespace"
 
 let str s = pstring s .>> ws
+// Identical to `str` but increases readability by distinguishing between strings and keywords
+let keyw = str
 
 /// Exact version of str. `stre s` parses the string `s` with no spaces after.
 let stre s = pstring s
@@ -187,13 +189,13 @@ let addBinOp (op, prec, nf, assoc, astOp) =
             InfixOperator(op, ws, prec, assoc, (astOp |> cons))
     exprOpp.AddOperator(inOp)
 
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&&", ws, 9, true, fun x -> (DblAmp,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 10, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&&", ws, 10, true, fun x -> (DblAmp,x) |> PrefixExpr ))
 
+exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> PrefixExpr))
 exprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
 exprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, MaybeApp) |> PostfixExpr))
-exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> PrefixExpr))
 
 List.map addBinOp binExprOps |> ignore
 
@@ -229,7 +231,6 @@ let pPathExpr =
     let path =
          (opt compOps .>>. csv pathElem) |> between (str "[") (str "]")
            
-
     let consPathElem (elems,prevEdge) (el : Expr * EdgeOp option) =
         // n2 <--prevEdge--> n1 <--nextEdge--> 
         // prevEdge is the incoming edge operator from n1 to n1
@@ -262,7 +263,6 @@ let pPathExpr =
     |>> PathExpr
     |>> GExpr
 
-
 let pGExpr = pPathExpr
 
 let exprs = [pSExpr; pVar; pGExpr;]
@@ -289,19 +289,19 @@ let pAssignmentExpr =
 let pExprStatement =
     choice [pAssignmentExpr;]
 
-let pReturn = str "return" >>. pExpr |>> Return
-let pBecome = str "become" >>. pExpr |>> Become
+let pReturn = keyw "return" >>. pExpr |>> Return
+let pBecome = keyw "become" >>. pExpr |>> Become
 let pTerminatingStatement = (pReturn <|> pBecome) <?> "terminating statement, `return` or `become`" 
 
 let pMatchCase =
     let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
     let body = many pExprStatement
-    let whereClause = (str "where") >>. many pExpr
+    let whereClause = (keyw "where") >>. many pExpr
     pipe5 pExpr (opt whereClause) (str "->") body pTerminatingStatement cons
 
 let pMatchStatement =
     let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
-    pipe3 (str "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
+    pipe3 (keyw "match") (opt pGExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
     
 let pTransformDef =
     let paramCsv = csv pId
@@ -310,14 +310,14 @@ let pTransformDef =
     let matches = pMatchStatement
     let cons (def, tName, paramLst, eq, exprs, matches) =
         (tName, paramLst, exprs, matches) |> TransformDef
-    pipe6 (str "def") pId paramBrac (str "=") exprs matches cons
+    pipe6 (keyw "def") pId paramBrac (str "=") exprs matches cons
 
 let pTypeDef =
     let csvIds1 = csv1 pId
     let csvIds = csv pId
     let bracIds = brackets csvIds
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
-    pipe4 (str "type") pId (str "=") (bracIds <|> csvIds1) ctor
+    pipe4 (keyw "type") pId (str "=") (bracIds <|> csvIds1) ctor
 
 // Top level parsers
 let pStatement =

@@ -13,9 +13,10 @@ let STR x = x |> StrLit |> Literal
 let FLT x = x |> FloatLit |> Literal 
 let BOOL x = x |> BoolLit |> Literal 
 
-let BE x op y = (SExpr x, op, SExpr y) |> BinExpr
-let PE op x = (op, x) |> PrefixExpr
-let OI t pLst = (t,pLst) |> ObjInstan |> ObjExpr
+let BIN x op y = (SExpr x, op, SExpr y) |> BinExpr
+let PRE op x = (op, x) |> PrefixExpr
+let POST op x = (x, op) |> PostfixExpr
+let OBJ t pLst = (t,pLst) |> ObjInstan |> ObjExpr
 let DOT e id = (e,id) |> DotAssign
 
 let runAstTest expAst codeStr =
@@ -35,3 +36,7 @@ let runAssignTest codeStr var rhs =
 let consAssignTest eTyp data  =
     let code, var, rhs, des = data
     testCase des <| fun _ -> runAssignTest code var (eTyp rhs)
+
+let sExprTest = consAssignTest SExpr
+
+let exprTest = consAssignTest (fun x -> x)
