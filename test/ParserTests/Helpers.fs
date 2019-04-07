@@ -20,6 +20,12 @@ let OBJ t pLst = (t,pLst) |> ObjInstan |> ObjExpr
 let DOT e id = (e,Dot,id) |> BinExpr
 let PLST lst = lst |> ParamList
 
+let ND n = n |> Node
+let REDGE n1 e n2 = (n1, Right e,n2) |> Edge
+let LEDGE n1 e n2 = (n1,Left e,n2) |> Edge
+let BIEDGE n1 e n2 = (n1,Bidir e,n2) |> Edge
+let PATH lst = lst |> Path |> PathExpr |> GExpr
+
 let runAstTest expAst codeStr =
     let ast = pBilboStr codeStr |> function
         | Success(res, _, _) -> res
@@ -41,3 +47,4 @@ let consAssignTest eTyp data  =
 let sExprTest = consAssignTest SExpr
 
 let exprTest = consAssignTest id
+let exprTests = List.map exprTest

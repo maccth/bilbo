@@ -14,4 +14,4 @@ let prefixOpExprTests = [
 
 [<Tests>]
 let tests3 =
-    testList "Binary expression tests" (List.map exprTest prefixOpExprTests)
+    testList "Prefix operator tests" (List.map exprTest prefixOpExprTests)

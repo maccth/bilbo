@@ -30,14 +30,16 @@ let paramListTests = [
     "a = (1)", "a", INT 1, "Single values in brackets are not param lists";
 ]
 
+let eExprTests = List.map sExprTest
+
 [<Tests>]
 let tests =
-    testList "Basic literal tests" (List.map sExprTest literalTests)
+    testList "Literal tests" (eExprTests literalTests)
 
 [<Tests>]
 let tests2 =
-    testList "Binary expression tests" (List.map sExprTest objExprTests)
+    testList "Object expression tests" (eExprTests objExprTests)
 
 [<Tests>]
 let tests3 =
-    testList "Param list tests" (List.map sExprTest paramListTests)
+    testList "Param list tests" (eExprTests paramListTests)

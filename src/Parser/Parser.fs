@@ -272,30 +272,7 @@ let pGExpr = pPathExpr
 
 let exprs = [pSExpr; pVar; pGExpr;]
 do pExprTermRef := chance exprs
-
-// This allows differentiation between field access (xyz = a.b) and
-//  field assignement (a.b = xyz). Furthermore, that only valid LHSs
-//  will be parsed
-// let pDotAssign' =
-//     let attrs = (str ".") >>. sepBy1 pId (str ".")
-//     let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAssign |> VExpr) (var |> Var |> VExpr) 
-//     attrs |>> consDot
-
-// let pVExpr =
-    // let loadAssign =
-    //     (str "&&") >>. pId
-    //     |>> NodeLoadAssign |>> VExpr
-    // let idAssign =
-    //     ((notFollowedBy (str "&&")) >>. str "&") >>. pId
-    //     |>> NodeIdAssign |>> VExpr
-    // let varAssigns =
-    //     pId .>>. opt pDotAssign' |>>
-    //     function
-    //     | v, Some d -> d v
-    //     | v, None -> v |> VarAssign |> VExpr
-    // choice [loadAssign; idAssign; varAssigns]
-    
-
+   
 let pAssignmentExpr =
     let ctor var _ expr  =  (var, expr) |> AssignmentExpr
     pipe3 pExpr (str "=") pExpr ctor
