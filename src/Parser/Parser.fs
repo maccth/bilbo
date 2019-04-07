@@ -74,15 +74,20 @@ let pnKeyword : Parser<unit, unit> =
     notFollowedBy (choice pKws)
 
 let pId : Parser<string, unit> =
-    let firstChar c = isLetter c || c = '_'
-    let middleChar c = firstChar c || isDigit c
+    let firstChar c = isLetter c
+    let middleChar c = firstChar c || c = '_' || isDigit c
     let upToLastChar = many1Satisfy2 firstChar middleChar
     let lastChar = manyChars (pchar ''') .>> ws
     // For the special `++` variable available in match cases
-    let p = (str "++") <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
+    let specialVars =
+        [
+            "(++)"; // For the positive and negative application conditions in a match
+            "(--)";
+        ] |> List.map str |> choice
+    let p = specialVars <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
     p <?> "variable identifier"
 
-let pVar = pId |>> Var |>> VExpr
+let pVar = pId |>> Var
 
 let pStrLit : Parser<Literal, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
@@ -124,7 +129,7 @@ let pPostIds =
     let checkPosts s p =
         match p with
         | Some p' -> p' s
-        | None -> s |> Var |> VExpr
+        | None -> s |> Var
     pipe2 pId (opt postIds) checkPosts
 
 let pParamList = pExpr |> csv2 |> brackets |>> ParamList |>> SExpr
@@ -137,7 +142,7 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 9, al, NodeCons;
+        "::", 10, al, NodeCons;
         ".", 9, al, Dot
 
         "^", 8, ar, Pow;
@@ -189,9 +194,9 @@ let addBinOp (op, prec, nf, assoc, astOp) =
             InfixOperator(op, ws, prec, assoc, (astOp |> cons))
     exprOpp.AddOperator(inOp)
 
+exprOpp.AddOperator(PrefixOperator("&&", ws, 9, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 10, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&&", ws, 10, true, fun x -> (DblAmp,x) |> PrefixExpr ))
 
 exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> PrefixExpr))
 exprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
@@ -271,20 +276,29 @@ do pExprTermRef := chance exprs
 // This allows differentiation between field access (xyz = a.b) and
 //  field assignement (a.b = xyz). Furthermore, that only valid LHSs
 //  will be parsed
-let pDotAssign' =
-    let attrs = (str ".") >>. sepBy1 pId (str ".")
-    let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAssign |> VExpr) (var |> Var |> VExpr) 
-    attrs |>> consDot
+// let pDotAssign' =
+//     let attrs = (str ".") >>. sepBy1 pId (str ".")
+//     let consDot aLst var = aLst |> List.fold (fun x y ->  (x, y) |> DotAssign |> VExpr) (var |> Var |> VExpr) 
+//     attrs |>> consDot
 
-let pVExpr =
-    pId .>>. opt pDotAssign' |>>
-    function
-    | v, Some d -> d v
-    | v, None -> v |> Var |> VExpr
+// let pVExpr =
+    // let loadAssign =
+    //     (str "&&") >>. pId
+    //     |>> NodeLoadAssign |>> VExpr
+    // let idAssign =
+    //     ((notFollowedBy (str "&&")) >>. str "&") >>. pId
+    //     |>> NodeIdAssign |>> VExpr
+    // let varAssigns =
+    //     pId .>>. opt pDotAssign' |>>
+    //     function
+    //     | v, Some d -> d v
+    //     | v, None -> v |> VarAssign |> VExpr
+    // choice [loadAssign; idAssign; varAssigns]
+    
 
 let pAssignmentExpr =
     let ctor var _ expr  =  (var, expr) |> AssignmentExpr
-    pipe3 pVExpr (str "=") pExpr ctor
+    pipe3 pExpr (str "=") pExpr ctor
 
 let pExprStatement =
     choice [pAssignmentExpr;]
@@ -294,10 +308,16 @@ let pBecome = keyw "become" >>. pExpr |>> Become
 let pTerminatingStatement = (pReturn <|> pBecome) <?> "terminating statement, `return` or `become`" 
 
 let pMatchCase =
-    let cons lhs where _arrow body term = (lhs,where,body,term) |> MatchCase
+    let cons lhs where _arrow body term =
+        match lhs with
+        | Var v when v="_" ->
+            (where,body,term) |> CatchAll
+        | _ ->
+            (lhs, where,body,term) |> Case
     let body = many pExprStatement
     let whereClause = (keyw "where") >>. many pExpr
-    pipe5 pExpr (opt whereClause) (str "->") body pTerminatingStatement cons
+    let matcher = (str ("_") |>> Var) <|> pExpr
+    pipe5 matcher (opt whereClause) (str "->") body pTerminatingStatement cons
 
 let pMatchStatement =
     let cases = (str "|") >>. sepBy1 pMatchCase (str "|")

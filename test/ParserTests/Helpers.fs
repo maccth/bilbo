@@ -6,7 +6,7 @@ open Bilbo.Parser.Parser
 open FParsec
 
 // Helper functions to make AST construction quicker
-let VAR x = x |> Var |> VExpr
+let VAR x = x |> Var
 
 let INT x = x |> IntLit |> Literal  
 let STR x = x |> StrLit |> Literal 
@@ -17,7 +17,8 @@ let BIN x op y = (SExpr x, op, SExpr y) |> BinExpr
 let PRE op x = (op, x) |> PrefixExpr
 let POST op x = (x, op) |> PostfixExpr
 let OBJ t pLst = (t,pLst) |> ObjInstan |> ObjExpr
-let DOT e id = (e,id) |> DotAssign
+let DOT e id = (e,Dot,id) |> BinExpr
+let PLST lst = lst |> ParamList
 
 let runAstTest expAst codeStr =
     let ast = pBilboStr codeStr |> function
@@ -39,4 +40,4 @@ let consAssignTest eTyp data  =
 
 let sExprTest = consAssignTest SExpr
 
-let exprTest = consAssignTest (fun x -> x)
+let exprTest = consAssignTest id

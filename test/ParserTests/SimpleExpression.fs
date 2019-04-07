@@ -22,6 +22,13 @@ let objExprTests = [
     "a = MyType'(\"One\",-2.0,3,False)", "a", OBJs "MyType'" [STR "One"; FLT -2.0; INT 3; BOOL false], "Instantiation, literal params";
 ]
 
+let INTe x = x |> INT |> SExpr
+// Some of these tests are not valid semantically since param lists cannot be bound
+let paramListTests = [
+    "a = (1,2,3)", "a", [1;2;3] |> List.map INTe |> PLST, "Param list, 3 ints";
+    "a = (1,2)", "a", [1;2] |> List.map INTe |> PLST , "Param list, 2 ints";
+    "a = (1)", "a", INT 1, "Single values in brackets are not param lists";
+]
 
 [<Tests>]
 let tests =
@@ -30,3 +37,7 @@ let tests =
 [<Tests>]
 let tests2 =
     testList "Binary expression tests" (List.map sExprTest objExprTests)
+
+[<Tests>]
+let tests3 =
+    testList "Param list tests" (List.map sExprTest paramListTests)

@@ -16,21 +16,12 @@ and ExprStatement =
     | AssignmentExpr of Expr * Expr
     
 and Expr =
-    | VExpr of VExpr
+    | Var of Id
     | SExpr of SExpr
     | GExpr of GExpr
     | BinExpr of Expr * BinOp * Expr
     | PrefixExpr of PreOp  * Expr
     | PostfixExpr of Expr * PostOp
-    // TODO: These types will allow for better domain modelling in the ASG
-    // | MExpr of MExpr
-    // | AExpr of AExpr
-    // | TExpr of TExpr
-    // | NodeCons of Expr * Expr
-
-and VExpr =
-    | Var of Id
-    | DotAssign of Expr * Id
 
 and SExpr =
     | ObjExpr of ObjExpr
@@ -40,9 +31,6 @@ and SExpr =
 and GExpr =
     | PathExpr of PathExpr
 
-// and MExpr =
-    // | MPrefixExpr of MPreOp * Expr
-    // | MBinExpr of Expr * MBinOp * Expr
  
 and ObjExpr =
     | ObjInstan of TypeName * Expr list
@@ -115,7 +103,8 @@ and MatchStatement =
     Expr Option * MatchCase list
 
 and MatchCase =
-    Expr * WhereClause Option * ExprStatement list * TerminatingStatement 
+    | Case of Expr * WhereClause Option * ExprStatement list * TerminatingStatement
+    | CatchAll of WhereClause Option * ExprStatement list * TerminatingStatement
 
 and WhereClause = Expr list
 
