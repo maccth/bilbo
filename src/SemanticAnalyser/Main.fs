@@ -9,7 +9,7 @@ open Bilbo.SemanticAnalyser.SemanticAnalyser
 let main (argv : string []) =
     match argv.Length with
     | l when l <> 1 ->
-        printfn "Starting parsing REPL"
+        printfn "Starting semantic analysis REPL"
         let mutable codeIn = ""
         let mutable stillReading = false
         while true do
@@ -21,8 +21,8 @@ let main (argv : string []) =
             if line.EndsWith ";" then
                 // TODO: refactor REPLs
                 let ast = pBilboStr codeIn
-                let ast' = analyseSemantics ast
-                printfn "%A" ast'
+                analyseSemanticsPrint ast []
+                // printfn "%A" ast'
                 codeIn <- ""
                 stillReading <- false
             else
@@ -30,6 +30,5 @@ let main (argv : string []) =
     | _ ->
         let file =  argv.[0]
         let ast = pBilbo file
-        let ast' = analyseSemantics ast
-        printfn "%A" ast'
+        analyseSemanticsPrint ast []
     0
