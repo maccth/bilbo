@@ -2,6 +2,7 @@
 .paket/paket.exe
 packages/
 tmp/*
+inputs/*
 
 # The rest is from: https://gist.github.com/vmandic/ac2ecc9c24f6899ee0ec46e4ce444a0e
 

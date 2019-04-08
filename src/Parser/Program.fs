@@ -27,14 +27,13 @@ let main (argv : string []) =
             let line = Console.ReadLine()
             codeIn <- codeIn + "\n" + line.Replace(";", "")
             if line.EndsWith ";" then
-                let result = pBilboStr codeIn
-                outputParsedResult result
+                pBilboStrPrint codeIn
                 codeIn <- ""
                 stillReading <- false
             else
                 stillReading <- true
     | _ ->
         let file =  argv.[0]
-        let result = pBilboFile file
-        outputParsedResult result
+        let result = pBilboFile file file
+        printfn "%A" result
     0

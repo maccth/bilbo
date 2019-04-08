@@ -27,10 +27,7 @@ let BIEDGE n1 e n2 = (n1,Bidir e,n2) |> Edge
 let PATH lst = lst |> Path |> PathExpr |> GExpr
 
 let runAstTest expAst codeStr =
-    let ast = pBilboStr codeStr |> function
-        | Success(res, _, _) -> res
-        // TODO: Deal with failures by raising Expecto failure
-        // | Failure(msg, err, state) -> failwith "Parsing failed"
+    let ast = pBilboStr codeStr
     Expect.equal expAst ast ""
     
 let consAssignAst var rhs =

@@ -21,7 +21,7 @@ let comment =
     |>> ignore
     |> fun p -> p <?> "comment"
 
-let ws = (many (choice [spaces1; comment;]) |>> ignore) <?> ""
+let ws = (many (choice [spaces1; comment;]) |>> ignore) <?> "whitespace"
 
 let str s = pstring s .>> ws
 // Identical to `str` but increases readability by distinguishing between strings and keywords
@@ -335,8 +335,6 @@ let pTypeDef =
     let p = pipe4 (keyw "type") (pId <?> "type name") (str "=") (bracIds <|> csvIds1) ctor
     p <?> "type definition"
 
-let pFile, pFileRef = createParserForwardedToRef()
-
 let pImport =
     let file = keyw "import" >>. pStr
     let alias = keyw "as" >>. pId
@@ -351,26 +349,47 @@ let pProgramUnit = choice [pStatement]
 
 let pProgram = ws >>. choice [pProgramUnit] |> many1 .>> ws
 
-do pFileRef := pProgram .>> eof
+let pFile = pProgram .>> eof
 
-let rec pBilboFile file =
+let pBilboFile' file =
     runParserOnFile pFile () file System.Text.Encoding.UTF8
 
-let pBilboStr' str stream =
-    runParserOnString pFile () stream str 
+let pBilboStr' str =
+    runParserOnString pFile () "user input" str 
+
+let getAst reply fSucc fFail =
+    match reply with
+    | Success(ast, _s, _p) ->
+        fSucc ast
+    | Failure(msg, err, u) ->
+        fFail msg err u
+
+let rec evalImports astIn =
+    let rec evalImports' astIn astOut =
+        match astIn with
+        | (Statement (Import (fp, alias))) :: rest ->
+            // TODO: add usage of alias
+            let importedLines = pBilboFile fp alias
+            let astOut' = List.append astOut importedLines
+            evalImports' rest astOut'
+        | line :: rest ->
+            evalImports' (rest) (astOut @ [line])   
+        | [] -> astOut
+    evalImports' astIn []
+
+and pBilboFile file alias =
+    // TODO: add usage of alias
+    let res = pBilboFile' file
+    getAst res (evalImports) <| fun msg _err _u ->
+        printfn "%s" ("In file: " + file)
+        failwithf "%s" msg
+
+let pBilboStrPrint str =
+    let res = pBilboStr' str   
+    getAst res (evalImports >> printfn "%A") <| fun msg _err _u ->
+        printf "%s" msg
 
 let pBilboStr str =
-    pBilboStr' str "user input string"
-
-// Sketch code for parsing imported file
-// let pWholeProgram file =
-//     runParserOnFile pFile () file System.Text.Encoding.UTF8
-// let parseImportedFile path =
-//     pWholeProgram path
-// (file .>>. alias) |>> function
-//     | file', alias' ->
-//         let res = parseImportedFile file'
-//         match res with
-//         | Success(res', _s, _p) ->
-//          ...
-            
+    let res = pBilboStr' str   
+    getAst res (evalImports) <| fun msg _err _u ->
+        failwithf "%s" msg
