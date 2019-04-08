@@ -9,11 +9,13 @@ and Statement =
     | TypeDef of TypeDef
     | TransformDef of TransformDef
     | ExprStatement of ExprStatement
+    | Import of FilePath * string
 
 and TypeDef = TypeName * Attribute list
     
 and ExprStatement =
     | AssignmentExpr of Expr * Expr
+    | PrintExpr of Expr * Expr Option
     
 and Expr =
     | Var of Id
@@ -117,3 +119,4 @@ and Id = string
 and Param = string
 and TypeName = string
 and Attribute = string
+and FilePath = string

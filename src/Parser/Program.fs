@@ -35,6 +35,6 @@ let main (argv : string []) =
                 stillReading <- true
     | _ ->
         let file =  argv.[0]
-        let result = pBilboFile file System.Text.Encoding.UTF8
+        let result = pBilboFile file
         outputParsedResult result
     0

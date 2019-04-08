@@ -69,6 +69,8 @@ let keywords =
         "match";
         "where";
         "True"; "False";
+        "print";
+        "import";
     ] |> Set.ofList
 
 let pnKeyword : Parser<unit, unit> =
@@ -91,9 +93,12 @@ let pId : Parser<string, unit> =
 
 let pVar = pId |>> Var
 
-let pStrLit : Parser<Literal, unit> =
+let pStr : Parser<string, unit> =
     let chars = manySatisfy (fun c -> c <> '"')
-    between (stre "\"") (str "\"") chars |>> StrLit
+    between (stre "\"") (str "\"") chars
+
+let pStrLit =
+    pStr |>> StrLit
 
 let pIntLit : Parser<Literal, unit> =
     pint32 .>> notFollowedBy (stre ".") .>> ws |>> int |>> IntLit
@@ -144,30 +149,30 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 10, al, NodeCons;
-        ".", 9, al, Dot
+        "::", 12, al, NodeCons;
+        ".", 11, al, Dot
 
-        "^", 8, ar, Pow;
+        "^", 10, ar, Pow;
 
-        "**", 7, al, MulApp;
-        "*!*", 7, al, UpToApp;
+        "**", 9, al, MulApp;
+        "*!*", 9, al, UpToApp;
         // Times is defined below
-        "/", 7, al, Divide;
+        "/", 9, al, Divide;
 
-        "+", 6, al, Plus;
+        "+", 8, al, Plus;
         // Minus is defined below
 
-        "<", 5, al, LessThan;
-        "<=", 5, al, LessThanEq;
+        "<", 7, al, LessThan;
+        "<=", 7, al, LessThanEq;
         // Greater than is defined below
-        ">=", 5, al, GreaterThanEq;
-        "==", 5, al, Equal;
-        "is", 5, al, Is;
-        "!=", 5, al, NotEqual;
+        ">=", 7, al, GreaterThanEq;
+        "==", 7, al, Equal;
+        "is", 7, al, Is;
+        "!=", 7, al, NotEqual;
 
-        // "not" has precedence 4, but is prefix (unary)
-        "and", 3, al, And;
-        "or", 2, al, Or;
+        // "not" has precedence 6, but is prefix (unary)
+        "and", 5, al, And;
+        "or", 4, al, Or;
 
         "<|>", 3, al, OrPipe;
         "|>", 2, al, Pipe;
@@ -177,12 +182,20 @@ let binExprOps2 =
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 7, (str "*") <|> (str "!") , al, Times;
+        "*", 9, (str "*") <|> (str "!") , al, Times;
         // Stops conflicts with `->`
-        "-", 6, str ">", al, Minus;
+        "-", 8, str ">", al, Minus;
         // Stops conflicts with `x>,y` in path expressions and `[a>:b,>,c]` in path comprehensions
-        ">", 5, (str ",") <|> (str ":"), al, GreaterThan;
+        ">", 7, (str ",") <|> (str ":"), al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
+
+exprOpp.AddOperator(PrefixOperator("&&", ws, 11, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 11, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("not", ws, 8, true, fun x -> (Not,x) |> PrefixExpr))
+
+exprOpp.AddOperator(PrefixOperator("$", ws, 11 , true, fun x -> (Dollar,x) |> PrefixExpr))
+exprOpp.AddOperator(PostfixOperator("!", ws, 10, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 10, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 let binExprOps = List.append binExprOps1 binExprOps2
 
@@ -195,14 +208,6 @@ let addBinOp (op, prec, nf, assoc, astOp) =
         | None ->
             InfixOperator(op, ws, prec, assoc, (astOp |> cons))
     exprOpp.AddOperator(inOp)
-
-exprOpp.AddOperator(PrefixOperator("&&", ws, 9, true, fun x -> (DblAmp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 9, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("not", ws, 3, true, fun x -> (Not,x) |> PrefixExpr))
-
-exprOpp.AddOperator(PrefixOperator("$", ws, 9, true, fun x -> (Dollar,x) |> PrefixExpr))
-exprOpp.AddOperator(PostfixOperator("!", ws, 8, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
-exprOpp.AddOperator(PostfixOperator("?", ws, 8, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 List.map addBinOp binExprOps |> ignore
 
@@ -281,8 +286,12 @@ let pAssignmentExpr =
     let p = pipe3 pExpr (str "=") pExpr ctor
     p <?> "assignment expression"
 
+let pPrintExpr =
+    let dest = keyw "to" >>. pExpr
+    pipe2 (keyw "print" >>. pExpr) (opt dest) (fun e d -> (e,d) |> PrintExpr)
+
 let pExprStatement =
-    choice [pAssignmentExpr;]
+    choice [pAssignmentExpr; pPrintExpr;]
 
 let pReturn = keyw "return" >>. pExpr |>> Return
 let pBecome = keyw "become" >>. pExpr |>> Become
@@ -323,24 +332,45 @@ let pTypeDef =
     let csvIds = csv pId
     let bracIds = brackets csvIds
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
-    let p = pipe4 (keyw "type") pId (str "=") (bracIds <|> csvIds1) ctor
+    let p = pipe4 (keyw "type") (pId <?> "type name") (str "=") (bracIds <|> csvIds1) ctor
     p <?> "type definition"
+
+let pFile, pFileRef = createParserForwardedToRef()
+
+let pImport =
+    let file = keyw "import" >>. pStr
+    let alias = keyw "as" >>. pId
+    file .>>. alias
+    |>> Import
 
 // Top level parsers
 let pStatement =
-    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport] |>> Statement
 
 let pProgramUnit = choice [pStatement]
 
 let pProgram = ws >>. choice [pProgramUnit] |> many1 .>> ws
 
-let pFile = pProgram .>> eof
+do pFileRef := pProgram .>> eof
 
-let pBilboFile file encoding =
-    runParserOnFile pFile () file encoding
+let rec pBilboFile file =
+    runParserOnFile pFile () file System.Text.Encoding.UTF8
 
 let pBilboStr' str stream =
     runParserOnString pFile () stream str 
 
 let pBilboStr str =
     pBilboStr' str "user input string"
+
+// Sketch code for parsing imported file
+// let pWholeProgram file =
+//     runParserOnFile pFile () file System.Text.Encoding.UTF8
+// let parseImportedFile path =
+//     pWholeProgram path
+// (file .>>. alias) |>> function
+//     | file', alias' ->
+//         let res = parseImportedFile file'
+//         match res with
+//         | Success(res', _s, _p) ->
+//          ...
+            
