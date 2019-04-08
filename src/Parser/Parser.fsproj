@@ -4,9 +4,12 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.6.1" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="Ast.fs" />
     <Compile Include="Parser.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="Main.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -1,17 +1,7 @@
 ﻿module Bilbo.Parser.Main
-open System
-open FParsec
-open Ast
-open Parser
 
-let outputParsedResult res =
-    match res with
-    | Success(res', _s, _p) ->
-        printf "The AST of the input is:\n%A\n" res'
-    | Failure(msg, err, u) ->
-        printfn "%s" msg
-        printfn "%A" err 
-        printfn "%A" u
+open System
+open Bilbo.Parser.Parser
 
 [<EntryPoint>]
 let main (argv : string []) =
