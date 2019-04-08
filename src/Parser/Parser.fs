@@ -337,25 +337,27 @@ let pTypeDef =
 
 let pImport =
     let file = keyw "import" >>. pStr
-    let alias = keyw "as" >>. pId
-    file .>>. alias
+    let nspace = keyw "as" >>. pId
+    file .>>. nspace
     |>> Import
 
 // Top level parsers
 let pStatement =
-    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport] |>> Statement
+    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport]
+    
 
-let pProgramUnit = choice [pStatement]
+let pProgramUnit nspace =
+    pStatement |>> fun s -> (nspace,s) |> Statement
 
-let pProgram = ws >>. choice [pProgramUnit] |> many1 .>> ws
+let pProgram nspace = ws >>. choice [pProgramUnit nspace] |> many1 .>> ws
 
-let pFile = pProgram .>> eof
+let pFile nspace = (pProgram nspace) .>> eof
 
-let pBilboFile' file =
-    runParserOnFile pFile () file System.Text.Encoding.UTF8
+let pBilboFile' nspace file =
+    runParserOnFile (pFile nspace) () file System.Text.Encoding.UTF8
 
-let pBilboStr' str =
-    runParserOnString pFile () "user input" str 
+let pBilboStr' nspace str =
+    runParserOnString (pFile nspace) () "user input" str 
 
 let getAst reply fSucc fFail =
     match reply with
@@ -364,32 +366,34 @@ let getAst reply fSucc fFail =
     | Failure(msg, err, u) ->
         fFail msg err u
 
-let rec evalImports astIn =
-    let rec evalImports' astIn astOut =
+let rec resolveImports astIn =
+    let rec resolveImports' astIn astOut =
         match astIn with
-        | (Statement (Import (fp, alias))) :: rest ->
-            // TODO: add usage of alias
-            let importedLines = pBilboFile fp alias
+        | (Statement (nlst, Import (fp, nspace))) :: rest ->
+            // TODO: add usage of nspace'
+            let importedLines = pBilboFile fp (Name nspace :: nlst)
             let astOut' = List.append astOut importedLines
-            evalImports' rest astOut'
+            resolveImports' rest astOut'
         | line :: rest ->
-            evalImports' (rest) (astOut @ [line])   
+            resolveImports' (rest) (astOut @ [line])
         | [] -> astOut
-    evalImports' astIn []
+    resolveImports' astIn []
 
-and pBilboFile file alias =
-    // TODO: add usage of alias
-    let res = pBilboFile' file
-    getAst res (evalImports) <| fun msg _err _u ->
+and pBilboFile file nspace =
+    let res = pBilboFile' nspace file
+    getAst res (resolveImports) <| fun msg _err _u ->
         printfn "%s" ("In file: " + file)
         failwithf "%s" msg
 
+let pBilbo file =
+    pBilboFile file [Top]
+
 let pBilboStrPrint str =
-    let res = pBilboStr' str   
-    getAst res (evalImports >> printfn "%A") <| fun msg _err _u ->
+    let res = pBilboStr' [Top] str   
+    getAst res (resolveImports >> printfn "%A") <| fun msg _err _u ->
         printf "%s" msg
 
 let pBilboStr str =
-    let res = pBilboStr' str   
-    getAst res (evalImports) <| fun msg _err _u ->
+    let res = pBilboStr' [Top] str   
+    getAst res (resolveImports) <| fun msg _err _u ->
         failwithf "%s" msg

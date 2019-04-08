@@ -31,7 +31,7 @@ let runAstTest expAst codeStr =
     Expect.equal expAst ast ""
     
 let consAssignAst var rhs =
-    (VAR var, rhs) |> AssignmentExpr |> ExprStatement |> Statement
+    (VAR var, rhs) |> AssignmentExpr |> ExprStatement |> fun s -> ([Top],s) |> Statement
 
 let runAssignTest codeStr var rhs =
     let expAst = [consAssignAst var rhs]

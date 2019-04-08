@@ -34,6 +34,6 @@ let main (argv : string []) =
                 stillReading <- true
     | _ ->
         let file =  argv.[0]
-        let result = pBilboFile file file
+        let result = pBilbo file
         printfn "%A" result
     0
