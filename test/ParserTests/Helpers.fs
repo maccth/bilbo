@@ -27,7 +27,7 @@ let BIEDGE n1 e n2 = (n1,Bidir e,n2) |> Edge
 let PATH lst = lst |> Path |> PathExpr |> GExpr
 
 let runAstTest expAst codeStr =
-    let ast = pBilboStr codeStr
+    let ast = bilboStringParser codeStr
     Expect.equal expAst ast ""
     
 let consAssignAst var rhs =

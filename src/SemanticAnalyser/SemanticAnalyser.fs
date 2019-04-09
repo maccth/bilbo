@@ -96,6 +96,7 @@ let rec aProgram (st : SymbolTable) astIn astOut : Analysed<Program> =
         let astOut' = List.rev astOut
         Ok(st, Some astOut')
 
+// Top level semantic analysers
 let bilboSemanticAnalyser (astIn : Program) =
     aProgram emptySymbolTable astIn []
 

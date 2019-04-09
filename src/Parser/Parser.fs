@@ -341,7 +341,6 @@ let pImport =
     file .>>. nspace
     |>> Import
 
-// Top level parsers
 let pStatement =
     choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport]
     
@@ -352,6 +351,8 @@ let pProgram nspace = ws >>. choice [pProgramUnit nspace] |> many1 .>> ws
 
 let pFile nspace = (pProgram nspace) .>> eof
 
+// Top level parsers
+// =================
 let pBilboFile' nspace file =
     runParserOnFile (pFile nspace) () file System.Text.Encoding.UTF8
 
@@ -388,15 +389,15 @@ and pBilboFile file nspace =
         printfn "%s" ("In file: " + file)
         failwithf "%s" msg
 
-let pBilbo file =
+let bilboParser file =
     pBilboFile file [Top]
 
-let pBilboStrPrint str =
+let bilboStringParserPrint str =
     let res = pBilboStr' [Top] str   
     getAst res (resolveImports >> printfn "%A") <| fun msg _err _u ->
         printf "%s" msg
 
-let pBilboStr str =
+let bilboStringParser str =
     let res = pBilboStr' [Top] str   
     getAst res (resolveImports) <| fun msg _err _u ->
         failwithf "%s" msg
