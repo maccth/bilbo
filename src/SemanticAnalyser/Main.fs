@@ -20,9 +20,9 @@ let main (argv : string []) =
             codeIn <- codeIn + "\n" + line.Replace(";", "")
             if line.EndsWith ";" then
                 // TODO: refactor REPLs
+                // TODO: Create print alternatives for REPL
                 let ast = pBilboStr codeIn
-                analyseSemanticsPrint ast []
-                // printfn "%A" ast'
+                analyseSemanticsTop ast
                 codeIn <- ""
                 stillReading <- false
             else
@@ -30,5 +30,6 @@ let main (argv : string []) =
     | _ ->
         let file =  argv.[0]
         let ast = pBilbo file
-        analyseSemanticsPrint ast []
+        analyseSemanticsTop ast
+        // analyseSemanticsPrint ast []
     0

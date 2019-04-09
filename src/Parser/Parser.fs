@@ -243,7 +243,7 @@ let pPathExpr =
     let path =
          (opt compOps .>>. csv pathElem) |> between (str "[") (str "]")
            
-    let consPathElem (elems,prevEdge) (el : Expr * EdgeOp option) =
+    let consPathElem (elems,prevEdge) (el : Expr * EdgeOp Option) =
         // n2 <--prevEdge--> n1 <--nextEdge--> 
         // prevEdge is the incoming edge operator from n1 to n1
         // nextEdge is the outgoing edge operator from n1
@@ -347,7 +347,7 @@ let pStatement =
     
 
 let pProgramUnit nspace =
-    pStatement |>> fun s -> (nspace,s) |> Statement
+    pStatement |>> fun s -> (nspace,s) |> ProgramUnit
 
 let pProgram nspace = ws >>. choice [pProgramUnit nspace] |> many1 .>> ws
 
@@ -366,10 +366,10 @@ let getAst reply fSucc fFail =
     | Failure(msg, err, u) ->
         fFail msg err u
 
-let rec resolveImports astIn =
-    let rec resolveImports' astIn astOut =
+let rec resolveImports (astIn : ProgramUnit list) =
+    let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
-        | (Statement (nlst, Import (fp, nspace))) :: rest ->
+        |  (nlst, Import (fp, nspace)) :: rest ->
             // TODO: add usage of nspace'
             let importedLines = pBilboFile fp (Name nspace :: nlst)
             let astOut' = List.append astOut importedLines

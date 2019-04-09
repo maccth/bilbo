@@ -2,8 +2,7 @@ module Bilbo.Parser.Ast
 
 type Program = ProgramUnit list
 
-and ProgramUnit =
-    | Statement of Namespace list * Statement
+and ProgramUnit = Namespace list * Statement
 
 and Namespace =
     | Top
