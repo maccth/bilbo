@@ -2,11 +2,19 @@ module Bilbo.Parser.Ast
 
 type Program = ProgramUnit list
 
-and ProgramUnit = Namespace list * Statement
+and ProgramUnit = Namespace list * Loc * Statement
 
 and Namespace =
     | Top
     | Name of string
+
+and Loc = {
+        file        : FilePath
+        startLine   : int64
+        startCol    : int64
+        endLine     : int64
+        endCol      : int64
+    } 
 
 and Statement =
     | TypeDef of TypeDef
@@ -123,4 +131,3 @@ and Param = string
 and TypeName = string
 and Attribute = string
 and FilePath = string
-// and Namespace = string

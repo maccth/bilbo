@@ -8,6 +8,29 @@ open System.Runtime.InteropServices.ComTypes
 
 let qp x = printfn "%A" x
 
+// FParsec line and column number
+// ==============================
+// credit : https://stackoverflow.com/questions/55590902/fparsec-keeping-line-and-column-numbers
+type WithPos<'T> = { value: 'T; start: Position; finish: Position }
+
+module Position =
+    /// Get the previous position on the same line.
+    let leftOf (p: Position) =
+        if p.Column > 1L then
+            Position(p.StreamName, p.Index - 1L, p.Line, p.Column - 1L)
+        else
+            p
+
+/// Wrap a parser to include the position
+let withPos (p: Parser<'T, 'U>) : Parser<WithPos<'T>, 'U> =
+    // Get the position before and after parsing
+    pipe3 getPosition p getPosition <| fun start value finish ->
+        {
+            value = value
+            start = start
+            finish = Position.leftOf finish
+        }
+
 // Extensions to FParsec
 // =====================
 let commentLine =
@@ -344,20 +367,31 @@ let pImport =
 let pStatement =
     choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport]
     
-let pProgramUnit nspace =
-    pStatement |>> fun s -> (nspace,s) |> ProgramUnit
+let pProgramUnit nspace fname =
+    pStatement
+    |> withPos
+    |>> fun s ->
+        let loc = {
+            file = fname;
+            startLine = s.start.Line;
+            startCol = s.start.Column;
+            endLine = s.finish.Line;
+            endCol = s.finish.Column;
+        } 
+        (nspace, loc, s.value) |> ProgramUnit
 
-let pProgram nspace = ws >>. choice [pProgramUnit nspace] |> many1 .>> ws
+let pProgram nspace fname = ws >>. choice [pProgramUnit nspace fname] |> many1 .>> ws
 
-let pFile nspace = (pProgram nspace) .>> eof
+let pFile nspace fname = (pProgram nspace fname) .>> eof
 
 // Top level parsers
 // =================
 let pBilboFile' nspace file =
-    runParserOnFile (pFile nspace) () file System.Text.Encoding.UTF8
+    runParserOnFile (pFile nspace file) () file System.Text.Encoding.UTF8
 
 let pBilboStr' nspace str =
-    runParserOnString (pFile nspace) () "user input" str 
+    let stream = "user input"
+    runParserOnString (pFile nspace stream) () stream  str 
 
 let getAst reply fSucc fFail =
     match reply with
@@ -369,10 +403,10 @@ let getAst reply fSucc fFail =
 let rec resolveImports (astIn : ProgramUnit list) =
     let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
-        |  (nlst, Import (fp, nspace)) :: rest ->
+        |  (nlst, loc, Import (fp, nspace)) :: rest ->
             let importedLines = pBilboFile fp (Name nspace :: nlst)
             // Keep import statement for semantic analysis to record the namespace
-            let importLine = (nlst, Import (fp, nspace))
+            let importLine = (nlst, loc, Import (fp, nspace))
             // TODO: Construct AST in reverse by prepending and then reverse at the end
             let astOut' = List.append astOut (importLine :: importedLines)
             resolveImports' rest astOut'
