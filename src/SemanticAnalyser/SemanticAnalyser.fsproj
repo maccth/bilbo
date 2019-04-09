@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Include="Value.fs" />
+    <Compile Include="SymbolTable.fs" />
     <Compile Include="SemanticAnalyser.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
