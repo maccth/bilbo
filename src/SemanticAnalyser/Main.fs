@@ -22,7 +22,7 @@ let main (argv : string []) =
                 // TODO: refactor REPLs
                 // TODO: Create print alternatives for REPL
                 let ast = pBilboStr codeIn
-                analyseSemanticsTop ast
+                bilboSemanticAnalyserPrint ast
                 codeIn <- ""
                 stillReading <- false
             else
@@ -30,6 +30,5 @@ let main (argv : string []) =
     | _ ->
         let file =  argv.[0]
         let ast = pBilbo file
-        analyseSemanticsTop ast
-        // analyseSemanticsPrint ast []
+        bilboSemanticAnalyserPrint ast
     0

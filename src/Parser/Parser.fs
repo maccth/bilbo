@@ -345,7 +345,6 @@ let pImport =
 let pStatement =
     choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport]
     
-
 let pProgramUnit nspace =
     pStatement |>> fun s -> (nspace,s) |> ProgramUnit
 
@@ -370,16 +369,20 @@ let rec resolveImports (astIn : ProgramUnit list) =
     let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
         |  (nlst, Import (fp, nspace)) :: rest ->
-            // TODO: add usage of nspace'
             let importedLines = pBilboFile fp (Name nspace :: nlst)
-            let astOut' = List.append astOut importedLines
+            // Keep import statement for semantic analysis to record the namespace
+            let importLine = (nlst, Import (fp, nspace))
+            // TODO: Construct AST in reverse by prepending and then reverse at the end
+            let astOut' = List.append astOut (importLine :: importedLines)
             resolveImports' rest astOut'
         | line :: rest ->
+
             resolveImports' (rest) (astOut @ [line])
         | [] -> astOut
     resolveImports' astIn []
 
 and pBilboFile file nspace =
+    // TODO: catch exception for file not existing, turn into error monad
     let res = pBilboFile' nspace file
     getAst res (resolveImports) <| fun msg _err _u ->
         printfn "%s" ("In file: " + file)

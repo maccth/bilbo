@@ -2,24 +2,12 @@
 
 open Bilbo.Parser.Ast
 open Bilbo.SemanticAnalyser.Value
-// open Bilbo.Parser.Parser
-
-let checkLhsAssign s =
-    let rec checkLhsExpr lhs =
-        match lhs with
-        | Var _id -> true
-        | BinExpr (l, Dot, r) ->
-            (checkLhsExpr l) && (checkLhsExpr r)
-        | _ -> false
-    match s with
-    | ExprStatement (AssignmentExpr(lhs,rhs)) -> checkLhsExpr lhs
-    | _ -> true
 
 type SymbolTable = {
-    types       : Map<string * string, TypeDef>; 
-    transforms  : Map<string * string, TransformDef>;
-    variables   : Map<string * string, Value>;
-    namespaces  : Map<string, Value>;
+    types       : Map<string * string,  TypeDef>; 
+    transforms  : Map<string * string,  TransformDef>;
+    variables   : Map<string * string,  Value>;
+    namespaces  : Map<string,           string>;
 }
 
 let consSymbolTable = {
@@ -32,20 +20,23 @@ let consSymbolTable = {
 let addType (st : SymbolTable) (nspace,tname) tdef =
     {st with types = Map.add (nspace,tname) tdef st.types}
 
+let addTransform (st : SymbolTable) (nspace,tname) tdef =
+    {st with transforms = Map.add (nspace,tname) tdef st.transforms}
+
+let addNamespace (st : SymbolTable) nspace fp =
+    {st with namespaces = Map.add nspace fp st.namespaces}
+
 // TODO: Create Bilbo error types
 type BilboError = string
-//                  Result<(SymbolTable * 'T option), BilboError>)
-type Analysis<'T> = Result<SymbolTable * 'T Option, BilboError>
+type Analysed<'T> = Result<SymbolTable * 'T Option, BilboError>
 
-let analysisBind (binder : 'T1 -> 'T2) (r : Analysis<'T1>) =
+let analysedBind (binder : 'T1 -> 'T2) (r : Analysed<'T1>) =
     match r with
     | Error e -> Error e
     | Ok(st, None) -> Ok(st,None)
     | Ok(st, Some astPart) -> 
         let astPart' = astPart |> binder |> Some
         Ok(st, astPart')
-
-// type Analyser<'T> = SymbolTable -> 'T -> Analysis<'T>
 
 let nstr (nlst : Namespace list) =
     let str e =
@@ -62,36 +53,59 @@ let nstr (nlst : Namespace list) =
         | [] -> res
     nstr' (List.rev nlst) ""
 
-let aTypeDef st tdef nspace : Analysis<TypeDef> = 
-    let tname, attrs = tdef
+let aTypeDef st tdef nspace : Analysed<TypeDef> = 
+    let tname = fst tdef
     match Map.containsKey (nspace, tname) st.types with
-    | true -> "Type definition with this name already exists" |> Error
+    | true -> "A type definition with this name already exists" |> Error
     | false ->
-        let st' = addType st (nspace, tname) (tname,attrs)
+        let st' = addType st (nspace, tname) (tdef)
         (st', None) |> Ok
 
-// TODO: requires expression semantic analysis
-// let aTransformDef st tdef nspace =
+let aTransformDef (st : SymbolTable) tdef nspace : Analysed<TransformDef> =
+    let tname,_,_,_ = tdef
+    match Map.containsKey (nspace, tname) st.transforms with
+    | true -> "A transform with this name already exists" |> Error
+    | false ->
+        let st' = addTransform st (nspace, tname) (tdef)
+        (st', None) |> Ok
 
-let aExprStatement st e nspace : Analysis<ExprStatement> =
-    (st, Some e) |> Ok
+let rec checkAssignmentLhs e =
+    match e with
+    | Var id -> true
+    | BinExpr (l, Dot, r) ->
+        (checkAssignmentLhs l) && (checkAssignmentLhs r)
+    | _ -> false
 
-let aProgramUnit st (pu : ProgramUnit) : Analysis<ProgramUnit> = 
+let aExprStatement st e : Analysed<ExprStatement> =
+    match e with
+    | AssignmentExpr (lhs, rhs) ->
+        match checkAssignmentLhs lhs with
+        | true -> Ok(st, Some e)
+        | false -> "The left-hand side of this expression cannot be assigned to" |> Error
+    | _ -> Ok(st, Some e)
+        
+let aImport st (fp,n) nspace : Analysed<FilePath * string> =
+    let st' = addNamespace st n fp
+    (st', None) |> Ok
+
+let aProgramUnit st (pu : ProgramUnit) : Analysed<ProgramUnit> = 
     let (nspace, s) = pu
     let nspace' = nstr nspace
     match s with
     | TypeDef def ->
         aTypeDef st def nspace'
-        |> analysisBind (fun t -> (nspace, TypeDef t) |> ProgramUnit)
-    // | TransformDef def ->
+        |> analysedBind (fun t -> (nspace, TypeDef t) |> ProgramUnit)
+    | TransformDef def ->
+        aTransformDef st def nspace'
+        |> analysedBind (fun t -> (nspace, TransformDef t) |> ProgramUnit)
     | ExprStatement e ->
-        aExprStatement st e nspace'
-        |> analysisBind (fun t -> (nspace, ExprStatement t) |> ProgramUnit)
-    // Import statements are handled at parse time
-    | Import _ -> (st, None) |> Ok
-    | _ -> (st, Some pu) |> Ok
+        aExprStatement st e
+        |> analysedBind (fun t -> (nspace, ExprStatement t) |> ProgramUnit)
+    | Import(fp,n) ->
+        aImport st (fp,n) nspace'
+        |> analysedBind (fun t -> (nspace, Import t) |> ProgramUnit)
     
-let rec aProgram (st : SymbolTable) (astIn : Program) (astOut : Program) =
+let rec aProgram (st : SymbolTable) astIn astOut : Analysed<Program> =
     match astIn with
     | line :: rest ->
         match aProgramUnit st line with
@@ -100,17 +114,26 @@ let rec aProgram (st : SymbolTable) (astIn : Program) (astOut : Program) =
         | Ok (st', None) ->
             aProgram st' rest astOut
         | Error e ->
-            printfn "%s" e
+            Error e
     | [] ->
         let astOut' = List.rev astOut
-        printfn "%A" astOut'
+        Ok(st, Some astOut')
+
+let bilboSemanticAnalyser (astIn : Program) =
+    aProgram consSymbolTable astIn []
+
+let bilboSemanticAnalyserPrint (astIn : Program) =
+    let out = bilboSemanticAnalyser astIn
+    match out with
+    | Ok(st, Some ast) ->
+        printfn "Program AST:"
+        printfn "%A" ast
+        printfn "Program symbol table:"
         printfn "%A" st
-
-let analyseSemanticsTop astIn =
-    aProgram consSymbolTable astIn [] 
-
-
-
-
-
-
+    | Error(s) ->
+        printfn "%A" s
+    | Ok(st, None) ->
+        printfn "%s" "Passed semantic analysis but did not return an AST."
+        printfn "%s" "The symbol table is:"
+        printfn "%A" st
+        failwithf "%s" "Will not happen. Program cannot parse and pass semantic analysis but return no AST."
