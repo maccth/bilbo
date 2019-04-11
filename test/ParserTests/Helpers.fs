@@ -35,12 +35,18 @@ let emptyLoc = {
         endCol = -1L;
 }
 
-let overrideAstLocs (ast : ProgramUnit list) loc =
-    let rec setAstLocs astIn astOut =
+let overrideAstLocs (ast : ProgramUnit list) (loc : Loc) =
+    let rec setAstLocs (astIn : ProgramUnit list) astOut =
         match astIn with
-        | (nlst, _, s) :: rest ->
-            let altered = (nlst, loc, s) |> ProgramUnit
-            setAstLocs rest (altered:: astOut)
+        | (nlst, s) :: rest ->
+            let s' =
+                match s with
+                | TypeDefL (l,tdef) -> TypeDefL (loc, tdef)
+                | TransformDefL (l,tdef) -> TransformDefL (loc, tdef)
+                | ExprStatementL (l, e) -> ExprStatementL(loc, e)
+                | ImportL (l, im) -> ImportL (loc, im)
+            let altered = (nlst, s') |> ProgramUnit
+            setAstLocs rest ((ProgramUnit altered):: astOut)
         | [] -> astOut
     setAstLocs ast []
 
@@ -51,7 +57,11 @@ let runAstTest expAst codeStr =
     Expect.equal expAst ast' ""
     
 let consAssignAst var rhs =
-    (VAR var, rhs) |> AssignmentExpr |> ExprStatement |> fun s -> ([Top],emptyLoc,s) |> ProgramUnit
+    (VAR var, rhs)
+    |> AssignmentExpr
+    |> fun e -> (emptyLoc, e)
+    |> ExprStatementL
+    |> fun s -> ([Top],s) |> ProgramUnit
 
 let runAssignTest codeStr var rhs =
     let expAst = [consAssignAst var rhs]

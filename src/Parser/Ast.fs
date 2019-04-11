@@ -18,7 +18,7 @@ and Loc = {
 
 and Statement =
     | TypeDefL of Loc * TypeDef
-    | TransformDefL of Loc *  TransformDef
+    | TransformDefL of Loc * TransformDef
     | ExprStatementL of ExprStatementL
     | ImportL of Loc * Import
 
