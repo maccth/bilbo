@@ -4,13 +4,15 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
-<ItemGroup>
+  <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.6.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="Ast.fs" />
     <Compile Include="Cli.fs" />
+    <Compile Include="Value.fs" />
+    <Compile Include="SymbolTable.fs" />
   </ItemGroup>
 
 </Project>
