@@ -11,7 +11,9 @@ let qp x = printfn "%A" x
 // FParsec line and column number
 // ==============================
 // credit : https://stackoverflow.com/questions/55590902/fparsec-keeping-line-and-column-numbers
-type WithPos<'T> = { value: 'T; start: Position; finish: Position }
+// edited by maccth
+
+type WithPos<'T> = (Loc * 'T)
 
 module Position =
     /// Get the previous position on the same line.
@@ -21,15 +23,21 @@ module Position =
         else
             p
 
-/// Wrap a parser to include the position
-let withPos (p: Parser<'T, 'U>) : Parser<WithPos<'T>, 'U> =
-    // Get the position before and after parsing
-    pipe3 getPosition p getPosition <| fun start value finish ->
-        {
-            value = value
-            start = start
-            finish = Position.leftOf finish
-        }
+    /// Wrap a parser to include the position
+    let attachPos fname (p: Parser<'T, 'U>) : Parser<WithPos<'T>, 'U> =
+        // Get the position before and after parsing
+        pipe3 getPosition p getPosition <| fun start value finish ->
+            let loc = {
+                file = fname;
+                startLine = start.Line;
+                startCol = start.Column;
+                endLine = (leftOf finish).Line;
+                endCol = (leftOf finish).Column;
+            }
+            (loc, value)
+
+    let bind binder (p : Parser<WithPos<'T>, 'U>) =
+        p |>> binder
 
 // Extensions to FParsec
 // =====================
@@ -313,8 +321,9 @@ let pPrintExpr =
     let dest = keyw "to" >>. pExpr
     pipe2 (keyw "print" >>. pExpr) (opt dest) (fun e d -> (e,d) |> PrintExpr)
 
-let pExprStatement =
-    choice [pAssignmentExpr; pPrintExpr;]
+let pExprStatementL fname =
+    choice [pAssignmentExpr; pPrintExpr]
+    |> Position.attachPos fname
 
 let pReturn = keyw "return" >>. pExpr |>> Return
 let pBecome = keyw "become" >>. pExpr |>> Become
@@ -322,63 +331,67 @@ let pTerminatingStatement =
     (pReturn <|> pBecome)
     |> fun p -> p <?> "terminating statement (`return` or `become`)" 
 
-let pMatchCase =
+let pMatchCase fname =
     let cons lhs where _arrow body term =
         match lhs with
         | Var v when v="_" ->
             (where,body,term) |> CatchAll
         | _ ->
             (lhs, where,body,term) |> Case
-    let body = many pExprStatement
+    let body = many (pExprStatementL fname)
     let whereClause = (keyw "where") >>. many pExpr
     let matcher = (str ("_") |>> Var) <|> pExpr
     let p = pipe5 matcher (opt whereClause) (str "->") body pTerminatingStatement cons
     p <?> "match case"
 
-let pMatchStatement =
-    let cases = (str "|") >>. sepBy1 pMatchCase (str "|")
+let pMatchStatement fname =
+    let cases = (str "|") >>. sepBy1 (pMatchCase fname) (str "|")
     let p = pipe3 (keyw "match") (opt pExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
     p <?> "match statement"
 
-let pTransformDef =
+let pTransformDef fname =
     let paramCsv = csv pId
     let paramBrac = brackets paramCsv <|> paramCsv 
-    let exprs = many pExprStatement
-    let matches = pMatchStatement 
+    let exprs = many (pExprStatementL fname)
+    let matches = pMatchStatement fname
     let cons (def, tName, paramLst, eq, exprs, matches) =
         (tName, paramLst, exprs, matches) |> TransformDef
     let p = pipe6 (keyw "def") pId paramBrac (str "=") exprs matches cons
-    p <?> "transform definition"
+    let p' = p <?> "transform definition"
+    p'
+    |> Position.attachPos fname
+    |> Position.bind TransformDefL
 
-let pTypeDef =
+let pTypeDef fname =
     let csvIds1 = csv1 pId
     let csvIds = csv pId
     let bracIds = brackets csvIds
     let ctor = fun _ name _ attrs -> (name, attrs) |> TypeDef
     let p = pipe4 (keyw "type") (pId <?> "type name") (str "=") (bracIds <|> csvIds1) ctor
-    p <?> "type definition"
+    let p'= p <?> "type definition"
+    p'
+    |> Position.attachPos fname
+    |> Position.bind TypeDefL
 
-let pImport =
+let pImport fname =
     let file = keyw "import" >>. pStr
     let nspace = keyw "as" >>. pId
-    file .>>. nspace
-    |>> Import
+    let p = file .>>. nspace |>> Import
+    let p' = p <?> "import"
+    p'
+    |> Position.attachPos fname
+    |> Position.bind ImportL
 
-let pStatement =
-    choice [pExprStatement |>> ExprStatement; pTypeDef; pTransformDef; pImport]
+let pStatement fname =
+    let pe fname = fname |>  pExprStatementL |>> ExprStatementL
+    let ps = [pe; pTypeDef; pTransformDef; pImport;]
+    let ps' = List.map (fun p -> p fname) ps
+    choice ps'
     
 let pProgramUnit nspace fname =
-    pStatement
-    |> withPos
+    pStatement fname
     |>> fun s ->
-        let loc = {
-            file = fname;
-            startLine = s.start.Line;
-            startCol = s.start.Column;
-            endLine = s.finish.Line;
-            endCol = s.finish.Column;
-        } 
-        (nspace, loc, s.value) |> ProgramUnit
+        (nspace, s) |> ProgramUnit
 
 let pProgram nspace fname = ws >>. choice [pProgramUnit nspace fname] |> many1 .>> ws
 
@@ -403,10 +416,10 @@ let getAst reply fSucc fFail =
 let rec resolveImports (astIn : ProgramUnit list) =
     let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
-        |  (nlst, loc, Import (fp, nspace)) :: rest ->
+        |  (nlst, ImportL (loc, (fp, nspace))) :: rest ->
             let importedLines = pBilboFile fp (Name nspace :: nlst)
             // Keep import statement for semantic analysis to record the namespace
-            let importLine = (nlst, loc, Import (fp, nspace))
+            let importLine = (nlst, ImportL (loc, Import(fp, nspace)))
             // TODO: Construct AST in reverse by prepending and then reverse at the end
             let astOut' = List.append astOut (importLine :: importedLines)
             resolveImports' rest astOut'

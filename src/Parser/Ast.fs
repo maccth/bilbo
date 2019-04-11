@@ -2,7 +2,7 @@ module Bilbo.Parser.Ast
 
 type Program = ProgramUnit list
 
-and ProgramUnit = Namespace list * Loc * Statement
+and ProgramUnit = Namespace list * Statement
 
 and Namespace =
     | Top
@@ -17,13 +17,17 @@ and Loc = {
     } 
 
 and Statement =
-    | TypeDef of TypeDef
-    | TransformDef of TransformDef
-    | ExprStatement of ExprStatement
-    | Import of FilePath * string
+    | TypeDefL of Loc * TypeDef
+    | TransformDefL of Loc *  TransformDef
+    | ExprStatementL of ExprStatementL
+    | ImportL of Loc * Import
 
+and Import = FilePath * string
+    
 and TypeDef = TypeName * Attribute list
     
+and ExprStatementL = Loc * ExprStatement
+
 and ExprStatement =
     | AssignmentExpr of Expr * Expr
     | PrintExpr of Expr * Expr Option
@@ -110,14 +114,14 @@ and EdgeOp =
     | Bidir of Expr Option
 
 and TransformDef =
-    Id * (Param list) * (ExprStatement list) * MatchStatement
+    Id * (Param list) * (ExprStatementL list) * MatchStatement
 
 and MatchStatement =
     Expr Option * MatchCase list
 
 and MatchCase =
-    | Case of Expr * WhereClause Option * ExprStatement list * TerminatingStatement
-    | CatchAll of WhereClause Option * ExprStatement list * TerminatingStatement
+    | Case of Expr * WhereClause Option * ExprStatementL list * TerminatingStatement
+    | CatchAll of WhereClause Option * ExprStatementL list * TerminatingStatement
 
 and WhereClause = Expr list
 
