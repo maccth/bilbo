@@ -1,8 +1,7 @@
 module Bilbo.SemanticAnalyser.SymbolTable
 
-open Bilbo.Parser.Ast
+open Bilbo.Common.Ast
 open Bilbo.SemanticAnalyser.Value
-open Bilbo.SemanticAnalyser
 
 type SymbolTable = {
     types       : Map<string * string,  TypeDef>; 

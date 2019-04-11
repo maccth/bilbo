@@ -1,7 +1,7 @@
 module Bilbo.Tests.ParserTests.PrefixExpression
 
 open Expecto
-open Bilbo.Parser.Ast
+open Bilbo.Common.Ast
 open Bilbo.Tests.ParserTests.Helpers
 
 

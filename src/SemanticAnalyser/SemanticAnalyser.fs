@@ -1,6 +1,6 @@
 ﻿module Bilbo.SemanticAnalyser.SemanticAnalyser
 
-open Bilbo.Parser.Ast
+open Bilbo.Common.Ast
 open Bilbo.SemanticAnalyser.SymbolTable
 
 // TODO: Create Bilbo error types
@@ -61,7 +61,7 @@ let aExprStatement st e : Analysed<ExprStatement> =
         | false -> "The left-hand side of this expression cannot be assigned to" |> Error
     | _ -> Ok(st, Some e)
         
-let aImport st (fp,n) nspace : Analysed<FilePath * string> =
+let aImport st (fp,n) nspace : Analysed<Import> =
     let st' = addNamespace st n fp
     (st', None) |> Ok
 
@@ -69,18 +69,18 @@ let aProgramUnit st (pu : ProgramUnit) : Analysed<ProgramUnit> =
     let (nspace, s) = pu
     let nspace' = nstr nspace
     match s with
-    | TypeDef def ->
+    | TypeDefL (l, def) ->
         aTypeDef st def nspace'
-        |> analysedBind (fun t -> (nspace, TypeDef t) |> ProgramUnit)
-    | TransformDef def ->
+        |> analysedBind (fun t -> (nspace, TypeDefL (l, t)) |> ProgramUnit)
+    | TransformDefL (l, def) ->
         aTransformDef st def nspace'
-        |> analysedBind (fun t -> (nspace, TransformDef t) |> ProgramUnit)
-    | ExprStatement e ->
+        |> analysedBind (fun t -> (nspace, TransformDefL (l,t)) |> ProgramUnit)
+    | ExprStatementL (l,e) ->
         aExprStatement st e
-        |> analysedBind (fun t -> (nspace, ExprStatement t) |> ProgramUnit)
-    | Import(fp,n) ->
-        aImport st (fp,n) nspace'
-        |> analysedBind (fun t -> (nspace, Import t) |> ProgramUnit)
+        |> analysedBind (fun t -> (nspace, ExprStatementL (l,t)) |> ProgramUnit)
+    | ImportL (l,im) ->
+        aImport st (im) nspace'
+        |> analysedBind (fun t -> (nspace, ImportL (l,t)) |> ProgramUnit)
     
 let rec aProgram (st : SymbolTable) astIn astOut : Analysed<Program> =
     match astIn with

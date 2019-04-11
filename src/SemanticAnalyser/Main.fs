@@ -1,8 +1,7 @@
 module Bilbo.SemanticAnalyser.Main
 
-open System
+open Bilbo.Common.Cli
 open Bilbo.Parser.Parser
-open Bilbo.Parser.Main
 open Bilbo.SemanticAnalyser.SemanticAnalyser
 
 [<EntryPoint>]

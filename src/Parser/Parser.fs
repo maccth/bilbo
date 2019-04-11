@@ -1,10 +1,7 @@
 module Bilbo.Parser.Parser
 
 open FParsec
-open Ast
-open Bilbo.Parser
-open Bilbo.Parser.Ast
-open System.Runtime.InteropServices.ComTypes
+open Bilbo.Common.Ast
 
 let qp x = printfn "%A" x
 

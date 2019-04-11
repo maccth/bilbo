@@ -1,4 +1,4 @@
-module Bilbo.Parser.Ast
+module Bilbo.Common.Ast
 
 type Program = ProgramUnit list
 

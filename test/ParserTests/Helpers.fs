@@ -1,10 +1,8 @@
 module Bilbo.Tests.ParserTests.Helpers
 
 open Expecto
-open Bilbo.Parser.Ast
+open Bilbo.Common.Ast
 open Bilbo.Parser.Parser
-open FParsec
-open Microsoft.VisualStudio.TestPlatform.TestHost
 
 // Helper functions to make AST construction quicker
 let VAR x = x |> Var
