@@ -1,6 +1,6 @@
 module Bilbo.SemanticAnalyser.Value
 
-open Bilbo.Parser.Ast
+open Bilbo.Common.Ast
 
 type Value =
     // For identifers whose value is to be determined at runtime
