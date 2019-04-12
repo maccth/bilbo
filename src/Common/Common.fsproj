@@ -13,6 +13,7 @@
     <Compile Include="Cli.fs" />
     <Compile Include="Value.fs" />
     <Compile Include="SymbolTable.fs" />
+    <Compile Include="Error.fs" />
   </ItemGroup>
 
 </Project>

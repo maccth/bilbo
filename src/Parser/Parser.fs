@@ -2,6 +2,7 @@ module Bilbo.Parser.Parser
 
 open FParsec
 open Bilbo.Common.Ast
+open Bilbo.Common.Error
 
 let qp x = printfn "%A" x
 
@@ -403,45 +404,47 @@ let pBilboStr' nspace str =
     let stream = "user input"
     runParserOnString (pFile nspace stream) () stream  str 
 
-let getAst reply fSucc fFail =
+let getAst reply fSucc fFail : BilboResult<Program>=
     match reply with
     | Success(ast, _s, _p) ->
         fSucc ast
     | Failure(msg, err, u) ->
         fFail msg err u
 
-let rec resolveImports (astIn : ProgramUnit list) =
+let rec resolveImports (astIn : ProgramUnit list) : BilboResult<Program> =
     let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
         |  (nlst, ImportL (loc, (fp, nspace))) :: rest ->
             let importedLines = pBilboFile fp (Name nspace :: nlst)
-            // Keep import statement for semantic analysis to record the namespace
-            let importLine = (nlst, ImportL (loc, Import(fp, nspace)))
-            // TODO: Construct AST in reverse by prepending and then reverse at the end
-            let astOut' = List.append astOut (importLine :: importedLines)
-            resolveImports' rest astOut'
+            match importedLines with
+            | FSharp.Core.Ok importedLines' -> 
+                // Keep import statement for semantic analysis to record the namespace
+                let importLine = (nlst, ImportL (loc, Import(fp, nspace)))
+                // TODO: Construct AST in reverse by prepending and then reverse at the end
+                let astOut' = List.append astOut (importLine :: importedLines')
+                resolveImports' rest astOut'
+            | FSharp.Core.Error e ->
+                e |> FSharp.Core.Error
         | line :: rest ->
-
             resolveImports' (rest) (astOut @ [line])
-        | [] -> astOut
+        | [] -> astOut |> FSharp.Core.Ok
     resolveImports' astIn []
 
-and pBilboFile file nspace =
-    // TODO: catch exception for file not existing, turn into error monad
+and pBilboFile file nspace : BilboResult<Program> =
     let res = pBilboFile' nspace file
-    getAst res (resolveImports) <| fun msg _err _u ->
-        printfn "%s" ("In file: " + file)
-        failwithf "%s" msg
+    getAst res resolveImports (parseError file)
 
-let bilboParser file =
+let bilboParser file : BilboResult<Program> =
     pBilboFile file [Top]
-
-let bilboStringParserPrint str =
-    let res = pBilboStr' [Top] str   
-    getAst res (resolveImports >> printfn "%A") <| fun msg _err _u ->
-        printf "%s" msg
 
 let bilboStringParser str =
     let res = pBilboStr' [Top] str   
-    getAst res (resolveImports) <| fun msg _err _u ->
-        failwithf "%s" msg
+    getAst res resolveImports (parseError "user input")
+
+let bilboStringParserPrint str =
+    let res = bilboStringParser str
+    match res with
+    | FSharp.Core.Ok ast ->
+        printfn "%A" ast
+    | FSharp.Core.Error err ->
+        printfn "%A" err

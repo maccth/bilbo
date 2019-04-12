@@ -3,7 +3,7 @@ module Bilbo.Evaluator.Evaluator
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
-open Bilbo.Common
+open Bilbo.Common.Error
 
 let evalProgramUnit symTabs pUnit =
     let nLst,s = pUnit
@@ -14,7 +14,7 @@ let evalProgramUnit symTabs pUnit =
         symTabs'
     | _ -> symTabs
 
-let bilboEvaluate (ast : Program) =
+let bilboEvaluate (ast : BilboResult<Program>) : BilboResult<ProgramSymbols> =
     let rec evalRec symTabs ast  =
         match ast with
         | pUnit :: rest ->
@@ -22,9 +22,13 @@ let bilboEvaluate (ast : Program) =
            evalRec symTabs' rest
         | [] ->
             symTabs
-    evalRec [SymbolTable.empty] ast 
+    match ast with
+    | Ok ast' ->
+        evalRec [SymbolTable.empty] ast' |> Ok
+    | Error err ->
+       err |> Error
 
-let bilboEvaluatorPrint (ast : Program) =
+let bilboEvaluatorPrint (ast : BilboResult<Program>) =
     ast
     |> bilboEvaluate
     |> printfn "%A"
