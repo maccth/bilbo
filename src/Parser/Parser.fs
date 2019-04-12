@@ -282,14 +282,23 @@ let pPathExpr =
             match elems with
             | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
             | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
-            | [] -> failwith "Will not happen. First element cannot have incoming edge."
+            | [] ->
+                "First element cannot have incoming edge."
+                |> ImplementationError
+                |> FSharp.Core.Error
+                |> failwithf "%A"
+
         | None -> ((n1 |> Node) :: elems), nextEdge
 
     let consPath p =
         List.fold consPathElem ([],None) p
         |> function
         | (lst, None) -> lst
-        | (lst, Some e) -> failwith "Will not happen. Final element cannot have outgoing edge."
+        | (lst, Some e) ->
+            "Final element cannot have outgoing edge."
+            |> ImplementationError
+            |> FSharp.Core.Error
+            |> failwithf "%A"
         |> List.rev
 
     path

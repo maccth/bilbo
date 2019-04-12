@@ -1,7 +1,6 @@
 module Bilbo.Common.Error
 
 open Bilbo.Common.Ast
-open Bilbo.Common.SymbolTable
 
 let Pass = Ok
 let Fail = Error

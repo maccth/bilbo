@@ -2,6 +2,7 @@ module Bilbo.Common.SymbolTable
 
 open Bilbo.Common.Value
 open Bilbo.Common.Ast
+open Bilbo.Common.Error
 
 module SymbolTable =
     type Table = Map<Id, Meaning>
@@ -43,6 +44,10 @@ module SymbolTable =
             | [] ->
                 let st' = add empty rnLst id def'
                 [st']
-        | [] -> failwithf "Will not happen. All program units exist in a namespace." 
+        | [] ->
+            "All program units exist in a namespace."
+            |> ImplementationError
+            |> Error
+            |> failwithf "%A"
 
 type ProgramSymbols = SymbolTable.Table list
