@@ -64,6 +64,8 @@ let evalProgramUnit symTabs pUnit : BilboResult<ProgramSymbols> =
         |> Ok
     | ExprStatementL (loc, e) ->
         evalExprStatement symTabs rnLst e
+    | ImportL (loc, i) ->
+        symTabs |> Ok    
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
