@@ -50,10 +50,26 @@ let overrideAstLocs (ast : ProgramUnit list) (loc : Loc) =
 
 let runAstTest expAst codeStr =
     let ast = bilboStringParser codeStr
-    let ast' = overrideAstLocs ast emptyLoc
-    let expAst = overrideAstLocs ast emptyLoc
-    Expect.equal expAst ast' ""
-    
+    match ast with
+    | Ok ast' ->
+        let astTest = overrideAstLocs ast' emptyLoc
+        let expAst = overrideAstLocs ast' emptyLoc
+        Expect.equal expAst astTest ""
+    | Error e ->
+        failwithf "%A" e
+
+// TODO: Add failure tests
+(*
+let runAstFailTest errorFunc codeStr =
+let ast = bilboStringParser codeStr
+match ast with
+| Error e ->
+    let e' = errorFunc e
+    Expect.isTrue e'
+| Ok ast' ->
+    failwithf "%s" "Meant to fail."
+*)
+
 let consAssignAst var rhs =
     (VAR var, rhs)
     |> AssignmentExpr
@@ -64,7 +80,7 @@ let consAssignAst var rhs =
 let runAssignTest codeStr var rhs =
     let expAst = [consAssignAst var rhs]
     runAstTest expAst codeStr
- 
+
 let consAssignTest eTyp data  =
     let code, var, rhs, des = data
     testCase des <| fun _ -> runAssignTest code var (eTyp rhs)
