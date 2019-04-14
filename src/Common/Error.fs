@@ -6,11 +6,14 @@ let Pass = Ok
 let Fail = Error
 
 type SyntaxError = string
-
 type ImplementationError = string
+type NameError = string
+type FieldError = string
 
 type BilboError =
     | SyntaxError of SyntaxError
+    | FieldError of FieldError
+    | NameError of NameError
     | ImplementationError of ImplementationError
 
 type BilboResult<'T> = Result<'T, BilboError>
