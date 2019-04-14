@@ -4,6 +4,27 @@ open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
+open Bilbo.Common
+
+// Serious code sketch...
+let plusRules x y =
+    match x,y with
+    | Int x', Int y' -> x' + y' |> Int |> SymbolTable.Value |> Ok
+    | Int x', Float y' -> (float x') + y' |> Float |> SymbolTable.Value |> Ok
+    | Float x', Int y' -> x' + (float y') |> Float |> SymbolTable.Value |> Ok
+    | String x', String y' -> x' + y' |> String |> SymbolTable.Value |> Ok
+    | _ ->
+        // TODO: Implement!
+        "Operator error."
+        |> ImplementationError
+        |> Error
+
+// Serious code sketch...
+let (!*!) func (x : BilboResult<SymbolTable.Meaning>) (y : BilboResult<SymbolTable.Meaning>) =
+    match x,y with
+    | Ok (SymbolTable.Value x'), Ok (SymbolTable.Value y') -> func x' y'
+    | Error x',_ -> x' |> Error     
+    | _, Error y' -> y' |> Error
 
 let evalLiteral l : BilboResult<SymbolTable.Meaning> =
     match l with
@@ -14,10 +35,26 @@ let evalLiteral l : BilboResult<SymbolTable.Meaning> =
     |> SymbolTable.Value
     |> Ok
 
-let evalExpr symTabs nLst e : BilboResult<SymbolTable.Meaning> =
+let evalBinExpr op : BilboResult<'A -> 'B -> 'C> =
+    match op with
+    | Plus -> plusRules |> Ok
+    | _ ->
+        // TODO: Implement!
+        "Not implemented yet."
+        |> ImplementationError
+        |> Error
+
+let rec evalExpr symTabs nLst e : BilboResult<SymbolTable.Meaning> =
     match e with
     | Var v -> SymbolTable.getSymbolValue symTabs {nLst=nLst; oLst=[]; id=v}
     | SExpr(Literal l) -> evalLiteral l
+    // Serious code sketch...
+    | BinExpr (lhs,op,rhs) ->
+        let l = evalExpr symTabs nLst lhs
+        let r = evalExpr symTabs nLst rhs
+        match evalBinExpr op with
+        | Ok op' -> !*!op' l r
+        | Error e -> e |> Error
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
