@@ -46,7 +46,7 @@ let evalBinExpr op : BilboResult<'A -> 'B -> 'C> =
 
 let rec evalExpr symTabs nLst e : BilboResult<SymbolTable.Meaning> =
     match e with
-    | Var v -> SymbolTable.getSymbolValue symTabs {nLst=nLst; oLst=[]; id=v}
+    | Var v -> SymbolTable.find symTabs {nLst=nLst; oLst=[]; id=v}
     | SExpr(Literal l) -> evalLiteral l
     // Serious code sketch...
     | BinExpr (lhs,op,rhs) ->
@@ -81,7 +81,7 @@ let evalExprStatement symTabs nLst (e : ExprStatement) : BilboResult<ProgramSymb
             match rhsVal with
             | Error e -> e |> Error
             | Ok rhs ->
-                SymbolTable.setSymbolValue symTabs vid rhs
+                SymbolTable.set symTabs vid rhs
                 |> Ok
     | _ ->
         // TODO: Implement!

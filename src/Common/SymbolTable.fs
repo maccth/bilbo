@@ -16,11 +16,11 @@ module SymbolTable =
 
     and Meaning =
         | Value of Value
-        | SymbolTable of SymbolType * Table 
+        | Space of SpaceType * Table 
 
-    and SymbolType =
+    and SpaceType =
         | Namespace
-        | Object
+        | Objectspace
 
     let empty : Table
         = Map.empty
@@ -34,11 +34,11 @@ module SymbolTable =
                 add st rest id def
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (SymbolTable(Namespace, stCurrent)) ->                 
-                    let stUpdated = add stCurrent rest id def |> fun s -> SymbolTable(Namespace,s)
+                | Some (Space(Namespace, stCurrent)) ->                 
+                    let stUpdated = add stCurrent rest id def |> fun s -> Space(Namespace,s)
                     Map.add n stUpdated st
                 | _ ->
-                    let stNew = (add empty rest id def) |> fun s -> (Namespace,s) |> SymbolTable
+                    let stNew = (add empty rest id def) |> fun s -> (Namespace,s) |> Space
                     Map.add n stNew st
         let def' = def |> Type |> Value
         match nLst with
@@ -56,10 +56,10 @@ module SymbolTable =
                 let st' = add empty nLst id def'
                 [st']
    
-    let getSymbolValue (symTabs : Table list) (vid : ValueId) : BilboResult<Meaning> =
+    let find (symTabs : Table list) (vid : ValueId) : BilboResult<Meaning> =
         let rec getField (st : Table) (vid : ValueId) : BilboResult<Meaning> =
             // match st with
-            // | SymbolTable (Object,st) ->
+            // | Space (Objectspace,st) ->
             match vid.oLst with
             | [] ->
                 match Map.tryFind vid.id st with
@@ -70,7 +70,7 @@ module SymbolTable =
                     |> Error
             | o :: rest ->
                 match Map.tryFind o st with
-                | Some (SymbolTable (typ,st')) -> 
+                | Some (Space (typ,st')) -> 
                     getField st' {vid with oLst = rest}
                 | _ ->
                     "Field " + "\"" + o + "\"" + " is not is not defined"
@@ -83,7 +83,7 @@ module SymbolTable =
                 getSpace st {vid with nLst = rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (SymbolTable(Namespace, stNext)) -> 
+                | Some (Space(Namespace, stNext)) -> 
                     getSpace stNext {vid with nLst = rest}
                 | _ ->
                     "Namespace " + "\"" + n + "\"" + " is not is not defined"
@@ -120,7 +120,7 @@ module SymbolTable =
             | Error e ->
                 e |> Error
 
-    let setSymbolValue (symTabs : Table list) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
+    let set (symTabs : Table list) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
         let (st,rest) =
             match symTabs with
             | hd :: rest -> hd,rest
@@ -134,21 +134,21 @@ module SymbolTable =
                         Map.add vid.id value st
                     | o :: rest ->
                         match Map.tryFind o st with
-                        | Some (SymbolTable(Object,stCurrent)) ->
-                            let stUpdated = set stCurrent {vid with oLst=rest} |> fun s -> (Object,s) |> SymbolTable
+                        | Some (Space(Objectspace,stCurrent)) ->
+                            let stUpdated = set stCurrent {vid with oLst=rest} |> fun s -> (Objectspace,s) |> Space
                             Map.add o stUpdated st
                         | _ ->
-                            let stNew = set empty {vid with oLst=rest} |> fun s -> (Object,s) |> SymbolTable
+                            let stNew = set empty {vid with oLst=rest} |> fun s -> (Objectspace,s) |> Space
                             Map.add o stNew st                              
                 setObj st vid                                         
             | Top :: rest -> set st {vid with nLst=rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (SymbolTable(Namespace, stCurrent)) ->                 
-                    let stUpdated = set stCurrent {vid with nLst=rest} |> fun s -> (Namespace,s) |> SymbolTable
+                | Some (Space(Namespace, stCurrent)) ->                 
+                    let stUpdated = set stCurrent {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
                     Map.add n stUpdated st
                 | _ ->
-                    let stNew = set empty {vid with nLst=rest} |> fun s -> (Namespace,s) |> SymbolTable
+                    let stNew = set empty {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
                     Map.add n stNew st
         let st' = set st vid
         st' :: rest
