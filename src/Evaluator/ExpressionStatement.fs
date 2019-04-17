@@ -5,8 +5,6 @@ open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open System 
-open Bilbo.Common
-open Bilbo.Common.SymbolTable
 
 // Serious code sketch...
 let plusRules x y =
@@ -84,10 +82,10 @@ let typeConvert typ (v : Value) : BilboResult<Value> =
         |> ValueError
         |> Error
 
-let rec typeCast syms nLst typ attrs =
+let rec typeCast syms spLst typ attrs =
     match attrs with
     | [e] ->
-        let e' = evalExpr syms nLst e
+        let e' = evalExpr syms spLst e
         match e' with
         | Ok (Value v) ->
             typeConvert typ v
@@ -104,24 +102,24 @@ let rec typeCast syms nLst typ attrs =
         |> ValueError
         |> Error    
     
-and evalObjExpr syms nLst e : BilboResult<Meaning> =
+and evalObjExpr syms spLst e : BilboResult<Meaning> =
     match e with
     | ObjInstan(typ, attrs) ->
         match typ with
         | "str"
         | "float"
         | "int"
-        | "bool" -> typeCast syms nLst typ attrs
+        | "bool" -> typeCast syms spLst typ attrs
 
 
-and evalExpr (syms : Symbols) nLst e : BilboResult<Meaning> =
+and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
     match e with
-    | Var v -> Symbols.find syms {nLst=nLst; oLst=[]; id=v}
+    | Var v -> Symbols.find syms {spLst=spLst; id=v}
     | SExpr(Literal l) -> evalLiteral l
-    | SExpr(ObjExpr o) -> evalObjExpr syms nLst o
+    | SExpr(ObjExpr o) -> evalObjExpr syms spLst o
     | BinExpr (lhs,op,rhs) ->
-        let l = evalExpr syms nLst lhs
-        let r = evalExpr syms nLst rhs
+        let l = evalExpr syms spLst lhs
+        let r = evalExpr syms spLst rhs
         match evalBinExpr op with
         | Ok op' -> !*!op' l r
         | Error e -> e |> Error
@@ -131,23 +129,23 @@ and evalExpr (syms : Symbols) nLst e : BilboResult<Meaning> =
         |> ImplementationError
         |> Error
 
-let consVid syms nLst e : BilboResult<ValueId> =
+let consVid syms spLst e : BilboResult<ValueId> =
     match e with
-    |Var v -> {nLst=nLst; oLst=[]; id=v} |> Ok
+    | Var v -> {spLst=spLst; id=v} |> Ok
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
     
-let evalExprStatement (syms : Symbols) nLst (e : ExprStatement) : BilboResult<Symbols> =
+let evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
     match e with
     | AssignmentExpr (eLhs, eRhs) ->
-        let lhsId = consVid syms nLst eLhs
+        let lhsId = consVid syms spLst eLhs
         match lhsId with
         | Error e -> e |> Error
         | Ok vid ->
-            let rhsVal = evalExpr syms nLst eRhs
+            let rhsVal = evalExpr syms spLst eRhs
             match rhsVal with
             | Error e -> e |> Error
             | Ok rhs ->

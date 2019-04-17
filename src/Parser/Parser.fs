@@ -423,12 +423,12 @@ let getAst reply fSucc fFail : BilboResult<Program>=
 let rec resolveImports (astIn : ProgramUnit list) : BilboResult<Program> =
     let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
-        |  (nlst, ImportL (loc, (fp, nspace))) :: rest ->
-            let importedLines = pBilboFile fp (Name nspace :: nlst)
+        |  (nLst, ImportL (loc, (fp, nsp))) :: rest ->
+            let importedLines = pBilboFile fp (Name nsp :: nLst)
             match importedLines with
             | FSharp.Core.Ok importedLines' -> 
                 // Keep import statement for semantic analysis to record the namespace
-                let importLine = (nlst, ImportL (loc, Import(fp, nspace)))
+                let importLine = (nLst, ImportL (loc, Import(fp, nsp)))
                 // TODO: Construct AST in reverse by prepending and then reverse at the end
                 let astOut' = List.append astOut (importLine :: importedLines')
                 resolveImports' rest astOut'

@@ -2,11 +2,11 @@ module Bilbo.Common.Ast
 
 type Program = ProgramUnit list
 
-and ProgramUnit = Namespace list * Statement
+and ProgramUnit = SpaceId list * Statement
 
-and Namespace =
+and SpaceId =
     | Top
-    | Name of string
+    | Name of Id
 
 and Loc = {
         file        : FilePath

@@ -12,7 +12,7 @@ let evalProgramUnit (syms : Symbols) pUnit : BilboResult<Symbols> =
     match s with
     | TypeDefL (loc,def) ->
         let tname = fst def
-        let vid = {nLst=rnLst; oLst=[]; id=tname}
+        let vid = {spLst=rnLst; id=tname}
         let value = def |> Type |> Value
         Symbols.set syms vid value
     | ExprStatementL (loc, e) ->
