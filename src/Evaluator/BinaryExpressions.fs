@@ -3,6 +3,8 @@ module Bilbo.Evaluator.BinaryExpressions
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
+open System
+open Bilbo.Common
 
 let (<.|.>) first (second : Lazy<'T option>) =
     match first with
@@ -48,7 +50,7 @@ let intFloat2 ops iiFun ifFun fiFun ffFun erFun =
     intFloat ops iiFun2 ifFun2 fiFun2 ffFun2 erFun
 
 let intFloatStr2 ops iiFun ifFun fiFun ffFun ssFun erFun =
-    let ssFun2 x y = (ssFun x y) |> String
+    let ssFun2 x y = (ssFun x y) |> Value.String
     let str2 =
         match ops with
         | Error e -> e |> Error |> Some
@@ -152,6 +154,42 @@ let notEqualsRules ops =
     let fiFun = fun x y -> x <> float(y) |> Bool
     intFloat ops neq ifFun fiFun neq operatorErr
     |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
+
+
+let boolean ops binOp =
+    match ops with
+    | Ok (Value lhs', Value rhs') ->
+        match lhs',rhs' with
+        | Int x, Int y ->       binOp   (x<>0  )  (y<>0)
+        | Int x, Float y ->     binOp   (x<>0  )  (y<>0.0)
+        | Int x, String y ->    binOp   (x<>0  )  (y<>"")
+        | Int x, Bool y ->      binOp   (x<>0  )  (y)
+        | Float x, Int y ->     binOp   (x<>0.0)  (y<>0)
+        | Float x, Float y ->   binOp   (x<>0.0)  (y<>0.0)
+        | Float x, String y ->  binOp   (x<>0.0)  (y<>"")
+        | Float x, Bool y ->    binOp   (x<>0.0)  (y)
+        | String x, Int y ->    binOp   (x<>"" )  (y<>0)
+        | String x, Float y ->  binOp   (x<>"" )  (y<>0.0)
+        | String x, String y -> binOp   (x<>"" )  (y<>"")
+        | String x, Bool y ->   binOp   (x<>"" )  (y)
+        | Bool x, Int y ->      binOp   (x     )  (y<>0)
+        | Bool x, Float y ->    binOp   (x     )  (y<>0.0)
+        | Bool x, String y ->   binOp   (x     )  (y<>"")
+        | Bool x, Bool y ->     binOp   (x     )  (y)
+        // TODO: Add graph pattern matching `and` and `or` operartions for pos and neg graph
+        | _ -> operatorErr |> Error
+    | Error e -> e |> Error
+    | _ ->
+        // TODO: Implement!
+        "Not implemented yet."
+        |> ImplementationError
+        |> Error
+
+let andRules (ops : BilboResult<Meaning * Meaning>) =
+   boolean ops (fun x y -> (x && y) |> Bool |> Value |> Ok)
+
+let orRules (ops : BilboResult<Meaning * Meaning>) =
+   boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
 
 (**
 let plusRules (ops : BilboResult<Meaning * Meaning>) =

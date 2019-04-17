@@ -35,6 +35,8 @@ and evalBinExpr syms spLst lhs op rhs =
     | GreaterThanEq -> (syms,spLst,lhs,rhs) |..> gteqRules
     | Equal -> (syms,spLst,lhs,rhs) |..> equalsRules
     | NotEqual -> (syms,spLst,lhs,rhs) |..> notEqualsRules
+    | And -> (syms,spLst,lhs,rhs) |..> andRules
+    | Or -> (syms,spLst,lhs,rhs) |..> orRules
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
