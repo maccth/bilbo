@@ -113,11 +113,7 @@ module SymbolTable =
             | Error e ->
                 e |> Error
 
-    let set (symTabs : Bindings list) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
-        let (st,rest) =
-            match symTabs with
-            | hd :: rest -> hd,rest
-            | [] -> (empty,[])
+    let set (symtab : Bindings) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
         let rec setObj (st : Bindings) (vid : ValueId) =
             match vid.oLst with
             | [] -> Map.add vid.id value st
@@ -143,9 +139,7 @@ module SymbolTable =
                 | _ ->
                     let stNew = setNspace empty {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
                     Map.add n stNew st
-        let st' = setNspace st vid
-        st' :: rest
-
+        setNspace symtab vid
 
 module Symbols =
     type Bindings = SymbolTable.Bindings list
@@ -164,3 +158,14 @@ module Symbols =
                 |> NameError
                 |> Error
         findClosest syms []
+    let set (syms : Bindings) (vid : ValueId) (value : SymbolTable.Meaning) : BilboResult<Bindings> =
+        match syms with
+        | st :: rest ->
+            let st' = SymbolTable.set st vid value
+            st'::rest
+            |> Ok
+        | [] ->
+            let st' = SymbolTable.set SymbolTable.empty vid value
+            [st']
+            |> Ok
+

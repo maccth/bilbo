@@ -80,8 +80,7 @@ let evalExprStatement (syms : Symbols.Bindings) nLst (e : ExprStatement) : Bilbo
             match rhsVal with
             | Error e -> e |> Error
             | Ok rhs ->
-                SymbolTable.set syms vid rhs
-                |> Ok
+                Symbols.set syms vid rhs
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
