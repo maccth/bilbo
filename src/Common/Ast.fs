@@ -56,7 +56,7 @@ and BinOp =
     | NodeCons
     | Dot
     // Simple
-    | Pow | Times | Divide | Plus | Minus 
+    | Pow | Times | Divide | Plus | Minus | Percent
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | And | Or

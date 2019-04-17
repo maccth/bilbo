@@ -5,27 +5,7 @@ open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.PrimativeTypes
-
-// Serious code sketch...
-let plusRules ops =
-    match ops with
-    | Ok (Value lhs', Value rhs') ->
-        match lhs',rhs' with
-        | Int x', Int y' -> x' + y' |> Int |> Value |> Ok
-        | Int x', Float y' -> (float x') + y' |> Float |> Value |> Ok
-        | Float x', Int y' -> x' + (float y') |> Float |> Value |> Ok
-        | String x', String y' -> x' + y' |> Value.String |> Value |> Ok
-        | _ ->
-            // TODO: Implement!
-            "Operator error."
-            |> ImplementationError
-            |> Error
-    | Error e -> e |> Error
-    | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
+open Bilbo.Evaluator.BinaryExpressions
 
 let rec evalBinOperands syms spLst lhs rhs =
     let valL = evalExpr syms spLst lhs
@@ -44,6 +24,17 @@ and (|..>) (syms,spLst,lhs,rhs) opRule =
 and evalBinExpr syms spLst lhs op rhs =
     match op with
     | Plus -> (syms,spLst,lhs,rhs) |..> plusRules
+    | Minus -> (syms,spLst,lhs,rhs) |..> minusRules
+    | Times -> (syms,spLst,lhs,rhs) |..> timesRules
+    | Divide -> (syms,spLst,lhs,rhs) |..> divideRules
+    | Percent -> (syms,spLst,lhs,rhs) |..> moduloRules
+    | Pow -> (syms,spLst,lhs,rhs) |..> powRules
+    | LessThan -> (syms,spLst,lhs,rhs) |..> ltRules
+    | LessThanEq -> (syms,spLst,lhs,rhs) |..> lteqRules
+    | GreaterThan -> (syms,spLst,lhs,rhs) |..> gtRules
+    | GreaterThanEq -> (syms,spLst,lhs,rhs) |..> gteqRules
+    | Equal -> (syms,spLst,lhs,rhs) |..> equalsRules
+    | NotEqual -> (syms,spLst,lhs,rhs) |..> notEqualsRules
     | _ ->
         // TODO: Implement!
         "Not implemented yet."

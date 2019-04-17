@@ -187,6 +187,7 @@ let binExprOps1 =
         "*!*", 9, al, UpToApp;
         // Times is defined below
         "/", 9, al, Divide;
+        "%", 9, al, Percent;
 
         "+", 8, al, Plus;
         // Minus is defined below

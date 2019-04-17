@@ -5,6 +5,17 @@ open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 
+let evalLiteral l : BilboResult<Meaning> =
+    let lit =
+        match l with
+        | StrLit s -> s |> Value.String
+        | FloatLit f -> f |> Float
+        | IntLit i -> i |> Int
+        | BoolLit b -> b |> Bool
+    lit
+    |> Value
+    |> Ok
+
 let typeConvert typ (v : Value) : BilboResult<Value> =
     match typ,v with
     | "str", String x -> v |> Ok
@@ -42,12 +53,3 @@ let typeConvert typ (v : Value) : BilboResult<Value> =
         "Cannot convert to a primative type"
         |> ValueError
         |> Error
-
-let evalLiteral l : BilboResult<Meaning> =
-    match l with
-    | StrLit s -> s |> Value.String
-    | FloatLit f -> f |> Float
-    | IntLit i -> i |> Int
-    | BoolLit b -> b |> Bool
-    |> Value
-    |> Ok
