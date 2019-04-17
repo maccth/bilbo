@@ -6,15 +6,17 @@ let Pass = Ok
 let Fail = Error
 
 type SyntaxError = string
-type ImplementationError = string
-type NameError = string
 type FieldError = string
+type NameError = string
+type ImplementationError = string
+type ValueError = string
 
 type BilboError =
     | SyntaxError of SyntaxError
     | FieldError of FieldError
     | NameError of NameError
     | ImplementationError of ImplementationError
+    | ValueError of ValueError
 
 type BilboResult<'T> = Result<'T, BilboError>
 
