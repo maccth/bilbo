@@ -7,7 +7,6 @@ open Bilbo.Common.Error
 type ValueId =
     {
         spLst : SpaceId list;
-        // oLst : Id list;
         id : Id;
     }
 
@@ -93,6 +92,7 @@ module Symbols =
                 |> NameError
                 |> Error
         findClosest syms []
+
     let set (syms : Symbols) (vid : ValueId) (value : Meaning) : BilboResult<Symbols> =
         match syms with
         | st :: rest ->
