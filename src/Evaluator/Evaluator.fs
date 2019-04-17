@@ -4,7 +4,6 @@ open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
-open Bilbo.Common
 
 // Serious code sketch...
 let plusRules x y =
@@ -44,14 +43,14 @@ let evalBinExpr op : BilboResult<'A -> 'B -> 'C> =
         |> ImplementationError
         |> Error
 
-let rec evalExpr symTabs nLst e : BilboResult<SymbolTable.Meaning> =
+let rec evalExpr (syms : Symbols.Bindings) nLst e : BilboResult<SymbolTable.Meaning> =
     match e with
-    | Var v -> SymbolTable.find symTabs {nLst=nLst; oLst=[]; id=v}
+    | Var v -> Symbols.find syms {nLst=nLst; oLst=[]; id=v}
     | SExpr(Literal l) -> evalLiteral l
     // Serious code sketch...
     | BinExpr (lhs,op,rhs) ->
-        let l = evalExpr symTabs nLst lhs
-        let r = evalExpr symTabs nLst rhs
+        let l = evalExpr syms nLst lhs
+        let r = evalExpr syms nLst rhs
         match evalBinExpr op with
         | Ok op' -> !*!op' l r
         | Error e -> e |> Error
@@ -61,7 +60,7 @@ let rec evalExpr symTabs nLst e : BilboResult<SymbolTable.Meaning> =
         |> ImplementationError
         |> Error
 
-let consVid symTabs nLst e : BilboResult<ValueId> =
+let consVid syms nLst e : BilboResult<ValueId> =
     match e with
     |Var v -> {nLst=nLst; oLst=[]; id=v} |> Ok
     | _ ->
@@ -70,60 +69,61 @@ let consVid symTabs nLst e : BilboResult<ValueId> =
         |> ImplementationError
         |> Error
     
-let evalExprStatement symTabs nLst (e : ExprStatement) : BilboResult<ProgramSymbols> =
+let evalExprStatement (syms : Symbols.Bindings) nLst (e : ExprStatement) : BilboResult<Symbols.Bindings> =
     match e with
     | AssignmentExpr (eLhs, eRhs) ->
-        let lhsId = consVid symTabs nLst eLhs
+        let lhsId = consVid syms nLst eLhs
         match lhsId with
         | Error e -> e |> Error
         | Ok vid ->
-            let rhsVal = evalExpr symTabs nLst eRhs
+            let rhsVal = evalExpr syms nLst eRhs
             match rhsVal with
             | Error e -> e |> Error
             | Ok rhs ->
-                SymbolTable.set symTabs vid rhs
+                SymbolTable.set syms vid rhs
                 |> Ok
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
-                        
 
-let evalProgramUnit symTabs pUnit : BilboResult<ProgramSymbols> =
+
+
+let evalProgramUnit (syms : Symbols.Bindings) pUnit : BilboResult<Symbols.Bindings> =
     let nLst,s = pUnit
     let rnLst = List.rev nLst
     match s with
-    | TypeDefL (loc,def) ->
-        let tname = fst def
-        let symTabs' = SymbolTable.addType symTabs rnLst tname def
-        symTabs'
-        |> Ok
+    // | TypeDefL (loc,def) ->
+    //     let tname = fst def
+    //     let syms' = SymbolTable.addType syms rnLst tname def
+    //     syms'
+    //     |> Ok
     | ExprStatementL (loc, e) ->
-        evalExprStatement symTabs rnLst e
+        evalExprStatement syms rnLst e
     | ImportL (loc, i) ->
-        symTabs |> Ok    
+        syms |> Ok    
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
 
-let bilboEvaluate (ast : BilboResult<Program>) : BilboResult<ProgramSymbols> =
-    let rec evalRec symTabs ast  =
+let bilboEvaluate (ast : BilboResult<Program>) : BilboResult<Symbols.Bindings> =
+    let rec evalRec syms ast  =
         match ast with
         | pUnit :: rest ->
-           let symTabs' = evalProgramUnit symTabs pUnit
-           match symTabs' with
-           | Ok symTabs'' ->
-                evalRec symTabs'' rest
+           let syms' = evalProgramUnit syms pUnit
+           match syms' with
+           | Ok syms'' ->
+                evalRec syms'' rest
             | Error e ->
                 e |> Error
         | [] ->
-            symTabs |> Ok
+            syms |> Ok
     match ast with
     | Ok ast' ->
-        evalRec [SymbolTable.empty] ast'
+        evalRec Symbols.empty ast'
     | Error err ->
        err |> Error
 

@@ -12,21 +12,20 @@ type ValueId =
     }
 
 module SymbolTable =
-    type Table = Map<Id, Meaning>
+    type Bindings = Map<Id, Meaning>
 
     and Meaning =
         | Value of Value
-        | Space of SpaceType * Table 
+        | Space of SpaceType * Bindings 
 
     and SpaceType =
         | Namespace
         | Objectspace
 
-    let empty : Table
-        = Map.empty
+    let empty : Bindings = Map.empty
     
-    let addType (symTabs:Table list) nLst id (def : TypeDef) =
-        let rec add (st : Table) (nLst : Namespace list) (id : Id) (def : Meaning) =
+    let addType (symTabs : Bindings list) nLst id (def : TypeDef) =
+        let rec add (st : Bindings) (nLst : Namespace list) (id : Id) (def : Meaning) =
             match nLst with
             | [] ->
                 Map.add id def st
@@ -34,8 +33,8 @@ module SymbolTable =
                 add st rest id def
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (Space(Namespace, stCurrent)) ->                 
-                    let stUpdated = add stCurrent rest id def |> fun s -> Space(Namespace,s)
+                | Some (Space(Namespace, stExisting)) ->                 
+                    let stUpdated = add stExisting rest id def |> fun s -> Space(Namespace,s)
                     Map.add n stUpdated st
                 | _ ->
                     let stNew = (add empty rest id def) |> fun s -> (Namespace,s) |> Space
@@ -56,42 +55,38 @@ module SymbolTable =
                 let st' = add empty nLst id def'
                 [st']
    
-    let find (symTabs : Table list) (vid : ValueId) : BilboResult<Meaning> =
-        let rec getField (st : Table) (vid : ValueId) : BilboResult<Meaning> =
-            // match st with
-            // | Space (Objectspace,st) ->
-            match vid.oLst with
-            | [] ->
-                match Map.tryFind vid.id st with
-                | Some value -> value |> Ok
-                | _ ->
-                    "Field " + "\"" + vid.id + "\"" + " is not is not defined"
-                    |> NameError
-                    |> Error
-            | o :: rest ->
-                match Map.tryFind o st with
-                | Some (Space (typ,st')) -> 
-                    getField st' {vid with oLst = rest}
-                | _ ->
-                    "Field " + "\"" + o + "\"" + " is not is not defined"
-                    |> NameError
-                    |> Error                   
-        let rec getSpace (st : Table) (vid : ValueId) : BilboResult<Table> =
+    let find (symtab : Bindings) (vid : ValueId) : BilboResult<Meaning> =
+        let rec findNspace (st : Bindings) (vid : ValueId) : BilboResult<Bindings> =
             match vid.nLst with
             | [] -> st |> Ok
-            | Top :: rest ->
-                getSpace st {vid with nLst = rest}
+            | Top :: rest -> findNspace st {vid with nLst = rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
                 | Some (Space(Namespace, stNext)) -> 
-                    getSpace stNext {vid with nLst = rest}
+                    findNspace stNext {vid with nLst = rest}
                 | _ ->
                     "Namespace " + "\"" + n + "\"" + " is not is not defined"
                     |> NameError
                     |> Error
-        let get (st : Table) (vid : ValueId) : BilboResult<Meaning> =
-            let sp = vid |> getSpace st
-            let getValue (st : Table) =
+        let findMeaning (st : Bindings) (vid : ValueId) : BilboResult<Meaning> =
+            let rec findOspace (st : Bindings) (vid : ValueId) : BilboResult<Meaning> =
+                match vid.oLst with
+                | [] ->
+                    match Map.tryFind vid.id st with
+                    | Some value -> value |> Ok
+                    | _ ->
+                        "Field " + "\"" + vid.id + "\"" + " is not is not defined"
+                        |> NameError
+                        |> Error
+                | o :: rest ->
+                    match Map.tryFind o st with
+                    | Some (Space (typ,st')) -> 
+                        findOspace st' {vid with oLst = rest}
+                    | _ ->
+                        "Field " + "\"" + o + "\"" + " is not is not defined"
+                        |> NameError
+                        |> Error  
+            let findValue (st : Bindings) : BilboResult<Meaning> =
                 match vid.oLst with
                 | [] ->
                     match Map.tryFind vid.id st with
@@ -100,57 +95,72 @@ module SymbolTable =
                         "Name " + "\"" + vid.id + "\"" + " is not is not defined"
                         |> NameError
                         |> Error
-                | _ -> getField st vid
-            Result.bind getValue sp
+                | _ -> findOspace st vid
+            vid
+            |> findNspace st
+            |> Result.bind findValue
         match vid.nLst with
-        | [] ->
-            "All program units exist in a namespace."
-            |> ImplementationError
-            |> Error
-            |> failwithf "%A"
+        // | [] ->
+        //     "All program units exist in a namespace."
+        //     |> ImplementationError
+        //     |> Error
+        //     |> failwithf "%A"
         | _ ->
-            let st = 
-                match symTabs with
-                | st :: _ -> st
-                | [] -> empty
-            let symVal = get st vid
+            let symVal = findMeaning symtab vid
             match symVal with
             | Ok value ->
                 value |> Ok
             | Error e ->
                 e |> Error
 
-    let set (symTabs : Table list) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
+    let set (symTabs : Bindings list) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
         let (st,rest) =
             match symTabs with
             | hd :: rest -> hd,rest
             | [] -> (empty,[])
-        let rec set (st : Table) (vid : ValueId) (*: BilboResult<Table>*) =
+        let rec setObj (st : Bindings) (vid : ValueId) =
+            match vid.oLst with
+            | [] -> Map.add vid.id value st
+            | o :: rest ->
+                match Map.tryFind o st with
+                | Some (Space(Objectspace,stExisting)) ->
+                    // Used to be setNspace
+                    let stUpdated = setObj stExisting {vid with oLst=rest} |> fun s -> (Objectspace,s) |> Space
+                    Map.add o stUpdated st
+                | _ ->
+                    // Used to be setNspace
+                    let stNew = setObj empty {vid with oLst=rest} |> fun s -> (Objectspace,s) |> Space
+                    Map.add o stNew st
+        and setNspace (st : Bindings) (vid : ValueId) (*: BilboResult<Table>*) =
             match vid.nLst with
-            | [] ->
-                let rec setObj (st : Table) (vid : ValueId) =
-                    match vid.oLst with
-                    | [] ->
-                        Map.add vid.id value st
-                    | o :: rest ->
-                        match Map.tryFind o st with
-                        | Some (Space(Objectspace,stCurrent)) ->
-                            let stUpdated = set stCurrent {vid with oLst=rest} |> fun s -> (Objectspace,s) |> Space
-                            Map.add o stUpdated st
-                        | _ ->
-                            let stNew = set empty {vid with oLst=rest} |> fun s -> (Objectspace,s) |> Space
-                            Map.add o stNew st                              
-                setObj st vid                                         
-            | Top :: rest -> set st {vid with nLst=rest}
+            | [] -> setObj st vid                                         
+            | Top :: rest -> setNspace st {vid with nLst=rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (Space(Namespace, stCurrent)) ->                 
-                    let stUpdated = set stCurrent {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
+                | Some (Space(Namespace, stExisting)) ->                 
+                    let stUpdated = setNspace stExisting {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
                     Map.add n stUpdated st
                 | _ ->
-                    let stNew = set empty {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
+                    let stNew = setNspace empty {vid with nLst=rest} |> fun s -> (Namespace,s) |> Space
                     Map.add n stNew st
-        let st' = set st vid
+        let st' = setNspace st vid
         st' :: rest
 
-type ProgramSymbols = SymbolTable.Table list
+
+module Symbols =
+    type Bindings = SymbolTable.Bindings list
+    let empty : Bindings = [] 
+    let find (syms : Bindings) (vid : ValueId) : BilboResult<SymbolTable.Meaning> =
+        let rec findClosest (symsIn : Bindings) (errLst : BilboError list) : BilboResult<SymbolTable.Meaning> =
+            match symsIn with
+            | st :: rest ->
+                match SymbolTable.find st vid with
+                | Ok value -> value |> Ok
+                | Error e -> findClosest rest (e::errLst)
+            | [] ->
+                // TODO: generate specific error from errList
+                // let errLst' = List.rev errLst
+                "Name " + "\"" + vid.id + "\"" + " is not is not defined"
+                |> NameError
+                |> Error
+        findClosest syms []
