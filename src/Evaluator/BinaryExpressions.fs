@@ -28,6 +28,8 @@ let intFloat ops iiFun ifFun fiFun ffFun erFun =
         | Int x, Float y -> (ifFun x y) |> Value |> Ok |> Some
         | Float x, Int y -> (fiFun x y) |> Value |> Ok |> Some
         | Float x, Float y -> (ffFun x y) |> Value |> Ok |> Some
+        // TODO: consider changing to None and only adding error
+        // at the end. Will allow easier composition of matches
         | _ -> erFun |> Error |> Some
     | _ -> None
 
@@ -142,6 +144,7 @@ let gteqRules ops =
     |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
 
 let equalsRules ops =
+    // TODO: Add equality for non-primative (structural types) types
     let eq = fun x y -> (x = y) |> Bool
     let ifFun = fun x y -> (float(x) = y) |> Bool
     let fiFun = fun x y -> x = float(y) |> Bool
@@ -149,47 +152,41 @@ let equalsRules ops =
     |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
 
 let notEqualsRules ops =
+    // TODO: Add non-equality for non-primative (structural types) types
     let neq = fun x y -> (x <> y) |> Bool
     let ifFun = fun x y -> (float(x) <> y) |> Bool
     let fiFun = fun x y -> x <> float(y) |> Bool
     intFloat ops neq ifFun fiFun neq operatorErr
     |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
 
-
 let boolean ops binOp =
-    match ops with
-    | Ok (Value lhs', Value rhs') ->
-        match lhs',rhs' with
-        | Int x, Int y ->       binOp   (x<>0  )  (y<>0)
-        | Int x, Float y ->     binOp   (x<>0  )  (y<>0.0)
-        | Int x, String y ->    binOp   (x<>0  )  (y<>"")
-        | Int x, Bool y ->      binOp   (x<>0  )  (y)
-        | Float x, Int y ->     binOp   (x<>0.0)  (y<>0)
-        | Float x, Float y ->   binOp   (x<>0.0)  (y<>0.0)
-        | Float x, String y ->  binOp   (x<>0.0)  (y<>"")
-        | Float x, Bool y ->    binOp   (x<>0.0)  (y)
-        | String x, Int y ->    binOp   (x<>"" )  (y<>0)
-        | String x, Float y ->  binOp   (x<>"" )  (y<>0.0)
-        | String x, String y -> binOp   (x<>"" )  (y<>"")
-        | String x, Bool y ->   binOp   (x<>"" )  (y)
-        | Bool x, Int y ->      binOp   (x     )  (y<>0)
-        | Bool x, Float y ->    binOp   (x     )  (y<>0.0)
-        | Bool x, String y ->   binOp   (x     )  (y<>"")
-        | Bool x, Bool y ->     binOp   (x     )  (y)
+    let booleanTrue (v : Value) =
         // TODO: Add graph pattern matching `and` and `or` operartions for pos and neg graph
-        | _ -> operatorErr |> Error
-    | Error e -> e |> Error
-    | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
+        // and non-primative types 
+        match v with
+        | Int x -> x<>0 |> Some
+        | Float x -> x<>0.0 |> Some
+        | String x -> x<>"" |> Some
+        | Bool x -> x |> Some
+        | _ -> None
+    match ops with
+    | Error e -> e |> Error |> Some
+    | Ok (Value lhs, Value rhs) ->
+        let lhs' = booleanTrue lhs
+        let rhs' = booleanTrue rhs
+        match lhs',rhs' with
+        | Some l', Some r' -> binOp l' r' |> Some
+        | _ -> None
+    | _ -> None
 
-let andRules (ops : BilboResult<Meaning * Meaning>) =
-   boolean ops (fun x y -> (x && y) |> Bool |> Value |> Ok)
+let andRules (ops : BilboResult<Meaning*Meaning>) =
+    boolean ops (fun x y -> (x && y) |> Bool |> Value |> Ok)
+    |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
 
-let orRules (ops : BilboResult<Meaning * Meaning>) =
-   boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
+let orRules (ops : BilboResult<Meaning*Meaning>) =
+    boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
+    |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
+
 
 (**
 let plusRules (ops : BilboResult<Meaning * Meaning>) =
