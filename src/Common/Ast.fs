@@ -59,7 +59,7 @@ and BinOp =
     | Pow | Times | Divide | Plus | Minus | Percent
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
-    | And | Or
+    | And | Or | Xor
     | Is
     // Application
     | Pipe | OrPipe

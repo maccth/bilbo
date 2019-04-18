@@ -187,6 +187,11 @@ let orRules (ops : BilboResult<Meaning*Meaning>) =
     boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
     |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
 
+let xorRules (ops : BilboResult<Meaning*Meaning>) =
+    let xor x y = (x && (not y)) || ((not x) && y)
+    boolean ops (fun x y -> (xor x y) |> Bool |> Value |> Ok)
+    |> noneReplace ("Not implemented yet." |> ImplementationError |> Error)
+
 
 (**
 let plusRules (ops : BilboResult<Meaning * Meaning>) =

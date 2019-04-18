@@ -37,6 +37,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | NotEqual -> (syms,spLst,lhs,rhs) |..> notEqualsRules
     | And -> (syms,spLst,lhs,rhs) |..> andRules
     | Or -> (syms,spLst,lhs,rhs) |..> orRules
+    | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
     | _ ->
         // TODO: Implement!
         "Not implemented yet."

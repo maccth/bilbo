@@ -178,30 +178,31 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 12, al, NodeCons;
-        ".", 11, al, Dot
+        "::", 13, al, NodeCons;
+        ".", 12, al, Dot
 
-        "^", 10, ar, Pow;
+        "^", 11, ar, Pow;
 
-        "**", 9, al, MulApp;
-        "*!*", 9, al, UpToApp;
+        "**", 10, al, MulApp;
+        "*!*",10, al, UpToApp;
         // Times is defined below
-        "/", 9, al, Divide;
-        "%", 9, al, Percent;
+        "/", 10, al, Divide;
+        "%", 10, al, Percent;
 
-        "+", 8, al, Plus;
+        "+", 9, al, Plus;
         // Minus is defined below
 
-        "<", 7, al, LessThan;
-        "<=", 7, al, LessThanEq;
+        "<", 8, al, LessThan;
+        "<=", 8, al, LessThanEq;
         // Greater than is defined below
-        ">=", 7, al, GreaterThanEq;
-        "==", 7, al, Equal;
-        "is", 7, al, Is;
-        "!=", 7, al, NotEqual;
+        ">=", 8, al, GreaterThanEq;
+        "==", 8, al, Equal;
+        "is", 8, al, Is;
+        "!=", 8, al, NotEqual;
 
         // "not" has precedence 6, but is prefix (unary)
-        "and", 5, al, And;
+        "and", 6, al, And;
+        "xor", 5, al, Xor;
         "or", 4, al, Or;
 
         "<|>", 3, al, OrPipe;
@@ -212,20 +213,20 @@ let binExprOps2 =
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 9, (str "*") <|> (str "!") , al, Times;
+        "*", 10, (str "*") <|> (str "!") , al, Times;
         // Stops conflicts with `->`
-        "-", 8, str ">", al, Minus;
+        "-", 9, str ">", al, Minus;
         // Stops conflicts with `x>,y` in path expressions and `[a>:b,>,c]` in path comprehensions
-        ">", 7, (str ",") <|> (str ":"), al, GreaterThan;
+        ">", 8, (str ",") <|> (str ":"), al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
 
-exprOpp.AddOperator(PrefixOperator("&&", ws, 11, true, fun x -> (DblAmp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 11, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("not", ws, 8, true, fun x -> (Not,x) |> PrefixExpr))
+exprOpp.AddOperator(PrefixOperator("&&", ws, 12, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 12, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("not", ws, 9, true, fun x -> (Not,x) |> PrefixExpr))
 
-exprOpp.AddOperator(PrefixOperator("$", ws, 11 , true, fun x -> (Dollar,x) |> PrefixExpr))
-exprOpp.AddOperator(PostfixOperator("!", ws, 10, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
-exprOpp.AddOperator(PostfixOperator("?", ws, 10, true, fun x -> (x, MaybeApp) |> PostfixExpr))
+exprOpp.AddOperator(PrefixOperator("$", ws, 12 , true, fun x -> (Dollar,x) |> PrefixExpr))
+exprOpp.AddOperator(PostfixOperator("!", ws, 11, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 11, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 let binExprOps = List.append binExprOps1 binExprOps2
 
