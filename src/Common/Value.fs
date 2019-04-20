@@ -9,7 +9,7 @@ type Value =
     | Float of float
     | Int of int
     | Bool of bool
-    | Node of Node
+    // | Node of Node
     // TODO: Graphs and paths
     // TODO: Pipelines with <|>
     // | Pipeline of TransformDef list

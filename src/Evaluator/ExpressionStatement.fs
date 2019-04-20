@@ -38,6 +38,15 @@ and evalBinExpr syms spLst lhs op rhs =
     | And -> (syms,spLst,lhs,rhs) |..> andRules
     | Or -> (syms,spLst,lhs,rhs) |..> orRules
     | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
+    | Is ->
+        // Code sketch fort now...
+        // Must be done in this module becuase it depends on
+        //  the BinaryExpressions module.
+        let eLhs = evalExpr syms spLst lhs
+        match eLhs with
+        | Error e -> e |> Error
+        | Ok l ->
+            (l, rhs) ||> isRules
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
@@ -62,8 +71,46 @@ and typeCast syms spLst typ attrs =
     | _ ->
         "Cannot convert to a primative type"
         |> ValueError
-        |> Error    
-    
+        |> Error
+
+and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
+    let evalAttrs attrsIn : BilboResult<Meaning list> =
+        let rec evalAttrsRec attrsIn attrsOut =
+            match attrsIn with
+            | [] ->
+                attrsOut |> Ok
+            | a :: rest ->
+                let a' = evalExpr syms spLst a
+                match a' with
+                | Ok at -> evalAttrsRec rest (at :: attrsOut)
+                | Error e -> e |> Error
+        evalAttrsRec attrsIn []
+        |> Result.bind (List.rev >> Ok) 
+    let typeDef = Symbols.find syms {spLst=spLst; id=typ}
+    match typeDef with
+    | Error e ->
+        // Make error specific to non-existent type...
+        e |> Error    
+    | Ok (Value(Type (_, attrNames))) ->
+        let nameCount = List.length attrNames
+        let givenCount = List.length attrs
+        match nameCount = givenCount with
+        | false -> objInstanArgNumError typ nameCount givenCount
+        | true ->
+            match evalAttrs attrs with
+            | Error e -> e |> Error
+            | Ok attrs' ->
+                attrs'
+                |> List.zip attrNames
+                |> Map.ofList
+                |> fun sp -> (Object typ, sp)
+                |> Space
+                |> Ok
+    | _ ->
+        "Type " + "\"" + typ + "\" is not defined."
+        |> NameError
+        |> Error
+
 and evalObjExpr syms spLst e : BilboResult<Meaning> =
     match e with
     | ObjInstan(typ, attrs) ->
@@ -72,6 +119,8 @@ and evalObjExpr syms spLst e : BilboResult<Meaning> =
         | "float"
         | "int"
         | "bool" -> typeCast syms spLst typ attrs
+        | _ -> evalObjInstan syms spLst typ attrs
+
 
 and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
     match e with

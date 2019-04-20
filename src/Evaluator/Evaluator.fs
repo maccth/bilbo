@@ -23,7 +23,7 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
         evalExprStatement syms rnLst e
         |> attachLoc loc
     | ImportL (loc, (fp, alias)) ->
-        let syms' = Symbols.set syms {spLst=nLst ; id=alias;} (SymbolTable.empty |> Space)
+        let syms' = Symbols.set syms {spLst=nLst ; id=alias;} ((Namespace, SymbolTable.empty) |> Space)
         attachLoc loc syms'
     | TransformDefL(loc, t) ->
         // TODO: Implement!

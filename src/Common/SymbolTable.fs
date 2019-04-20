@@ -14,7 +14,11 @@ type SymbolTable = Map<Id, Meaning>
 
 and Meaning =
     | Value of Value
-    | Space of SymbolTable 
+    | Space of SpaceType * SymbolTable
+
+and SpaceType =
+    | Namespace
+    | Object of TypeName
 
 module SymbolTable =
 
@@ -27,7 +31,7 @@ module SymbolTable =
             | Top :: rest -> findSpace st {vid with spLst = rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (Space(stNext)) -> 
+                | Some (Space(_, stNext)) -> 
                     findSpace stNext {vid with spLst = rest}
                 | _ ->
                     "Namespace " + "\"" + n + "\"" + " is not defined"
@@ -57,10 +61,10 @@ module SymbolTable =
                 setSpace st {vid with spLst=rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
-                | Some (Space(stExisting)) ->                 
+                | Some (Space(spType, stExisting)) ->                 
                     let stUpdated = setSpace stExisting {vid with spLst=rest} 
                     match stUpdated with
-                    | Ok stU' -> Map.add n (stU' |> Space) st |> Ok
+                    | Ok stU' -> Map.add n ((spType,stU') |> Space) st |> Ok
                     | Error e -> e |> Error
                 | _ ->
                      "Name " + "\"" + n + "\"" + " is not is not defined"
