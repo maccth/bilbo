@@ -76,8 +76,11 @@ and evalObjExpr syms spLst e : BilboResult<Meaning> =
 and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
-    | SExpr(Literal l) -> evalLiteral l
-    | SExpr(ObjExpr o) -> evalObjExpr syms spLst o
+    | BinExpr (lhs, Dot, rhs) ->
+        consVid syms spLst e
+        |> Result.bind (fun vid -> Symbols.find syms vid)
+    | SExpr (Literal l) -> evalLiteral l
+    | SExpr (ObjExpr o) -> evalObjExpr syms spLst o
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs 
     | _ ->
         // TODO: Implement!
@@ -85,9 +88,19 @@ and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
         |> ImplementationError
         |> Error
 
-let consVid syms spLst e : BilboResult<ValueId> =
+and consVid syms spLst e : BilboResult<ValueId> =
     match e with
     | Var v -> {spLst=spLst; id=v} |> Ok
+    | BinExpr(l, Dot, r) ->
+        let lVid = consVid syms spLst l
+        match lVid with
+        | Error e -> e |> Error
+        | Ok lVid' ->
+            let rVid = consVid syms spLst r
+            match rVid with
+            | Error e -> e |> Error
+            | Ok rVid' ->
+                {rVid' with spLst=lVid'.spLst @ [Name lVid'.id]} |> Ok
     | _ ->
         // TODO: Implement!
         "Not implemented yet."

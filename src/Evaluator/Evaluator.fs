@@ -6,7 +6,10 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.ExpressionStatement
 
-let evalProgramUnit (syms : Symbols) pUnit : BilboResult<Symbols> =
+let attachLoc loc res : ProgramResult<'T> = Result.mapError (fun e -> (Some loc, e)) res
+let noLoc res : ProgramResult<'T> = Result.mapError (fun e -> (None, e)) res
+
+let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
     let nLst,s = pUnit
     let rnLst = List.rev nLst
     match s with
@@ -15,17 +18,22 @@ let evalProgramUnit (syms : Symbols) pUnit : BilboResult<Symbols> =
         let vid = {spLst=rnLst; id=tname}
         let value = def |> Type |> Value
         Symbols.set syms vid value
+        |> attachLoc loc
     | ExprStatementL (loc, e) ->
         evalExprStatement syms rnLst e
-    | ImportL (loc, i) ->
-        syms |> Ok    
-    | _ ->
+        |> attachLoc loc
+    | ImportL (loc, (fp, alias)) ->
+        let syms' = Symbols.set syms {spLst=nLst ; id=alias;} (SymbolTable.empty |> Space)
+        attachLoc loc syms'
+    | TransformDefL(loc, t) ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
+        |> attachLoc loc
 
-let bilboEvaluate (ast : BilboResult<Program>) : BilboResult<Symbols> =
+
+let bilboEvaluate (ast : BilboResult<Program>) : ProgramResult<Symbols> =
     let rec evalRec syms ast  =
         match ast with
         | pUnit :: rest ->
@@ -41,7 +49,7 @@ let bilboEvaluate (ast : BilboResult<Program>) : BilboResult<Symbols> =
     | Ok ast' ->
         evalRec Symbols.empty ast'
     | Error err ->
-       err |> Error
+       err |> Error |> noLoc
 
 let bilboEvaluatorPrint (ast : BilboResult<Program>) =
     ast

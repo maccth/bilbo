@@ -32,7 +32,7 @@ module Match =
             | Matched y -> y |> Matched
             | NoMatch -> NoMatch
 
-    let lazyCompose first second =
+    let lcompose first second =
         first <.|.> second
 
 let intFloat ops iiFun ifFun fiFun ffFun =
@@ -132,14 +132,14 @@ let ltRules ops =
     let lt = fun x y -> (x < y) |> Bool
     let ifFun = fun x y -> (float(x) < y) |> Bool
     let fiFun = fun x y -> x < float(y) |> Bool
-    intFloat ops lt ifFun fiFun lt
+    intFloatStr ops lt ifFun fiFun lt lt
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let lteqRules ops =
     let lteq = fun x y -> (x <= y) |> Bool
     let ifFun = fun x y -> (float(x) <= y) |> Bool
     let fiFun = fun x y -> x <= float(y) |> Bool
-    intFloat ops lteq ifFun fiFun lteq
+    intFloatStr ops lteq ifFun fiFun lteq lteq
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let gtRules ops =
@@ -147,14 +147,14 @@ let gtRules ops =
     let gt = fun x y -> (x > y) |> Bool
     let ifFun = fun x y -> (float(x) > y) |> Bool
     let fiFun = fun x y -> x > float(y) |> Bool
-    intFloat ops gt ifFun fiFun gt
+    intFloatStr ops gt ifFun fiFun gt gt
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let gteqRules ops =
     let gteq = fun x y -> (x >= y) |> Bool
     let ifFun = fun x y -> (float(x) >= y) |> Bool
     let fiFun = fun x y -> x >= float(y) |> Bool
-    intFloat ops gteq ifFun fiFun gteq
+    intFloatStr ops gteq ifFun fiFun gteq gteq
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let equalsRules ops =
@@ -162,7 +162,7 @@ let equalsRules ops =
     let eq = fun x y -> (x = y) |> Bool
     let ifFun = fun x y -> (float(x) = y) |> Bool
     let fiFun = fun x y -> x = float(y) |> Bool
-    intFloat ops eq ifFun fiFun eq
+    intFloatStr ops eq ifFun fiFun eq eq
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let notEqualsRules ops =
@@ -170,7 +170,7 @@ let notEqualsRules ops =
     let neq = fun x y -> (x <> y) |> Bool
     let ifFun = fun x y -> (float(x) <> y) |> Bool
     let fiFun = fun x y -> x <> float(y) |> Bool
-    intFloat ops neq ifFun fiFun neq
+    intFloatStr ops neq ifFun fiFun neq neq
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let boolean ops binOp =
@@ -205,7 +205,6 @@ let xorRules (ops : BilboResult<Meaning*Meaning>) =
     let xor x y = (x && (not y)) || ((not x) && y)
     boolean ops (fun x y -> (xor x y) |> Bool |> Value |> Ok)
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
-
 
 (**
 let plusRules (ops : BilboResult<Meaning * Meaning>) =

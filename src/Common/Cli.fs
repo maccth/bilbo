@@ -10,8 +10,8 @@ let cli (cliArgs : string []) replName repl fileHandler =
         let mutable stillReading = false
         while true do
             match stillReading with
-            | false -> printf "\n~> "
-            | true -> printf "   "
+            | false -> printf "\n~~> "
+            | true -> printf "    "
             let line = Console.ReadLine()
             codeIn <- codeIn + "\n" + line.Replace(";", "")
             if line.EndsWith ";" then

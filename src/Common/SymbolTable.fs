@@ -33,7 +33,6 @@ module SymbolTable =
                     "Namespace " + "\"" + n + "\"" + " is not defined"
                     |> NameError
                     |> Error
-
         let findMeaning (st : SymbolTable) (vid : ValueId) : BilboResult<Meaning> =
             match Map.tryFind vid.id st with
             | Some v -> v |> Ok
@@ -41,35 +40,32 @@ module SymbolTable =
                 "Field " + "\"" + vid.id + "\"" + " is not is not defined"
                 |> NameError
                 |> Error              
-
-            
-        match vid.spLst with
-        // | [] ->
-        //     "All program units exist in a namespace."
-        //     |> ImplementationError
-        //     |> Error
-        //     |> failwithf "%A"
-        | _ ->
-            vid
-            |> findSpace symtab
-            |> Result.bind (fun st' -> findMeaning st' vid)
+        vid
+        |> findSpace symtab
+        |> Result.bind (fun st' -> findMeaning st' vid)
 
     let set (symtab : SymbolTable) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
         let setMeaning (st : SymbolTable) (vid : ValueId) =
             Map.add vid.id value st
 
-        let rec setSpace (st : SymbolTable) (vid : ValueId) (*: BilboResult<Table>*) =
+        let rec setSpace (st : SymbolTable) (vid : ValueId) : BilboResult<SymbolTable> =
             match vid.spLst with
-            | [] -> setMeaning st vid                                        
-            | Top :: rest -> setSpace st {vid with spLst=rest}
+            | [] ->
+                setMeaning st vid
+                |> Ok                          
+            | Top :: rest ->
+                setSpace st {vid with spLst=rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
                 | Some (Space(stExisting)) ->                 
-                    let stUpdated = setSpace stExisting {vid with spLst=rest} |> Space
-                    Map.add n stUpdated st
+                    let stUpdated = setSpace stExisting {vid with spLst=rest} 
+                    match stUpdated with
+                    | Ok stU' -> Map.add n (stU' |> Space) st |> Ok
+                    | Error e -> e |> Error
                 | _ ->
-                    let stNew = setSpace empty {vid with spLst=rest} |> Space
-                    Map.add n stNew st
+                     "Name " + "\"" + n + "\"" + " is not is not defined"
+                    |> NameError
+                    |> Error
 
         setSpace symtab vid
 
@@ -97,10 +93,8 @@ module Symbols =
         match syms with
         | st :: rest ->
             let st' = SymbolTable.set st vid value
-            st'::rest
-            |> Ok
+            Result.bind (fun s -> s::rest |> Ok) st'
         | [] ->
             let st' = SymbolTable.set SymbolTable.empty vid value
-            [st']
-            |> Ok
+            Result.bind (fun s -> [s] |> Ok) st'
 

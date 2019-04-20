@@ -20,6 +20,10 @@ type BilboError =
 
 type BilboResult<'T> = Result<'T, BilboError>
 
+type ProgramError = Loc option * BilboError
+
+type ProgramResult<'T> = Result<'T,ProgramError>
+
 let parseError file msg err state : BilboResult<Program> =
     let str = "In file: " + file + "\n" + msg
     str |> SyntaxError |> Error
