@@ -9,13 +9,22 @@ type Value =
     | Float of float
     | Int of int
     | Bool of bool
-    // | Node of Node
+    | Node of Node
     // TODO: Graphs and paths
     // TODO: Pipelines with <|>
     // | Pipeline of TransformDef list
    
-
 and Node = {
-    id : Value
-    load : Value
+    id : Meaning
+    load : Meaning
 }
+
+and Meaning =
+    | Value of Value
+    | Space of SpaceType * SymbolTable
+
+and SpaceType =
+    | Namespace
+    | Object of TypeName
+
+and SymbolTable = Map<Id, Meaning>

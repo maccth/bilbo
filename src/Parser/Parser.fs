@@ -100,6 +100,8 @@ let keywords =
         "True"; "False";
         "print";
         "import";
+        "is";
+        "has";
     ] |> Set.ofList
 
 let pnKeyword : Parser<unit, unit> =
@@ -198,6 +200,7 @@ let binExprOps1 =
         ">=", 8, al, GreaterThanEq;
         "==", 8, al, Equal;
         "is", 8, al, Is;
+        "has", 8, al, Has;
         "!=", 8, al, NotEqual;
 
         // "not" has precedence 6, but is prefix (unary)

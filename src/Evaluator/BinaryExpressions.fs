@@ -5,7 +5,6 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Common.Ast
 open Bilbo.Common
-open System
 
 type Match<'T> =
     | Matched of 'T
@@ -206,6 +205,33 @@ let xorRules (ops : BilboResult<Meaning*Meaning>) =
     let xor x y = (x && (not y)) || ((not x) && y)
     boolean ops (fun x y -> (xor x y) |> Bool |> Value |> Ok)
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+
+let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
+    let getNodePart nodeFn obj partStr =
+        match obj with
+        | Value v ->
+            match v with
+            | String _ | Float _ | Int _ | Bool _ -> obj |> Ok
+            | Value.Node n -> n |> nodeFn |> Ok
+            | Transform _ -> nodeConsError "transform" partStr
+            | Type _ -> nodeConsError "type definition" partStr
+        | Space (Object oTyp, symTab) -> obj |> Ok
+        | Space _ -> nodeConsError "namespace" partStr
+    let getId node =
+        getNodePart (fun (n : Value.Node) -> n.id) node "node id"
+    let getLoad node =
+        getNodePart (fun (n : Value.Node) -> n.load) node "node load"
+    match ops with
+    | Error e -> e |> Error
+    | Ok(l,r) ->
+        match getId l, getLoad r with
+        | Ok id, Ok load ->
+            {id=id; load=load}
+            |> Value.Node
+            |> Value
+            |> Ok
+        | Error e, _ -> e |> Error
+        | Ok _, Error e -> e |> Error
 
 let isRules (l : Meaning) (rhs : Expr) =
     match rhs with
