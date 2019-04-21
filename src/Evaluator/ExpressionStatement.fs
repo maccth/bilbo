@@ -121,13 +121,21 @@ and evalObjExpr syms spLst e : BilboResult<Meaning> =
         | "bool" -> typeCast syms spLst typ attrs
         | _ -> evalObjInstan syms spLst typ attrs
 
+and evalDot syms spLst lhs rhs =
+    let lSpace = evalExpr syms spLst lhs
+    match lSpace with
+    | Error e -> e |> Error
+    | Ok (Space(spType, syms')) -> 
+        evalExpr [syms'] [] rhs
+    | _ ->
+        "Clearly this isn't an object or a namespace..."
+        |> TypeError
+        |> Error
 
 and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
-    | BinExpr (lhs, Dot, rhs) ->
-        consVid syms spLst e
-        |> Result.bind (fun vid -> Symbols.find syms vid)
+    | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | SExpr (Literal l) -> evalLiteral l
     | SExpr (ObjExpr o) -> evalObjExpr syms spLst o
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs 
