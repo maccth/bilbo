@@ -53,28 +53,39 @@ html_theme = 'classic'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# https://www.ibm.com/design/v1/language/resources/color-library/
+
 html_theme_options = {
-    "collapsiblesidebar" : True,
-#     "footerbgcolor"     : "#e7e9f7",
-#     "footertextcolor"   : "#252e6a",
-    "sidebarbgcolor"    : "#fff",
-# #     "sidebarbtncolor"   :
-    "sidebartextcolor"  : "#424747",
-    "sidebarlinkcolor"  : "#5392ff",
-    "relbarbgcolor"     : "#25467a",
-#     "relbartextcolor"   : "#252e6a",
-# #     "relbarlinkcolor"   :
-    "bgcolor"   : "#fff",
-#     "textcolor"         : "#252e6a",
-# #     "linkcolor"         :
-# #     "visitedlinkcolor"  :
-    # "headbgcolor"       : "#25467a",
-#     "headtextcolor"     : "#252e6a",
-#     "headlinkcolor"     : "#252e6a",
-# #     "codebgcolor"       :
-# #     "codetextcolor"     :
-# #     "bodyfont"          :
-#     "headfont"  : "Helvetica",
+    "collapsiblesidebar" : False,
+
+    "footerbgcolor"     : "#ffb000",
+    # Alternatively, a nice blue
+    # "footerbgcolor"     : "#648fff",
+    "footertextcolor"   : "#fff",
+
+    "relbarbgcolor"     : "#ffb000",
+    "relbartextcolor"   : "#fff",
+    "relbarlinkcolor"   : "#fff",
+
+    "sidebarbgcolor"    : "#f3f3f3",
+    "sidebartextcolor"  : "#2a2626",
+    "sidebarlinkcolor"  : "#2a2626",
+    # "sidebarbtncolor"   : "#e9e8ff",
+
+    "headbgcolor"       : "#e3ecec",
+    "headtextcolor"     : "#2a2626",
+    "headlinkcolor"     : "#2a2626",
+
+    "bgcolor"           : "#fff",
+    "textcolor"         : "#2a2626",
+    "linkcolor"         : "#424747",
+    "visitedlinkcolor"  : "#424747",
+    
+#     "codebgcolor"       :
+#     "codetextcolor"     :
+#     "bodyfont"          :
+    "headfont"  : "Gill Sans",
+
 }
 
 # footerbgcolor (CSS color): Background color for the footer line.
