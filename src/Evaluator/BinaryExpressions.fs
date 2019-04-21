@@ -207,7 +207,6 @@ let xorRules (ops : BilboResult<Meaning*Meaning>) =
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
 let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
-    let consNode id load = {id=id; load=load}
     let getNodePart nodeFn obj partStr =
         match obj with
         | Value v ->
