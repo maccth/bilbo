@@ -28,6 +28,10 @@ let paramListTests = [
     "a = (1,2,3)", "a", [1;2;3] |> List.map INTe |> PLST, "Param list, 3 ints";
     "a = (1,2)", "a", [1;2] |> List.map INTe |> PLST , "Param list, 2 ints";
     "a = (1)", "a", INT 1, "Single values in brackets are not param lists";
+    "a = (1, 2.0, \"Three\", False)",
+        "a",
+        [INT 1; FLT 2.0; STR "Three"; BOOL false] |> List.map SExpr |> PLST,
+        "Param list, different types of literals";
 ]
 
 let eExprTests = List.map sExprTest
