@@ -38,6 +38,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | And -> (syms,spLst,lhs,rhs) |..> andRules
     | Or -> (syms,spLst,lhs,rhs) |..> orRules
     | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
+    | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
     | Is ->
         // Code sketch fort now...
         // Must be done in this module becuase it depends on
@@ -127,6 +128,14 @@ and evalDot syms spLst lhs rhs =
     | Error e -> e |> Error
     | Ok (Space(spType, syms')) -> 
         evalExpr [syms'] [] rhs
+    | Ok (Value (Node n)) ->
+        match n.load with
+        | Space (spType, syms') ->
+            evalExpr [syms'] [] rhs
+        | _ ->
+            "The load of this node is not an object type."
+            |> TypeError
+            |> Error        
     | _ ->
         "Clearly this isn't an object or a namespace..."
         |> TypeError

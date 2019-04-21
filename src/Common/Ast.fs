@@ -60,7 +60,7 @@ and BinOp =
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | And | Or | Xor
-    | Is
+    | Is | Has
     // Application
     | Pipe | OrPipe
     // Transform

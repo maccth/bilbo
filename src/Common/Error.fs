@@ -38,3 +38,8 @@ let objInstanArgNumError typName (expNum : int) (givenNum : int) =
     |> fun s -> s + " arguments, but given " + string(givenNum)
     |> fun s -> s + " arguments."
     |> TypeError |> Error
+
+let nodeConsError vType nodePart =
+    "A " + vType + " cannot be used as a " + nodePart
+    |> TypeError
+    |> Error

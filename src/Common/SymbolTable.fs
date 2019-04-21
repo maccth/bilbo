@@ -10,18 +10,7 @@ type ValueId =
         id : Id;
     }
 
-type SymbolTable = Map<Id, Meaning>
-
-and Meaning =
-    | Value of Value
-    | Space of SpaceType * SymbolTable
-
-and SpaceType =
-    | Namespace
-    | Object of TypeName
-
 module SymbolTable =
-
     let empty : SymbolTable = Map.empty
        
     let find (symtab : SymbolTable) (vid : ValueId) : BilboResult<Meaning> =
