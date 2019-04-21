@@ -53,28 +53,29 @@ html_theme = 'classic'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# html_theme_options = {
+html_theme_options = {
+    "collapsiblesidebar" : True,
 #     "footerbgcolor"     : "#e7e9f7",
 #     "footertextcolor"   : "#252e6a",
-#     "sidebarbgcolor"    : "#e7e9f7",
+    "sidebarbgcolor"    : "#fff",
 # #     "sidebarbtncolor"   :
-#     "sidebartextcolor"  : "#252e6a",
-# #     "sidebarlinkcolor"  :
-#     "relbarbgcolor"     : "#e7e9f7",
+    "sidebartextcolor"  : "#424747",
+    "sidebarlinkcolor"  : "#5392ff",
+    "relbarbgcolor"     : "#25467a",
 #     "relbartextcolor"   : "#252e6a",
 # #     "relbarlinkcolor"   :
-#     "bgcolor"   : "#e7e9f7",
+    "bgcolor"   : "#fff",
 #     "textcolor"         : "#252e6a",
 # #     "linkcolor"         :
 # #     "visitedlinkcolor"  :
-#     "headbgcolor"       : "#e7e9f7",
+    # "headbgcolor"       : "#25467a",
 #     "headtextcolor"     : "#252e6a",
 #     "headlinkcolor"     : "#252e6a",
 # #     "codebgcolor"       :
 # #     "codetextcolor"     :
 # #     "bodyfont"          :
 #     "headfont"  : "Helvetica",
-# }
+}
 
 # footerbgcolor (CSS color): Background color for the footer line.
 # footertextcolor (CSS color): Text color for the footer line.
