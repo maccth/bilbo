@@ -14,14 +14,27 @@ Bilbo
 
 Here is some inline code ``int a = 10;``.
 
+
 And here is a nice code block::
 
     match a with
     | b -> 10
 
+Here is some *emphasised* text.
+
+Here is some **very emphasised** text.
+
+graphs
+    this is what a graph is
+
+| and now we preserve
+| line breaks
+| yay!
+
 Finally, here is the highlighted python console output
 
 >>> 1+1
+
 
 Indices and tables
 ==================
