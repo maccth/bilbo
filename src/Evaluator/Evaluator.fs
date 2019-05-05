@@ -9,14 +9,22 @@ open Bilbo.Evaluator.ExpressionStatement
 let attachLoc loc res : ProgramResult<'T> = Result.mapError (fun e -> (Some loc, e)) res
 let noLoc res : ProgramResult<'T> = Result.mapError (fun e -> (None, e)) res
 
+let nLstStr nLst id =
+    let folder s space =
+        match space with
+        | Top -> s
+        | Name n -> s + n + "." 
+    List.fold folder "" nLst + id 
+
 let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
     let nLst,s = pUnit
     let rnLst = List.rev nLst
     match s with
     | TypeDefL (loc,def) ->
-        let tname = fst def
-        let vid = {spLst=rnLst; id=tname}
-        let value = def |> Type |> Value
+        let idName = fst def
+        let tName = nLstStr rnLst idName
+        let vid = {spLst=rnLst; id=idName}
+        let value = (tName, snd def) |> Type |> Value
         Symbols.set syms vid value
         |> attachLoc loc
     | ExprStatementL (loc, e) ->

@@ -39,20 +39,52 @@ and evalBinExpr syms spLst lhs op rhs =
     | Or -> (syms,spLst,lhs,rhs) |..> orRules
     | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
     | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
-    | Is ->
-        // Code sketch fort now...
-        // Must be done in this module becuase it depends on
-        //  the BinaryExpressions module.
-        let eLhs = evalExpr syms spLst lhs
-        match eLhs with
-        | Error e -> e |> Error
-        | Ok l ->
-            (l, rhs) ||> isRules
+    | Is -> isRules syms spLst lhs rhs
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
+
+and isRules syms spLst lhs rhs =
+    let lhsTypeStr : BilboResult<string> =
+        let lhs' = evalExpr syms spLst lhs
+        match lhs' with
+        | Error e -> e |> Error
+        | Ok lMean ->
+            match lMean with
+            | Value lVal ->
+                match lVal with
+                // TODO: implementation for graphs, type defs, transform defs, nodes...
+                | String _ -> "str" |> Ok
+                | Float _ -> "float" |> Ok
+                | Int _ -> "int" |> Ok
+                | Bool _ -> "bool" |> Ok
+            | Space (Object(oTyp), _) ->  oTyp |> Ok
+            | _ ->
+                "Can only check type for primative types"
+                |> TypeError
+                |> Error
+    let rhsTypeStr = lazy (
+        match rhs with
+        | Var(rTyp) -> rTyp |> Ok
+        | BinExpr(_,Dot,_) ->
+            let rhs' = evalExpr syms spLst rhs
+            match rhs' with
+            | Error e -> e |> Error
+            | Ok (Value(Type(rTyp,_))) -> rTyp |> Ok
+        | _ ->
+            "`is` should be followed by a type name"
+            |> OperatorError
+            |> Error )
+
+    match lhsTypeStr with
+    | Error e -> e |> Error
+    | Ok lTyp ->
+        match rhsTypeStr.Force() with
+        | Error e -> e |> Error
+        | Ok rTyp ->
+            lTyp = rTyp |> Bool |> Value |> Ok
 
 and typeCast syms spLst typ attrs =
     match attrs with
@@ -92,7 +124,7 @@ and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
     | Error e ->
         // Make error specific to non-existent type...
         e |> Error    
-    | Ok (Value(Type (_, attrNames))) ->
+    | Ok (Value(Type (tName, attrNames))) ->
         let nameCount = List.length attrNames
         let givenCount = List.length attrs
         match nameCount = givenCount with
@@ -104,7 +136,7 @@ and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
                 attrs'
                 |> List.zip attrNames
                 |> Map.ofList
-                |> fun sp -> (Object typ, sp)
+                |> fun sp -> (Object tName, sp)
                 |> Space
                 |> Ok
     | _ ->
@@ -180,11 +212,11 @@ let evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
         match lhsId with
         | Error e -> e |> Error
         | Ok vid ->
-            let rhsVal = evalExpr syms spLst eRhs
-            match rhsVal with
+            let rhs = evalExpr syms spLst eRhs
+            match rhs with
             | Error e -> e |> Error
-            | Ok rhs ->
-                Symbols.set syms vid rhs
+            | Ok rhsVal ->
+                Symbols.set syms vid rhsVal
     | _ ->
         // TODO: Implement!
         "Not implemented yet."

@@ -232,34 +232,7 @@ let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
             |> Ok
         | Error e, _ -> e |> Error
         | Ok _, Error e -> e |> Error
-
-let isRules (l : Meaning) (rhs : Expr) =
-    match rhs with
-    | Var (typ) ->
-        match l with
-        | Value v -> 
-            match v with
-            // TODO: is implementation for graphs, type defs, transform defs
-            | String _ -> typ = "str" |> Bool |> Value |> Ok
-            | Float _ -> typ = "float" |> Bool |> Value |> Ok
-            | Int _ -> typ = "int" |> Bool |> Value |> Ok
-            | Bool _ -> typ = "bool" |> Bool |> Value |> Ok
-        | Space (Object(oTyp), _) ->
-            typ = oTyp |> Bool |> Value |> Ok
-        | _ ->
-            "Can only check type for primative types"
-            |> TypeError
-            |> Error
-    | _ -> 
-        "`is` should be followed by a type name"
-        |> OperatorError
-        |> Error
             
-
-
-
-             
-
 
 (**
 let plusRules (ops : BilboResult<Meaning * Meaning>) =
