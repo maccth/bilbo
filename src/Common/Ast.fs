@@ -19,6 +19,7 @@ and Loc = {
 and Statement =
     | TypeDefL of Loc * TypeDef
     | TransformDefL of Loc * TransformDef
+    | FunctionDefL of Loc * FunctionDef
     | ExprStatementL of ExprStatementL
     | ImportL of Loc * Import
 
@@ -115,6 +116,9 @@ and EdgeOp =
 
 and TransformDef =
     Id * (Param list) * (ExprStatementL list) * MatchStatement
+
+and FunctionDef =
+    Id * (Param list) * (ExprStatementL list) * Expr
 
 and MatchStatement =
     Expr Option * MatchCase list

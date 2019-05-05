@@ -337,10 +337,10 @@ let pExprStatementL fname =
     choice [pAssignmentExpr; pPrintExpr]
     |> Position.attachPos fname
 
-let pReturn = keyw "return" >>. pExpr |>> Return
+let pReturn = keyw "return" >>. pExpr
 let pBecome = keyw "become" >>. pExpr |>> Become
 let pTerminatingStatement =
-    (pReturn <|> pBecome)
+    (pReturn |>> Return <|> pBecome)
     |> fun p -> p <?> "terminating statement (`return` or `become`)" 
 
 let pMatchCase fname =
@@ -361,18 +361,31 @@ let pMatchStatement fname =
     let p = pipe3 (keyw "match") (opt pExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
     p <?> "match statement"
 
-let pTransformDef fname =
+let defStart fname =
     let paramCsv = csv pId
     let paramBrac = brackets paramCsv <|> paramCsv 
     let exprs = many (pExprStatementL fname)
+    pipe5 (keyw "def") pId paramBrac (str "=") exprs 
+        (fun _ name paramLst _ exprs -> (name, paramLst, exprs))
+
+let pTransformDef fname =
     let matches = pMatchStatement fname
-    let cons (def, tName, paramLst, eq, exprs, matches) =
-        (tName, paramLst, exprs, matches) |> TransformDef
-    let p = pipe6 (keyw "def") pId paramBrac (str "=") exprs matches cons
+    let cons (name, paramLst, exprs) matches =
+        (name, paramLst, exprs, matches) |> TransformDef 
+    let p = pipe2 (defStart fname) matches cons
     let p' = p <?> "transform definition"
     p'
     |> Position.attachPos fname
     |> Position.bind TransformDefL
+
+let pFunctionDef fname =
+    let cons (name, paramLst, exprs) ret =
+        (name, paramLst, exprs, ret) |> FunctionDef 
+    let p = pipe2 (defStart fname) pReturn cons
+    let p' = p <?> "function definition"
+    p'
+    |> Position.attachPos fname
+    |> Position.bind FunctionDefL
 
 let pTypeDef fname =
     let csvIds1 = csv1 pId
@@ -396,7 +409,8 @@ let pImport fname =
 
 let pStatement fname =
     let pe fname = fname |>  pExprStatementL |>> ExprStatementL
-    let ps = [pe; pTypeDef; pTransformDef; pImport;]
+    let tryTransform fname = attempt (pTransformDef fname)
+    let ps = [pe; pTypeDef; tryTransform; pFunctionDef; pImport;]
     let ps' = List.map (fun p -> p fname) ps
     choice ps'
     
