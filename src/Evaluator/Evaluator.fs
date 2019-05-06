@@ -33,7 +33,8 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
     | ImportL (loc, (fp, alias)) ->
         let syms' = Symbols.set syms {spLst=nLst ; id=alias;} ((Namespace, SymbolTable.empty) |> Space)
         attachLoc loc syms'
-    | TransformDefL(loc, t) ->
+    | TransformDefL(loc, _)
+    | FunctionDefL(loc, _) ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
@@ -41,7 +42,7 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
         |> attachLoc loc
 
 
-let bilboEvaluate (ast : BilboResult<Program>) : ProgramResult<Symbols> =
+let bilboEvaluator (ast : BilboResult<Program>) : ProgramResult<Symbols> =
     let rec evalRec syms ast  =
         match ast with
         | pUnit :: rest ->
@@ -61,5 +62,5 @@ let bilboEvaluate (ast : BilboResult<Program>) : ProgramResult<Symbols> =
 
 let bilboEvaluatorPrint (ast : BilboResult<Program>) =
     ast
-    |> bilboEvaluate
+    |> bilboEvaluator
     |> printfn "%A"

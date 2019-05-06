@@ -56,7 +56,7 @@ let runAstTest expAst codeStr =
         let expAst = overrideAstLocs ast' emptyLoc
         Expect.equal expAst astTest ""
     | Error e ->
-        failwithf "%A" e
+        failwithf "Test failed. %A" e
 
 // TODO: Add failure tests
 (*
@@ -81,8 +81,8 @@ let runAssignTest codeStr var rhs =
     let expAst = [consAssignAst var rhs]
     runAstTest expAst codeStr
 
-let consAssignTest eTyp data  =
-    let code, var, rhs, des = data
+let consAssignTest eTyp testData =
+    let code, var, rhs, des = testData
     testCase des <| fun _ -> runAssignTest code var (eTyp rhs)
 
 let sExprTest = consAssignTest SExpr
