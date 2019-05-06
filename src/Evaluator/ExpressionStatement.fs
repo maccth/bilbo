@@ -6,6 +6,7 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.PrimativeTypes
 open Bilbo.Evaluator.BinaryExpressions
+open Bilbo.Common
 
 let rec evalBinOperands syms spLst lhs rhs =
     let valL = evalExpr syms spLst lhs
@@ -23,12 +24,12 @@ and (|..>) (syms,spLst,lhs,rhs) opRule =
 
 and evalBinExpr syms spLst lhs op rhs =
     match op with
-    | Plus -> (syms,spLst,lhs,rhs) |..> plusRules
-    | Minus -> (syms,spLst,lhs,rhs) |..> minusRules
+    | Pow -> (syms,spLst,lhs,rhs) |..> powRules
     | Times -> (syms,spLst,lhs,rhs) |..> timesRules
     | Divide -> (syms,spLst,lhs,rhs) |..> divideRules
+    | Plus -> (syms,spLst,lhs,rhs) |..> plusRules
+    | Minus -> (syms,spLst,lhs,rhs) |..> minusRules
     | Percent -> (syms,spLst,lhs,rhs) |..> moduloRules
-    | Pow -> (syms,spLst,lhs,rhs) |..> powRules
     | LessThan -> (syms,spLst,lhs,rhs) |..> ltRules
     | LessThanEq -> (syms,spLst,lhs,rhs) |..> lteqRules
     | GreaterThan -> (syms,spLst,lhs,rhs) |..> gtRules
@@ -40,11 +41,17 @@ and evalBinExpr syms spLst lhs op rhs =
     | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
     | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
     | Is -> isRules syms spLst lhs rhs
+    | Has -> hasRules syms spLst lhs rhs
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
+
+and varAsString var =
+    match var with
+    | Var(str) -> str |> Some 
+    | _ -> None
 
 and isRules syms spLst lhs rhs =
     let lhsTypeStr : BilboResult<string> =
@@ -70,8 +77,8 @@ and isRules syms spLst lhs rhs =
         match rhs' with
         | Ok (Value(Type(rTyp,_))) -> rTyp |> Ok
         | Error _->
-            match rhs with
-            | Var(rTyp) -> rTyp |> Ok
+            match varAsString rhs with
+            | Some rTyp -> rTyp |> Ok
             | _ ->
                 "`is` should be followed by a type name"
                 |> OperatorError
@@ -80,7 +87,6 @@ and isRules syms spLst lhs rhs =
             "`is` should be followed by a type name"
             |> OperatorError
             |> Error )
-
     match lhsTypeStr with
     | Error e -> e |> Error
     | Ok lTyp ->
@@ -88,6 +94,24 @@ and isRules syms spLst lhs rhs =
         | Error e -> e |> Error
         | Ok rTyp ->
             lTyp = rTyp |> Bool |> Value |> Ok
+
+and hasRules syms spLst lhs rhs =
+    match varAsString rhs with
+    | None ->
+        "`has` should be followed by an attribute name"
+        |> OperatorError
+        |> Error
+    | Some attr ->
+        let lhs' = evalExpr syms spLst lhs
+        match lhs' with
+        | Error e -> e |> Error
+        | Ok lMean ->
+            match lMean with
+            | Space (Object(oTyp), st) -> Map.containsKey attr st |> Bool |> Value |> Ok
+            | _ ->
+                "`has` must have an object on the left-hand side"
+                |> OperatorError
+                |> Error    
 
 and evalTypeCast syms spLst typ e =
     let e' = evalExpr syms spLst e
@@ -147,17 +171,29 @@ and evalDot syms spLst lhs rhs =
     | Error e -> e |> Error
     | Ok (Space(spType, syms')) -> 
         evalExpr [syms'] [] rhs
-    | Ok (Value (Node n)) ->
-        match n.load with
-        | Space (spType, syms') ->
-            evalExpr [syms'] [] rhs
-        | _ ->
-            "The load of this node is not an object type."
-            |> TypeError
-            |> Error        
+    // TODO: Move load forwarding to match statement evaluation
+    // | Ok (Value (Node n)) ->
+    //     match n.load with
+    //     | Space (spType, syms') ->
+    //         evalExpr [syms'] [] rhs
+    //     | _ ->
+    //         "The load of this node is not an object type."
+    //         |> TypeError
+    //         |> Error        
     | _ ->
         "Clearly this isn't an object or a namespace..."
         |> TypeError
+        |> Error
+
+and evalSExpr syms spLst s : BilboResult<Meaning> =
+    match s with
+    | Literal l -> evalLiteral l
+    | ObjExpr(t,attrs) -> evalObjExpr syms spLst t attrs
+    | TypeCast(t,e) -> evalTypeCast syms spLst t e
+    | _ ->
+        // TODO: Implement!
+        "Not implemented yet."
+        |> ImplementationError
         |> Error
 
 and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
@@ -166,17 +202,6 @@ and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
     | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | SExpr s -> evalSExpr syms spLst s
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs 
-    | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
-
-and evalSExpr syms spLst s : BilboResult<Meaning> =
-    match s with
-    | Literal l -> evalLiteral l
-    | ObjExpr(t,attrs) -> evalObjExpr syms spLst t attrs
-    | TypeCast(t,e) -> evalTypeCast syms spLst t e
     | _ ->
         // TODO: Implement!
         "Not implemented yet."

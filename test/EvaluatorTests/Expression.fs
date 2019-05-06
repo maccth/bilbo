@@ -23,7 +23,7 @@ open Expecto
 // let config = { FsCheckConfig.defaultConfig with maxTest = 10000 }
 // let primTypesAssignTests = [intAssignTest; boolAssignTest]
 
-let primativeTypesSingleVarAssign = [
+let primativeTypesSingleVarLiteralAssign = [
     "10", 10 |> Int |> Value, "Positive int"
     "-10", -10 |> Int |> Value, "Negative int"
     "0", 0 |> Int |> Value, "Int zero"
@@ -56,4 +56,4 @@ let quickSingleVarAssignTests testDatalst =
 
 [<Tests>]
 let tests =
-    testList "basic tests" (primativeTypesSingleVarAssign |> quickSingleVarAssignTests |> singleVarTests)
+    testList "basic tests" (primativeTypesSingleVarLiteralAssign |> quickSingleVarAssignTests |> singleVarTests)
