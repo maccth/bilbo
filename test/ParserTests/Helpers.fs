@@ -15,7 +15,7 @@ let BOOL x = x |> BoolLit |> Literal
 let BIN x op y = (SExpr x, op, SExpr y) |> BinExpr
 let PRE op x = (op, x) |> PrefixExpr
 let POST op x = (x, op) |> PostfixExpr
-let OBJ t pLst = (t,pLst) |> ObjInstan |> ObjExpr
+let OBJ t pLst = (t,pLst) |> ObjExpr
 let DOT e id = (e,Dot,id) |> BinExpr
 let PLST lst = lst |> ParamList
 

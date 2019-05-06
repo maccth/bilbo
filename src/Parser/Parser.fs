@@ -102,25 +102,28 @@ let keywords =
         "import";
         "is";
         "has";
-    ] |> Set.ofList
+        "int"; "float"; "str"; "bool";
+    ]
 
-let pnKeyword : Parser<unit, unit> =
-    let kws = Set.toList keywords
-    let pKws = kws |> List.map str |> List.toSeq 
-    notFollowedBy (choice pKws)
+let pnKeyword  =
+    let kws = List.map str keywords
+    notFollowedByL (choice kws) "keyword"
 
-let pId : Parser<string, unit> =
+let idBase : Parser<string, unit> =
     let firstChar c = isLetter c
     let middleChar c = firstChar c || c = '_' || isDigit c
     let upToLastChar = many1Satisfy2 firstChar middleChar
     let lastChar = manyChars (pchar ''') .>> ws
+    let id = (pipe2 upToLastChar lastChar (+))
     let specialVars =
         [
             "(++)"; // For the positive and negative application conditions in a match
             "(--)";
         ] |> List.map str |> choice
-    let p = specialVars <|> (pnKeyword >>. (pipe2 upToLastChar lastChar (+)))
+    let p = id <|> specialVars
     p <?> "variable identifier"
+
+let pId : Parser<string, unit> = pnKeyword >>. idBase
 
 let pVar = pId |>> Var
 
@@ -154,13 +157,18 @@ let pExpr = exprOpp.ExpressionParser
 let pExprTerm, pExprTermRef = createParserForwardedToRef()
 exprOpp.TermParser <- pExprTerm <|> brackets pExpr;
 
-let pObjInstan' =
+let pObjInstan =
     let attrs = (csv pExpr) |> brackets
-    let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr |> SExpr
+    let consObj aLst tName = (tName, aLst) |> ObjExpr |> SExpr
     attrs |>> consObj
 
 // TODO: potentially add object field indexing obj["field1"]
-let postIds = pObjInstan'
+let postIds = pObjInstan
+
+let checkPostIds s p =
+    match p with
+    | Some p' -> p' s
+    | None -> s |> Var  
 
 // Parses things that appear after IDs, object instantiation (MyT(p1,p2,p3)) and dot access (myObj.a)
 let pPostIds =
@@ -168,11 +176,22 @@ let pPostIds =
         match p with
         | Some p' -> p' s
         | None -> s |> Var
-    pipe2 pId (opt postIds) checkPosts
+    pipe2 pId (opt postIds) checkPostIds
+    
+let pTypeCasts =
+    let types = [
+        "int", CastInt;
+        "float", CastFloat;
+        "str", CastString;
+        "bool", CastBool;
+    ]
+    let pType = types |> List.map (fun (s,t) -> str s |>> fun _ -> t) |> choice
+    pipe2 pType (brackets pExpr) (fun t e -> (t,e) |> TypeCast |> SExpr)
+    
 
 let pParamList = pExpr |> csv2 |> brackets |>> ParamList |>> SExpr
 
-let pSExpr = choice [pParamList; pPostIds; pLiteral;]
+let pSExpr = choice [pParamList; pTypeCasts; pPostIds; pLiteral;]
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence

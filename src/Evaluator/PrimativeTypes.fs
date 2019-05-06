@@ -18,37 +18,37 @@ let evalLiteral l : BilboResult<Meaning> =
 
 let typeConvert typ (v : Value) : BilboResult<Value> =
     match typ,v with
-    | "str", String x -> v |> Ok
-    | "str", Float x -> x |> string |> Value.String |> Ok
-    | "str", Int x -> x |> string |> Value.String |> Ok
-    | "str", Bool true -> "True" |> Value.String |> Ok
-    | "str", Bool false -> "False" |> Value.String |> Ok
-    | "float", String x ->
+    | CastString, String x -> v |> Ok
+    | CastString, Float x -> x |> string |> Value.String |> Ok
+    | CastString, Int x -> x |> string |> Value.String |> Ok
+    | CastString, Bool true -> "True" |> Value.String |> Ok
+    | CastString, Bool false -> "False" |> Value.String |> Ok
+    | CastFloat, String x ->
         match System.Double.TryParse x with
         | true, x' -> x' |> Float |> Ok
         | _ ->
             "Cannot convert value to float"
             |> ValueError
             |> Error
-    | "float", Float x -> v |> Ok
-    | "float", Int x -> x |> float |> Float |> Ok
-    | "float", Bool true -> 1.0 |> Float |> Ok
-    | "float", Bool false -> 0.0 |> Float |> Ok     
-    | "int", String x ->
+    | CastFloat, Float x -> v |> Ok
+    | CastFloat, Int x -> x |> float |> Float |> Ok
+    | CastFloat, Bool true -> 1.0 |> Float |> Ok
+    | CastFloat, Bool false -> 0.0 |> Float |> Ok     
+    | CastInt, String x ->
         match System.Int32.TryParse x with
         | true, x' -> x' |> Int |> Ok
         | _ ->
             "Cannot convert value to int"
             |> ValueError
             |> Error
-    | "int", Float x -> x |> System.Math.Round |> int |> Int |> Ok
-    | "int", Int x -> v |> Ok
-    | "int", Bool true -> 1 |> Int |> Ok
-    | "int", Bool false -> 0 |> Int |> Ok
-    | "bool", String x -> (x <> "") |> Bool |> Ok
-    | "bool", Float x -> (x <> 0.0) |> Bool |> Ok
-    | "bool", Int x -> (x <> 0) |> Bool |> Ok
-    | "bool", Bool x -> v |> Ok
+    | CastInt, Float x -> x |> System.Math.Round |> int |> Int |> Ok
+    | CastInt, Int x -> v |> Ok
+    | CastInt, Bool true -> 1 |> Int |> Ok
+    | CastInt, Bool false -> 0 |> Int |> Ok
+    | CastBool, String x -> (x <> "") |> Bool |> Ok
+    | CastBool, Float x -> (x <> 0.0) |> Bool |> Ok
+    | CastBool, Int x -> (x <> 0) |> Bool |> Ok
+    | CastBool, Bool x -> v |> Ok
     | _ ->
         "Cannot convert to a primative type"
         |> ValueError

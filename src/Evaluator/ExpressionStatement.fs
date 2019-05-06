@@ -66,13 +66,16 @@ and isRules syms spLst lhs rhs =
                 |> TypeError
                 |> Error
     let rhsTypeStr = lazy (
-        match rhs with
-        | Var(rTyp) -> rTyp |> Ok
-        | BinExpr(_,Dot,_) ->
-            let rhs' = evalExpr syms spLst rhs
-            match rhs' with
-            | Error e -> e |> Error
-            | Ok (Value(Type(rTyp,_))) -> rTyp |> Ok
+        let rhs' = evalExpr syms spLst rhs
+        match rhs' with
+        | Ok (Value(Type(rTyp,_))) -> rTyp |> Ok
+        | Error _->
+            match rhs with
+            | Var(rTyp) -> rTyp |> Ok
+            | _ ->
+                "`is` should be followed by a type name"
+                |> OperatorError
+                |> Error 
         | _ ->
             "`is` should be followed by a type name"
             |> OperatorError
@@ -86,27 +89,21 @@ and isRules syms spLst lhs rhs =
         | Ok rTyp ->
             lTyp = rTyp |> Bool |> Value |> Ok
 
-and typeCast syms spLst typ attrs =
-    match attrs with
-    | [e] ->
-        let e' = evalExpr syms spLst e
-        match e' with
-        | Ok (Value v) ->
-            typeConvert typ v
-            |> function
-            | Ok v' -> v' |> Value |> Ok
-            | Error v' -> v' |> Error
-        | Ok _v ->
-            "Cannot convert to a primative type"
-            |> ValueError
-            |> Error
-        | Error err -> err |> Error
-    | _ ->
+and evalTypeCast syms spLst typ e =
+    let e' = evalExpr syms spLst e
+    match e' with
+    | Ok (Value v) ->
+        typeConvert typ v
+        |> function
+        | Ok v' -> v' |> Value |> Ok
+        | Error v' -> v' |> Error
+    | Ok _v ->
         "Cannot convert to a primative type"
         |> ValueError
         |> Error
+    | Error err -> err |> Error
 
-and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
+and evalObjExpr syms spLst typ attrs : BilboResult<Meaning> =
     let evalAttrs attrsIn : BilboResult<Meaning list> =
         let rec evalAttrsRec attrsIn attrsOut =
             match attrsIn with
@@ -144,16 +141,6 @@ and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
         |> NameError
         |> Error
 
-and evalObjExpr syms spLst e : BilboResult<Meaning> =
-    match e with
-    | ObjInstan(typ, attrs) ->
-        match typ with
-        | "str"
-        | "float"
-        | "int"
-        | "bool" -> typeCast syms spLst typ attrs
-        | _ -> evalObjInstan syms spLst typ attrs
-
 and evalDot syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
     match lSpace with
@@ -177,9 +164,19 @@ and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
     | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
-    | SExpr (Literal l) -> evalLiteral l
-    | SExpr (ObjExpr o) -> evalObjExpr syms spLst o
+    | SExpr s -> evalSExpr syms spLst s
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs 
+    | _ ->
+        // TODO: Implement!
+        "Not implemented yet."
+        |> ImplementationError
+        |> Error
+
+and evalSExpr syms spLst s : BilboResult<Meaning> =
+    match s with
+    | Literal l -> evalLiteral l
+    | ObjExpr(t,attrs) -> evalObjExpr syms spLst t attrs
+    | TypeCast(t,e) -> evalTypeCast syms spLst t e
     | _ ->
         // TODO: Implement!
         "Not implemented yet."

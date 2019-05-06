@@ -43,15 +43,16 @@ and Expr =
 
 and SExpr =
     | ObjExpr of ObjExpr
+    | TypeCast of TypeCast
     | Literal of Literal
     | ParamList of Expr list
 
 and GExpr =
     | PathExpr of PathExpr
 
- 
-and ObjExpr =
-    | ObjInstan of TypeName * Expr list
+and TypeCast = PrimTypeName * Expr
+
+and ObjExpr = TypeName * Expr list
 
 and BinOp =
     | NodeCons
@@ -92,6 +93,12 @@ and Literal =
     | FloatLit of float
     | IntLit of int
     | BoolLit of bool
+
+and PrimTypeName =
+    | CastInt
+    | CastFloat
+    | CastBool
+    | CastString
      
 and PathExpr =
     | Path of PathElem list
