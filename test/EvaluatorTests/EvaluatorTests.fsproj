@@ -1,5 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
@@ -8,22 +8,20 @@
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.6.1" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Include="Sample.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="Expression.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Expecto" Version="8.*" />
     <PackageReference Include="FSharp.Core" Version="4.*" />
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.*" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Evaluator\Evaluator.fsproj" />
   </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
