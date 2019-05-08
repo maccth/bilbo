@@ -106,4 +106,3 @@ module Symbols =
         | [] ->
             let st' = SymbolTable.set SymbolTable.empty vid value
             Result.bind (fun s -> [s] |> Ok) st'
-

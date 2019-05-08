@@ -213,8 +213,8 @@ let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
             match v with
             | String _ | Float _ | Int _ | Bool _ -> obj |> Ok
             | Value.Node n -> n |> nodeFn |> Ok
-            | Transform _ -> nodeConsError "transform" partStr
             | Type _ -> nodeConsError "type definition" partStr
+            | Pipeline p -> nodeConsError "function or transform" partStr
         | Space (Object oTyp, symTab) -> obj |> Ok
         | Space _ -> nodeConsError "namespace" partStr
     let getId node =
@@ -232,27 +232,3 @@ let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
             |> Ok
         | Error e, _ -> e |> Error
         | Ok _, Error e -> e |> Error
-            
-
-(**
-let plusRules (ops : BilboResult<Meaning * Meaning>) =
-    match ops with
-    | Ok (Value lhs', Value rhs') ->
-        match lhs',rhs' with
-        | Int x, Int y -> x + y |> Int |> Value |> Ok
-        | Int x, Float y -> (float x) + y |> Float |> Value |> Ok
-        | Float x, Int y -> x + (float y) |> Float |> Value |> Ok
-        | Float x, Float y -> x + y |> Float |> Value |> Ok
-        | String x, String y -> x + y |> String |> Value |> Ok
-        | _ ->
-            // TODO: Implement!
-            "Operator error."
-            |> ImplementationError
-            |> Error
-    | Error e -> e |> Error
-    | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
-*)

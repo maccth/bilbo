@@ -42,11 +42,62 @@ and evalBinExpr syms spLst lhs op rhs =
     | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
+    | Pipe -> pipeRules syms spLst lhs rhs
+    // | Pipe -> (syms,spLst,lhs,rhs)  
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
         |> Error
+
+and evalFuncBody (syms : Symbols) spLst fst bod ret =
+    let syms' : Symbols = fst :: syms
+    let folder syms (es : ExprStatementL) =
+        match syms with
+        | Error e -> e |> Error
+        | Ok syms' ->
+            let loc,es' = es
+            evalExprStatement syms' spLst es'
+    let symsPostFunc = List.fold folder (Ok syms') bod
+    match symsPostFunc with
+    | Error e -> e |> Error
+    | Ok syms'' -> evalExpr syms'' spLst ret
+
+and pipeParam syms spLst (fDef : FunctionDef) fst param = 
+    let fId, fParams, bod, ret = fDef
+    match fParams with
+    | hd :: paramsLeft ->
+        let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
+        match fst' with
+        | Error e -> e |> Error
+        | Ok fst'' ->
+            match paramsLeft with
+            // | [] -> evalFuncBody syms spLst fst bod ret
+            | [] -> evalFuncBody syms [] fst'' bod ret
+            | _ ->
+                ((fId,paramsLeft,bod,ret), fst'')
+                |> Function
+                |> fun p -> [p]
+                |> Pipeline
+                |> Value
+                |> Ok
+
+and pipeRules (syms : Symbols) spLst (l : Expr) (r : Expr) : BilboResult<Meaning> =
+    let lMean = evalExpr syms spLst l
+    let rMean = evalExpr syms spLst r
+    match lMean,rMean with
+    | Error e, _
+    | _, Error e -> e |> Error
+    | Ok l, Ok r ->
+        match r with
+        | Value (Pipeline p) ->
+            match p with
+            | Function (fDef,fst) :: rest ->
+                let appliedFunc = pipeParam syms spLst fDef fst l
+                match appliedFunc with
+                | Error e -> e |> Error
+                | Ok(Value(Pipeline([p]))) -> p :: rest |> Pipeline |> Value |> Ok
+                | Ok(m) -> m |> Ok
 
 and varAsString var =
     match var with
@@ -187,16 +238,26 @@ and evalDot syms spLst lhs rhs =
 
 and evalSExpr syms spLst s : BilboResult<Meaning> =
     match s with
+    // | SExpr.Unit -> Unit |> Value |> Ok
     | Literal l -> evalLiteral l
     | ObjExpr(t,attrs) -> evalObjExpr syms spLst t attrs
     | TypeCast(t,e) -> evalTypeCast syms spLst t e
-    | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
+    | SExpr.ParamList (eLst) ->
+        let meanLst = List.map (evalExpr syms spLst) eLst
+        let combineMeanLst (resLst : BilboResult<Meaning list>) (res : BilboResult<Meaning>) : BilboResult<Meaning list> = 
+            match res, resLst with
+            | Ok mean, Ok lst -> (mean::lst) |> Ok
+            | Error e, _ -> e |> Error
+            | _, Error e -> e |> Error
+        let start : BilboResult<Meaning list> = Ok []
+        meanLst
+        |> List.rev
+        |> List.fold combineMeanLst start
+        |> function
+        | Ok lst -> lst |> ParamList |> Ok
+        | Error e -> e |> Error
 
-and evalExpr (syms : Symbols) spLst e : BilboResult<Meaning> =
+and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
     | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
@@ -227,7 +288,7 @@ and consVid syms spLst e : BilboResult<ValueId> =
         |> ImplementationError
         |> Error
     
-let evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
+and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
     match e with
     | AssignmentExpr (eLhs, eRhs) ->
         let lhsId = consVid syms spLst eLhs
@@ -237,10 +298,14 @@ let evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
             let rhs = evalExpr syms spLst eRhs
             match rhs with
             | Error e -> e |> Error
+            | Ok (ParamList _) ->
+                "Cannot bind a parameter list to an identifier"
+                |> TypeError
+                |> Error
             | Ok rhsVal ->
                 Symbols.set syms vid rhsVal
-    | _ ->
+    | PrintExpr (_) ->
         // TODO: Implement!
         "Not implemented yet."
-        |> ImplementationError
+        |> ImplementationError 
         |> Error

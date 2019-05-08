@@ -191,7 +191,10 @@ let pTypeCasts =
 
 let pParamList = pExpr |> csv2 |> brackets |>> ParamList |>> SExpr
 
-let pSExpr = choice [pParamList; pTypeCasts; pPostIds; pLiteral;]
+// let pUnit = str "()" |>> fun _ -> Unit |> SExpr
+
+let pSExpr = choice [(*attempt pUnit;*) pParamList; pTypeCasts; pPostIds; pLiteral]
+
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence

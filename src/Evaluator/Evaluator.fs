@@ -5,6 +5,7 @@ open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.ExpressionStatement
+open Bilbo.Evaluator.Function
 
 let attachLoc loc res : ProgramResult<'T> = Result.mapError (fun e -> (Some loc, e)) res
 let noLoc res : ProgramResult<'T> = Result.mapError (fun e -> (None, e)) res
@@ -33,8 +34,10 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
     | ImportL (loc, (fp, alias)) ->
         let syms' = Symbols.set syms {spLst=nLst ; id=alias;} ((Namespace, SymbolTable.empty) |> Space)
         attachLoc loc syms'
-    | TransformDefL(loc, _)
-    | FunctionDefL(loc, _) ->
+    | FunctionDefL(loc, fd) ->
+        let syms' = evalfunctionDef syms rnLst fd
+        attachLoc loc syms'
+    | TransformDefL(loc, _) ->
         // TODO: Implement!
         "Not implemented yet."
         |> ImplementationError
