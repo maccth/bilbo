@@ -43,3 +43,8 @@ let nodeConsError vType nodePart =
     "A " + vType + " cannot be used as a " + nodePart
     |> TypeError
     |> Error
+
+let paramStringError thing = 
+    "Cannot bind a parameter list to " + thing
+    |> TypeError
+    |> Error

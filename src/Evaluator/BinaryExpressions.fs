@@ -3,7 +3,6 @@ module Bilbo.Evaluator.BinaryExpressions
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
-open Bilbo.Common.Ast
 open Bilbo.Common
 
 type Match<'T> =
@@ -36,10 +35,10 @@ module Match =
         first <.|.> second
 
 let intFloat ops iiFun ifFun fiFun ffFun =
-    match ops with
-    | Error e -> e |> Error |> Matched
-    | Ok (Value lhs', Value rhs') ->
-        match lhs',rhs' with
+    let lMean,rMean = ops
+    match lMean, rMean with
+    | Value lhs, Value rhs ->
+        match lhs,rhs with
         | Int x, Int y -> (iiFun x y) |> Value |> Ok |> Matched
         | Int x, Float y -> (ifFun x y) |> Value |> Ok |> Matched
         | Float x, Int y -> (fiFun x y) |> Value |> Ok |> Matched
@@ -50,12 +49,8 @@ let intFloat ops iiFun ifFun fiFun ffFun =
 let intFloatStr ops iiFun ifFun fiFun ffFun ssFun =
     let str = lazy(
         match ops with
-        | Error e -> e |> Error |> Matched
-        | Ok (Value lhs', Value rhs') ->
-            match lhs',rhs' with
-            | String x, String y -> (ssFun x y) |> Value |> Ok |> Matched
-            | _ -> NoMatch
-        | _ -> NoMatch)        
+        | Value (String x), Value (String y) -> (ssFun x y) |> Value |> Ok |> Matched
+        | _ -> NoMatch)
     (intFloat ops iiFun ifFun fiFun ffFun) <.|.> str
         
 let intFloat2 ops iiFun ifFun fiFun ffFun =
@@ -69,8 +64,7 @@ let intFloatStr2 ops iiFun ifFun fiFun ffFun ssFun =
     let ssFun2 x y = (ssFun x y) |> Value.String
     let str2 = lazy(
         match ops with
-        | Error e -> e |> Error |> Matched
-        | Ok (Value lhs', Value rhs') ->
+        | Value lhs', Value rhs' ->
             match lhs',rhs' with
             | String x, String y -> (ssFun2 x y) |> Value |> Ok |> Matched
             | _ -> NoMatch
@@ -82,7 +76,7 @@ let operatorErr =
     "Operator error."
     |> ImplementationError
 
-let plusRules (ops : BilboResult<Meaning * Meaning>) : BilboResult<Meaning> =
+let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
     // TODO: Add graph-based plus operations
@@ -98,9 +92,8 @@ let timesRules ops =
 
 let zeroCheck ops =
     match ops with
-    | Error e -> e |> Error |> Matched
-    | Ok (Value lhs', Value rhs') ->
-        match lhs',rhs' with
+    | Value lhs, Value rhs ->
+        match lhs, rhs with
         | (_, Int y) when y=0 ->
             "Cannot divide or modulo by zero" |> ValueError |> Error |> Matched
         | (_, Float y) when y=0.0 ->
@@ -184,8 +177,7 @@ let boolean ops binOp =
         | Bool x -> x |> Matched
         | _ -> NoMatch
     match ops with
-    | Error e -> e |> Error |> Matched
-    | Ok (Value lhs, Value rhs) ->
+    | (Value lhs, Value rhs) ->
         let lhs' = booleanTrue lhs
         let rhs' = booleanTrue rhs
         match lhs',rhs' with
@@ -193,20 +185,20 @@ let boolean ops binOp =
         | _ -> NoMatch
     | _ -> NoMatch
 
-let andRules (ops : BilboResult<Meaning*Meaning>) =
+let andRules (ops : Meaning * Meaning) =
     boolean ops (fun x y -> (x && y) |> Bool |> Value |> Ok)
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
-let orRules (ops : BilboResult<Meaning*Meaning>) =
+let orRules (ops : Meaning * Meaning) =
     boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
-let xorRules (ops : BilboResult<Meaning*Meaning>) =
+let xorRules (ops : Meaning * Meaning) =
     let xor x y = (x && (not y)) || ((not x) && y)
     boolean ops (fun x y -> (xor x y) |> Bool |> Value |> Ok)
     |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
 
-let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
+let nodeConsRules (ops : Meaning * Meaning) =
     let getNodePart nodeFn obj partStr =
         match obj with
         | Value v ->
@@ -214,16 +206,16 @@ let nodeConsRules (ops : BilboResult<Meaning*Meaning>) =
             | String _ | Float _ | Int _ | Bool _ -> obj |> Ok
             | Value.Node n -> n |> nodeFn |> Ok
             | Type _ -> nodeConsError "type definition" partStr
-            | Pipeline p -> nodeConsError "function or transform" partStr
+            | Pipeline _ -> nodeConsError "function or transform" partStr
         | Space (Object oTyp, symTab) -> obj |> Ok
         | Space _ -> nodeConsError "namespace" partStr
+        | ParamList _ -> nodeConsError "parameter list" partStr
     let getId node =
         getNodePart (fun (n : Value.Node) -> n.id) node "node id"
     let getLoad node =
         getNodePart (fun (n : Value.Node) -> n.load) node "node load"
     match ops with
-    | Error e -> e |> Error
-    | Ok(l,r) ->
+    | l,r ->
         match getId l, getLoad r with
         | Ok id, Ok load ->
             {id=id; load=load}

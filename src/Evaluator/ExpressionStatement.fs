@@ -19,8 +19,10 @@ let rec evalBinOperands syms spLst lhs rhs =
         | Error e -> e |> Error
 
 and (|..>) (syms,spLst,lhs,rhs) opRule =
-    evalBinOperands syms spLst lhs rhs
-    |> opRule
+    let ops = evalBinOperands syms spLst lhs rhs
+    match ops with
+    | Ok (l, r) -> opRule (l,r)
+    | Error e -> e |> Error
 
 and evalBinExpr syms spLst lhs op rhs =
     match op with
@@ -322,10 +324,7 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
             let rhs = evalExpr syms spLst eRhs
             match rhs with
             | Error e -> e |> Error
-            | Ok (ParamList _) ->
-                "Cannot bind a parameter list to an identifier"
-                |> TypeError
-                |> Error
+            | Ok (ParamList _) -> paramStringError "an identifier"
             | Ok rhsVal ->
                 Symbols.set syms vid rhsVal
     | PrintExpr (_) ->
