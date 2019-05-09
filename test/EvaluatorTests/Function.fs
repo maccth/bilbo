@@ -84,21 +84,35 @@ let paramListAppliction = [
     """, 25 |> Int |> Value, "3 stage partial pipeline application"
 ]
 
-let enpipingToParamList = [
-    sumFunc + """
-    sumTwice = sum |> 7 |> sum
-    a = (5,13) >> sumTwice
-    """, 25 |> Int |> Value, "Enpiping into param list to create larger param list"
+let functionsWithClosures = [
+    """
+    a = 10
+    b = 20
+    def func1(x) =
+        c = a + b
+        a = 10 + c
+        return x+c+a+7
 
-    sum3Func + """
-    sumTwice = sum3 |> (10,20) |> sum3
-    a = (7,2,5) >> sumTwice
-    """, 44 |> Int |> Value, "Enpiping into 3 param list"
+    a = 10 >> func1 |> func1
+    """, 164 |> Int |> Value, "Function closure contains global symbol and overwrites it";
 
-    avg4Func + """
-    a = (2,5) >> (4,1) |> avg4
-    """, 3 |> Int |> Value, "Param list enpiped into param list"
+    """
+    var1' = 30
+    var2' = 10
+    def sumVars(x) =
+        s = var1' + var2'
+        return s-x
+
+    def func1(a,b,c) =
+        a' = a >> sumVars
+        b' = b >> sumVars
+        c' = c >> sumVars
+        return a'+b'+c'
+
+    a = (100,135,96) >> func1
+    """, -211 |> Int |> Value, "Function closure contains global functions"
 ]
+
 
 let quickFunctionAppTest codeStr mean des =
     let var = "a"
@@ -122,8 +136,29 @@ let tests3 =
     let name = "param list application tests"
     testList name (paramListAppliction |> quickFunctionAppTests |> singleVarTests)
 
+
+[<Tests>]
+let tests4 =
+    let name = "param list application tests"
+    testList name (functionsWithClosures |> quickFunctionAppTests |> singleVarTests)
+
 // TODO: Decide on this. Working implementation of param list pipeline stages. 
 // TODO: Uncoment corresponding tests below
+// let enpipingToParamList = [
+//     sumFunc + """
+//     sumTwice = sum |> 7 |> sum
+//     a = (5,13) >> sumTwice
+//     """, 25 |> Int |> Value, "Enpiping into param list to create larger param list"
+
+//     sum3Func + """
+//     sumTwice = sum3 |> (10,20) |> sum3
+//     a = (7,2,5) >> sumTwice
+//     """, 44 |> Int |> Value, "Enpiping into 3 param list"
+
+//     avg4Func + """
+//     a = (2,5) >> (4,1) |> avg4
+//     """, 3 |> Int |> Value, "Param list enpiped into param list"
+// ]
 // [<Tests>]
 // let tests4 =
 //     let name = "param list enpiping tests"

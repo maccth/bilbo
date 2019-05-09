@@ -77,7 +77,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
         match fParams with
         | [] -> zeroParamFunctionError()
         | hd :: paramsLeft ->
-            let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
+            let fst' = SymbolTable.set fst {id=hd; spLst=spLst} param
             match fst' with
             | Error e -> e |> Error
             | Ok fstUpdated ->
