@@ -10,7 +10,6 @@ type Value =
     | Bool of bool
     | Node of Node
     | Pipeline of Pipeline
-    // | Unit
     // TODO: Graphs and paths
     // TODO: Pipelines with <|>
 
