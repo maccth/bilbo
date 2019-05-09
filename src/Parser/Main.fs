@@ -12,5 +12,7 @@ open Bilbo.Parser.Parser
 
 [<EntryPoint>]
 let main (argv : string []) =
-    cli argv "Bilbo parsing REPL" bilboStringParserPrint bilboParser
+    let file = bilboParser
+    let repl codeIn _prevAst = bilboStringParser codeIn
+    cli argv "Bilbo parsing REPL" file repl []
     0

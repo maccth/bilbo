@@ -1,12 +1,13 @@
 ﻿module Bilbo.Evaluator.Main
 
 open Bilbo.Common.Cli
+open Bilbo.Common.SymbolTable
 open Bilbo.Parser.Parser
 open Bilbo.Evaluator.Evaluator
 
 [<EntryPoint>]
 let main argv =
-    let repl code = code |> bilboStringParser |> bilboEvaluatorPrint
-    let normal code = code |> bilboParser |> bilboEvaluatorPrint
-    cli argv "Bilbo evaluator REPL" repl normal
+    let file code = code |> bilboParser |> bilboEvaluatorPrint
+    let repl code syms = code |> bilboStringParser |> fun ast ->  bilboEvaluatorSymsIn ast syms
+    cli argv "Bilbo evaluator REPL" file repl Symbols.Empty
     0

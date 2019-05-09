@@ -54,7 +54,7 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
         |> Error
         |> attachLoc loc
 
-let bilboEvaluator (ast : BilboResult<Program>) : ProgramResult<Symbols> =
+let evalBilbo syms ast =
     let rec evalRec syms ast  =
         match ast with
         | pUnit :: rest ->
@@ -66,11 +66,17 @@ let bilboEvaluator (ast : BilboResult<Program>) : ProgramResult<Symbols> =
                 e |> Error
         | [] ->
             syms |> Ok
+    evalRec syms ast    
+
+let bilboEvaluatorSymsIn (ast : BilboResult<Program>) (symsIn : Symbols) : ProgramResult<Symbols> =
     match ast with
     | Ok ast' ->
-        evalRec Symbols.empty ast'
-    | Error err ->
-       err |> Error |> noLoc
+        evalBilbo symsIn ast'
+    | Error e ->
+       e |> Error |> noLoc
+
+let bilboEvaluator (ast : BilboResult<Program>) : ProgramResult<Symbols> =
+    bilboEvaluatorSymsIn ast Symbols.empty
 
 let bilboEvaluatorPrint (ast : BilboResult<Program>) =
     ast
