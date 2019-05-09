@@ -3,17 +3,17 @@ module Bilbo.Common.Value
 open Bilbo.Common.Ast
 
 type Value =
-    | Pipeline of Pipeline
     | Type of TypeDef
     | String of string
     | Float of float
     | Int of int
     | Bool of bool
     | Node of Node
+
+    | Pipeline of Pipeline
     // | Unit
     // TODO: Graphs and paths
     // TODO: Pipelines with <|>
-    // | Pipeline of TransformDef list
 
 and Pipeline = PStage list
 
@@ -28,8 +28,8 @@ and Node = {
 
 and Meaning =
     | Value of Value
-    | ParamList of Meaning list
     | Space of SpaceType * SymbolTable
+    | ParamList of Meaning list
 
 and SpaceType =
     | Namespace

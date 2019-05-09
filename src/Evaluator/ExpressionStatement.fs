@@ -43,7 +43,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
     | Pipe -> pipeRules syms spLst lhs rhs
-    // | Pipe -> (syms,spLst,lhs,rhs)  
+    | Enpipe -> enpipeRules syms spLst lhs rhs
     | _ ->
         // TODO: Implement!
         "Not implemented yet."
@@ -63,41 +63,65 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
     | Error e -> e |> Error
     | Ok syms'' -> evalExpr syms'' spLst ret
 
-and pipeParam syms spLst (fDef : FunctionDef) fst param = 
-    let fId, fParams, bod, ret = fDef
-    match fParams with
-    | hd :: paramsLeft ->
-        let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
-        match fst' with
-        | Error e -> e |> Error
-        | Ok fst'' ->
-            match paramsLeft with
-            // | [] -> evalFuncBody syms spLst fst bod ret
-            | [] -> evalFuncBody syms [] fst'' bod ret
-            | _ ->
-                ((fId,paramsLeft,bod,ret), fst'')
-                |> Function
-                |> fun p -> [p]
-                |> Pipeline
-                |> Value
-                |> Ok
+and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
+    match pLine with
+    | Function(fDef, fst) :: pLine' when pLine' <> [] ->
+        let fId, fParams, bod, ret = fDef
+        match fParams with
+        // TODO: add error for func with no params. Should be evaluate at define time.
+        | hd :: paramsLeft ->
+            let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
+            match fst' with
+            | Error e -> e |> Error
+            | Ok fstUpdated ->
+                match paramsLeft with
+                | [] ->
+                    let funcResultAsParam = evalFuncBody syms spLst fstUpdated bod ret
+                    match funcResultAsParam with
+                    | Error e -> e |> Error
+                    | Ok param' -> applyArgToPipeline syms spLst pLine' param'
+                | _ ->
+                    let funcAsParam =
+                        ((fId, paramsLeft, bod, ret), fstUpdated)
+                        |> Function
+                        |> fun p -> [p]
+                        |> Pipeline
+                        |> Value
+                    applyArgToPipeline syms spLst pLine' funcAsParam
 
-and pipeRules (syms : Symbols) spLst (l : Expr) (r : Expr) : BilboResult<Meaning> =
-    let lMean = evalExpr syms spLst l
-    let rMean = evalExpr syms spLst r
-    match lMean,rMean with
-    | Error e, _
+    | [Function(fDef, fst)] ->
+        let fId, fParams, bod, ret = fDef
+        match fParams with
+        // TODO: add error for func with no params. Should be evaluate at define time.
+        | hd :: paramsLeft ->
+            let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
+            match fst' with
+            | Error e -> e |> Error
+            | Ok fstUpdated ->
+                evalFuncBody syms spLst fstUpdated bod ret
+
+and enpipeRules syms spLst (l : Expr) (r : Expr) =
+    let lRes = evalExpr syms spLst l
+    let rRes = evalExpr syms spLst r
+    match lRes, rRes with
+    | Error e, _ -> e |> Error
     | _, Error e -> e |> Error
-    | Ok l, Ok r ->
-        match r with
-        | Value (Pipeline p) ->
-            match p with
-            | Function (fDef,fst) :: rest ->
-                let appliedFunc = pipeParam syms spLst fDef fst l
-                match appliedFunc with
-                | Error e -> e |> Error
-                | Ok(Value(Pipeline([p]))) -> p :: rest |> Pipeline |> Value |> Ok
-                | Ok(m) -> m |> Ok
+    | Ok lMean, Ok rMean ->
+        match rMean with
+        | Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
+
+and pipeRules syms spLst (l : Expr) (r : Expr) =
+    let lRes = evalExpr syms spLst l
+    let rRes = evalExpr syms spLst r
+    match lRes, rRes with
+    | Error e, _ -> e |> Error
+    | _, Error e -> e |> Error
+    | Ok lMean, Ok rMean ->
+        match lMean, rMean with
+        | Value (Pipeline pl), Value (Pipeline pr) -> pl @ pr |> Pipeline |> Value |> Ok
+        | _ ->
+            "Only functions or transforms can be composed in a pipeline"
+            |> TypeError |> Error
 
 and varAsString var =
     match var with

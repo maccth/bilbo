@@ -64,8 +64,9 @@ and BinOp =
     | Equal | NotEqual
     | And | Or | Xor
     | Is | Has
-    // Application
+    // Composition
     | Pipe | OrPipe
+    | Enpipe
     // Transform
     | MulApp | UpToApp
 
