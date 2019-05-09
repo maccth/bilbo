@@ -5,7 +5,6 @@ open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.ExpressionStatement
-open Bilbo.Evaluator.Function
 
 let attachLoc loc res : ProgramResult<'T> = Result.mapError (fun e -> (Some loc, e)) res
 let noLoc res : ProgramResult<'T> = Result.mapError (fun e -> (None, e)) res
@@ -34,8 +33,19 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
     | ImportL (loc, (fp, alias)) ->
         let syms' = Symbols.set syms {spLst=nLst ; id=alias;} ((Namespace, SymbolTable.empty) |> Space)
         attachLoc loc syms'
-    | FunctionDefL(loc, fd) ->
-        let syms' = evalfunctionDef syms rnLst fd
+    | FunctionDefL(loc, fDef) ->
+        let fName,fParams,fBod,fRet = fDef
+        let fst = Symbols.head syms
+        let syms' =
+            match fParams with
+            | [] ->
+                let fMean = evalFuncBody syms rnLst fst fBod fRet
+                match fMean with
+                | Ok fRes -> Symbols.set syms {id=fName; spLst=rnLst} fRes
+                | Error e -> e |> Error
+            | _ ->
+                let f = (fDef, fst) |> Function |> fun s -> [s] |> Pipeline |> Value
+                Symbols.set syms {id=fName; spLst=rnLst} f
         attachLoc loc syms'
     | TransformDefL(loc, _) ->
         // TODO: Implement!
@@ -43,7 +53,6 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
         |> ImplementationError
         |> Error
         |> attachLoc loc
-
 
 let bilboEvaluator (ast : BilboResult<Program>) : ProgramResult<Symbols> =
     let rec evalRec syms ast  =

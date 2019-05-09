@@ -44,7 +44,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
-    | Pipe -> pipeRules syms spLst lhs rhs
+    | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
     | _ ->
         // TODO: Implement!
@@ -67,10 +67,12 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
-    | Function(fDef, fst) :: pLine' when pLine' <> [] ->
+    | [] -> param |> Ok
+    | Transform(_) :: _ ->  "Not implemented yet." |> ImplementationError |> Error
+    | Function(fDef, fst) :: pLine' ->
         let fId, fParams, bod, ret = fDef
         match fParams with
-        // TODO: add error for func with no params. Should be evaluate at define time.
+        | [] -> zeroParamFunctionError()
         | hd :: paramsLeft ->
             let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
             match fst' with
@@ -90,17 +92,24 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                         |> Pipeline
                         |> Value
                     applyArgToPipeline syms spLst pLine' funcAsParam
-
-    | [Function(fDef, fst)] ->
-        let fId, fParams, bod, ret = fDef
-        match fParams with
-        // TODO: add error for func with no params. Should be evaluate at define time.
-        | hd :: paramsLeft ->
-            let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
-            match fst' with
-            | Error e -> e |> Error
-            | Ok fstUpdated ->
-                evalFuncBody syms spLst fstUpdated bod ret
+    // | [Function(fDef, fst)] ->
+    //     let fId, fParams, bod, ret = fDef
+    //     match fParams with
+    //     | [] -> zeroParamFunctionError()
+    //     | hd :: paramsLeft ->
+    //         let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
+    //         match fst' with
+    //         | Error e -> e |> Error
+    //         | Ok fstUpdated ->
+    //             match paramsLeft with
+    //             | [] -> evalFuncBody syms spLst fstUpdated bod ret
+    //             | _ ->
+    //                 ((fId, paramsLeft, bod, ret), fstUpdated)
+    //                 |> Function
+    //                 |> fun p -> [p]
+    //                 |> Pipeline
+    //                 |> Value
+    //                 |> Ok
 
 and enpipeRules syms spLst (l : Expr) (r : Expr) =
     let lRes = evalExpr syms spLst l
@@ -111,19 +120,6 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
     | Ok lMean, Ok rMean ->
         match rMean with
         | Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
-
-and pipeRules syms spLst (l : Expr) (r : Expr) =
-    let lRes = evalExpr syms spLst l
-    let rRes = evalExpr syms spLst r
-    match lRes, rRes with
-    | Error e, _ -> e |> Error
-    | _, Error e -> e |> Error
-    | Ok lMean, Ok rMean ->
-        match lMean, rMean with
-        | Value (Pipeline pl), Value (Pipeline pr) -> pl @ pr |> Pipeline |> Value |> Ok
-        | _ ->
-            "Only functions or transforms can be composed in a pipeline"
-            |> TypeError |> Error
 
 and varAsString var =
     match var with

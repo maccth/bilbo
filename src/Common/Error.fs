@@ -48,3 +48,8 @@ let paramStringError thing =
     "Cannot bind a parameter list to " + thing
     |> TypeError
     |> Error
+
+let zeroParamFunctionError() =
+    "Functions with no paramaters should be evaluated at definition time and cannot be enpiped to."
+    |> ImplementationError
+    |> Error

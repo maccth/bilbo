@@ -82,6 +82,11 @@ module SymbolTable =
 type Symbols = SymbolTable list
 
 module Symbols =
+    let head (syms : Symbols) =
+        match syms with
+        | hd :: _ -> hd
+        | [] -> SymbolTable.empty
+        
     let empty : Symbols = [] 
     let find (syms : Symbols) (vid : ValueId) : BilboResult<Meaning> =
         let rec findClosest (symsIn : Symbols) (errLst : BilboError list) : BilboResult<Meaning> =

@@ -224,3 +224,12 @@ let nodeConsRules (ops : Meaning * Meaning) =
             |> Ok
         | Error e, _ -> e |> Error
         | Ok _, Error e -> e |> Error
+
+let pipeRules ops =
+    let lMean, rMean = ops
+    match lMean, rMean with
+    | Value (Pipeline pl), Value (Pipeline pr) -> pl @ pr |> Pipeline |> Value |> Ok
+    | _ ->
+        "Only functions or transforms can be composed in a pipeline"
+        |> TypeError
+        |> Error
