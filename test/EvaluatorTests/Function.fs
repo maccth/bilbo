@@ -5,16 +5,22 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 
-let add1Func = "def add1 a = return a+1"
+let add1Func = """
+    def add1 a = return a+1
+    """
 
-let negFunc = "def neg a = return -1*a"
+let negFunc = """
+    def neg a = return -1*a
+    """
 
-let sumFunc = "def sum(x,y) = return x+y"
+let sumFunc = """
+    def sum(x,y) = return x+y
+    """
 
 let avg4Func = """
     def avg(a,b,c,d) =
         return (a+b+c+d)/4
-"""
+    """
 
 let singleParamFunctionApplication = [
     add1Func + """
@@ -58,6 +64,22 @@ let partialFunctionApplication = [
     """, 25 |> Int |> Value, "4 arg function applied partially, one arg at a time"
 ]
 
+let paramListAppliction = [
+    sumFunc + """
+    a = (-345,72) >> sum
+    """, -345+72 |> Int |> Value, "2 arg param list enpiped into single function"
+
+    sumFunc + add1Func + """
+    a = (56127,-864234) >> sum |> add1 |> add1
+    """, (56127-864234+1+1) |> Int |> Value, "2 arg param list enpiped into 3 stage pipeline"
+
+    sumFunc + """
+    a = 10 >> sum |> sum
+    a = 20 >> a
+    a = -5 >> a
+    """, 25 |> Int |> Value, "3 stage partial pipeline application"
+]
+
 let quickFunctionAppTest codeStr mean des =
     let var = "a"
     codeStr, var, mean, des
@@ -74,3 +96,8 @@ let tests =
 let tests2 =
     let name = "basic function application tests"
     testList name (partialFunctionApplication |> quickFunctionAppTests |> singleVarTests)
+
+[<Tests>]
+let tests3 =
+    let name = "basic function application tests"
+    testList name (paramListAppliction |> quickFunctionAppTests |> singleVarTests)

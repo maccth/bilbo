@@ -68,7 +68,7 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
     | [] -> param |> Ok
-    | Transform(_) :: _ ->  "Not implemented yet." |> ImplementationError |> Error
+    | Transform(_) :: _ ->  "Transforms not implemented yet." |> ImplementationError |> Error
     | Function(fDef, fst) :: pLine' ->
         let fId, fParams, bod, ret = fDef
         match fParams with
@@ -85,31 +85,32 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                     | Error e -> e |> Error
                     | Ok param' -> applyArgToPipeline syms spLst pLine' param'
                 | _ ->
-                    let funcAsParam =
-                        ((fId, paramsLeft, bod, ret), fstUpdated)
-                        |> Function
-                        |> fun p -> [p]
-                        |> Pipeline
-                        |> Value
-                    applyArgToPipeline syms spLst pLine' funcAsParam
-    // | [Function(fDef, fst)] ->
-    //     let fId, fParams, bod, ret = fDef
-    //     match fParams with
-    //     | [] -> zeroParamFunctionError()
-    //     | hd :: paramsLeft ->
-    //         let fst' = SymbolTable.set fst {id=hd; spLst=[]} param
-    //         match fst' with
-    //         | Error e -> e |> Error
-    //         | Ok fstUpdated ->
-    //             match paramsLeft with
-    //             | [] -> evalFuncBody syms spLst fstUpdated bod ret
-    //             | _ ->
-    //                 ((fId, paramsLeft, bod, ret), fstUpdated)
-    //                 |> Function
-    //                 |> fun p -> [p]
-    //                 |> Pipeline
-    //                 |> Value
-    //                 |> Ok
+                    // NOTE: not pure implementation of currying. 
+                    // We don't move on in the pipeline until we the funciton has all its args)
+                    ((fId, paramsLeft, bod, ret), fstUpdated)
+                    |> Function
+                    |> fun p -> p :: pLine'
+                    |> Pipeline
+                    |> Value
+                    |> Ok
+                    // let funcAsParam = ^^^
+                    // applyArgToPipeline syms spLst pLine' funcAsParam
+
+and applyArgsToPipeline syms spLst pLine args =
+    match args with
+    | [] -> "Shoudl never get to this point" |> ImplementationError |> Error
+    | [arg] ->
+        applyArgToPipeline syms spLst pLine arg
+    | arg :: rest ->
+        let res = applyArgToPipeline syms spLst pLine arg
+        match res with
+        | Error e -> e |> Error
+        | Ok (Value(Pipeline(pLine'))) ->
+            applyArgsToPipeline syms spLst pLine' rest
+        | _ ->
+            "Too many arguments enpiped into function or transform"
+            |> TypeError
+            |> Error
 
 and enpipeRules syms spLst (l : Expr) (r : Expr) =
     let lRes = evalExpr syms spLst l
@@ -118,8 +119,9 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
     | Error e, _ -> e |> Error
     | _, Error e -> e |> Error
     | Ok lMean, Ok rMean ->
-        match rMean with
-        | Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
+        match lMean, rMean with
+        | ParamList(pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine pLst
+        | _, Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
 
 and varAsString var =
     match var with
