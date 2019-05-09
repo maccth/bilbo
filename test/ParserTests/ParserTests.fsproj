@@ -9,7 +9,6 @@
     <PackageReference Update="FSharp.Core" Version="4.6.1" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Sample.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="SimpleExpression.fs" />
     <Compile Include="GraphExpression.fs" />

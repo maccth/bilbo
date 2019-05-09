@@ -5,24 +5,6 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 
-// Property based testing for evaluation
-// =====================================
-// let consAssignCodeStr (mean : 'T) (meanStr : string) (typ : 'T->Value) =
-//     let codeStr = "a = " + meanStr
-//     let mean = mean |> typ |> Value
-//     runSingleVarTest codeStr "a" mean
-
-// let intAssignTest = testProperty "Assignment is fun" <| 
-//     fun (v : int) -> consAssignCodeStr v (string v) Int
-
-// let boolAssignTest = testProperty "Assignment is fun4" <| 
-//     fun (v : bool) ->
-//         match v with
-//         | true -> consAssignCodeStr v "True" Bool
-//         | false -> consAssignCodeStr v "False" Bool
-// let config = { FsCheckConfig.defaultConfig with maxTest = 10000 }
-// let primTypesAssignTests = [intAssignTest; boolAssignTest]
-
 let primTypesSingleVarAssign = [
     "10", 10 |> Int |> Value, "Positive int"
     "-10", -10 |> Int |> Value, "Negative int"
@@ -46,7 +28,7 @@ let primTypesSingleVarAssign = [
     "\"!@£$%^&*()~{}:|<>\"", "!@£$%^&*()~{}:|<>" |> String |> Value, "String with symbols"
 ]
 
-let primTypesSingleVarBinOp = [
+let primTypesSingleVarArithmeticOps = [
     "345^89", 345.0**89.0 |> Float |> Value, "Int int power, both pos" 
     "7^-3", 7.0**(-3.0) |> Float |> Value, "Int int power, pos base, neg power" 
     "-45^3", (-45.0)**(3.0) |> Float |> Value, "Int int power, neg base, pos power" 
@@ -99,6 +81,56 @@ let primTypesSingleVarBinOp = [
     "-925643-(-0)", -925643 |> Int |> Value, "Int int subtraction, subbing minus zero"
 ]
 
+let primTypesComparisonOperators = [
+    "0.0<0", false |> Bool |> Value, "Less then, zeros"
+    "(-0)<0.0", false |> Bool |> Value, "Less than, minus zero lhs"
+    "0<(-0)", false |> Bool |> Value, "Less than, minus zero rhs"
+    "10<40.0", true |> Bool |> Value, "Less than, true, both pos"
+    "19.0<18", false |> Bool |> Value, "Less than, false, both pos"
+    "(-20.0)<(-15)", true |> Bool |> Value, "Less than, True, both neg"
+    "(-3.0)<(10.0)", true |> Bool |> Value, "Less than, True, lhs neg"
+    "6<(-1.0)", false |> Bool |> Value, "Less than, False, rhs neg"
+    "(-6.0)<(-10)", false |> Bool |> Value, "Less than, False, both neg neg"
+    "981263.0<6798203", true |> Bool |> Value, "Less than, true, big nums"
+
+    "0<=0", true |> Bool |> Value, "Less than equal, zeros" 
+    "0.0<=0", true |> Bool |> Value, "Less than equal, zeros, int float mix"
+    "-0<=-0", true |> Bool |> Value, "Less than equal, neg zeros" 
+    "-10.0<=-10", true |> Bool |> Value, "Less than equal, true, neg 10s"
+    "10<=10", true |> Bool |> Value, "Less than equal, true, 10s"
+    "0.1<=0", false |> Bool |> Value, "Less than equal, false, int float mix"
+    "10<=11", true |> Bool |> Value, "Less than equal, true"
+    "10<=9", false |> Bool |> Value, "Less than equal, false,"
+    "128371<=8563", false |> Bool |> Value, "Less than equal, false, both pos big nums"
+    "128371<=-8563", false |> Bool |> Value, "Less than equal, false, rhs neg"
+    "-128371<=8563", true |> Bool |> Value, "Less than equal, true, lhs neg"
+    "-128371<=-8563", true |> Bool |> Value, "Less than equal, true, both neg"
+
+    "0.0>0", false |> Bool |> Value, "Greater then, zeros"
+    "(-0)>0.0", false |> Bool |> Value, "Greater than, minus zero lhs"
+    "0>(-0)", false |> Bool |> Value, "Greater than, minus zero rhs"
+    "10>40.0", false |> Bool |> Value, "Greater than, false, both pos"
+    "19.0>18", true |> Bool |> Value, "Greater than, true, both pos"
+    "(-20.0)>(-15)", false |> Bool |> Value, "Greater than, false, both neg"
+    "(-3.0)>(10.0)", false |> Bool |> Value, "Greater than, false, lhs neg"
+    "6>(-1.0)", true |> Bool |> Value, "Greater than, true, rhs neg"
+    "(-6.0)>(-10)", true |> Bool |> Value, "Greater than, true, both neg neg"
+    "981263.0>6798203", false |> Bool |> Value, "Greater than, false, big nums"
+
+    "0>=0", true |> Bool |> Value, "Greater than equal, zeros" 
+    "0.0>=0", true |> Bool |> Value, "Greater than equal, zeros, int float mix"
+    "-0>=-0", true |> Bool |> Value, "Greater than equal, neg zeros" 
+    "-10.0>=-10", true |> Bool |> Value, "Greater than equal, true, neg 10s"
+    "10>=10", true |> Bool |> Value, "Greater than equal, true, 10s"
+    "0.1>=0", true |> Bool |> Value, "Greater than equal, true, int float mix"
+    "10>=11", false |> Bool |> Value, "Greater than equal, false"
+    "10>=9", true |> Bool |> Value, "Greater than equal, true,"
+    "128371>=8563", true |> Bool |> Value, "Greater than equal, true, both pos big nums"
+    "128371>=-8563", true |> Bool |> Value, "Greater than equal, true, rhs neg"
+    "-128371>=8563", false |> Bool |> Value, "Greater than equal, false, lhs neg"
+    "-128371>=-8563", false |> Bool |> Value, "Greater than equal, false, both neg"
+]
+
 let quickSingleVarAssignTest strMean mean des =
     let var = "a"
     let codeStr = var + " = " + strMean
@@ -114,5 +146,10 @@ let tests =
 
 [<Tests>]
 let tests2 =
-    let name = "primative type single var binary operations"
-    testList name (primTypesSingleVarBinOp |> quickSingleVarAssignTests |> singleVarTests)
+    let name = "primative type single var arithemtic operations"
+    testList name (primTypesSingleVarArithmeticOps |> quickSingleVarAssignTests |> singleVarTests)
+
+[<Tests>]
+let tests3 =
+    let name = "primative type single var arithemtic operations"
+    testList name (primTypesComparisonOperators |> quickSingleVarAssignTests |> singleVarTests)
