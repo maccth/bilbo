@@ -9,27 +9,29 @@ type Value =
     | Int of int
     | Bool of bool
     | Node of Node
-
     | Pipeline of Pipeline
     // | Unit
     // TODO: Graphs and paths
     // TODO: Pipelines with <|>
-
-and Pipeline = PStage list
-
-and PStage =
-    | Transform of TransformDef * SymbolTable
-    | Function of FunctionDef * SymbolTable
 
 and Node = {
     id : Meaning
     load : Meaning
 }
 
+and Pipeline = PStage list
+
+and ParamList = Meaning list
+
+and PStage =
+    | Transform of TransformDef * SymbolTable
+    | Function of FunctionDef * SymbolTable
+    // | ParamStage of ParamList
+
 and Meaning =
     | Value of Value
     | Space of SpaceType * SymbolTable
-    | ParamList of Meaning list
+    | ParamList of ParamList
 
 and SpaceType =
     | Namespace

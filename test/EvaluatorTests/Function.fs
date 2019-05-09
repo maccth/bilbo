@@ -17,8 +17,12 @@ let sumFunc = """
     def sum(x,y) = return x+y
     """
 
+let sum3Func = """
+    def sum3(x,y,z) = return x+y+z
+    """
+
 let avg4Func = """
-    def avg(a,b,c,d) =
+    def avg4(a,b,c,d) =
         return (a+b+c+d)/4
     """
 
@@ -57,7 +61,7 @@ let partialFunctionApplication = [
     """, 30 |> Int |> Value, "2 arg function applied partially, one arg at a time"
 
     avg4Func + """
-    c = 10 >> avg
+    c = 10 >> avg4
     d = 20 >> c
     e = 30 >> d
     a = 40 >> e
@@ -80,6 +84,22 @@ let paramListAppliction = [
     """, 25 |> Int |> Value, "3 stage partial pipeline application"
 ]
 
+let enpipingToParamList = [
+    sumFunc + """
+    sumTwice = sum |> 7 |> sum
+    a = (5,13) >> sumTwice
+    """, 25 |> Int |> Value, "Enpiping into param list to create larger param list"
+
+    sum3Func + """
+    sumTwice = sum3 |> (10,20) |> sum3
+    a = (7,2,5) >> sumTwice
+    """, 44 |> Int |> Value, "Enpiping into 3 param list"
+
+    avg4Func + """
+    a = (2,5) >> (4,1) |> avg4
+    """, 3 |> Int |> Value, "Param list enpiped into param list"
+]
+
 let quickFunctionAppTest codeStr mean des =
     let var = "a"
     codeStr, var, mean, des
@@ -94,10 +114,17 @@ let tests =
 
 [<Tests>]
 let tests2 =
-    let name = "basic function application tests"
+    let name = "partial function application tests"
     testList name (partialFunctionApplication |> quickFunctionAppTests |> singleVarTests)
 
 [<Tests>]
 let tests3 =
-    let name = "basic function application tests"
+    let name = "param list application tests"
     testList name (paramListAppliction |> quickFunctionAppTests |> singleVarTests)
+
+// TODO: Decide on this. Working implementation of param list pipeline stages. 
+// TODO: Uncoment corresponding tests below
+// [<Tests>]
+// let tests4 =
+//     let name = "param list enpiping tests"
+//     testList name (enpipingToParamList |> quickFunctionAppTests |> singleVarTests)

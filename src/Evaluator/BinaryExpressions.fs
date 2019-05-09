@@ -229,6 +229,16 @@ let pipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
     | Value (Pipeline pl), Value (Pipeline pr) -> pl @ pr |> Pipeline |> Value |> Ok
+    // TODO: Decide on this. Working implementation of param list pipeline stages. 
+    // TODO: Uncoment corresponding tests
+    // | Value (Pipeline pl), ParamList(pLst) -> pl @ [ParamStage pLst] |> Pipeline |> Value |> Ok
+    // | Value (Pipeline pl), _ ->
+    //     let paramStage = [rMean] |> ParamStage |> fun p -> [p]
+    //     pl @ paramStage |> Pipeline |> Value |> Ok
+    // |  ParamList(pLst), Value (Pipeline pr) -> [ParamStage pLst] @ pr |> Pipeline |> Value |> Ok
+    // | _, Value (Pipeline pr) ->
+    //     let paramStage = [lMean] |> ParamStage |> fun p -> [p]
+    //     paramStage @ pr |> Pipeline |> Value |> Ok
     | _ ->
         "Only functions or transforms can be composed in a pipeline"
         |> TypeError

@@ -67,6 +67,9 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
+    // | ParamStage ps :: pLine'->
+    //     let ps' = param :: ps
+    //     applyArgsToPipeline syms spLst pLine' ps'
     | [] -> param |> Ok
     | Transform(_) :: _ ->  "Transforms not implemented yet." |> ImplementationError |> Error
     | Function(fDef, fst) :: pLine' ->
@@ -98,17 +101,16 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
 
 and applyArgsToPipeline syms spLst pLine args =
     match args with
-    | [] -> "Shoudl never get to this point" |> ImplementationError |> Error
+    | [] -> "Control should have passed onto single arg handler." |> ImplementationError |> Error
     | [arg] ->
         applyArgToPipeline syms spLst pLine arg
     | arg :: rest ->
-        let res = applyArgToPipeline syms spLst pLine arg
-        match res with
+        let evalRes = applyArgToPipeline syms spLst pLine arg
+        match evalRes with
         | Error e -> e |> Error
-        | Ok (Value(Pipeline(pLine'))) ->
-            applyArgsToPipeline syms spLst pLine' rest
+        | Ok (Value(Pipeline(pLine'))) -> applyArgsToPipeline syms spLst pLine' rest
         | _ ->
-            "Too many arguments enpiped into function or transform"
+            "Too many arguments enpiped into function or transform."
             |> TypeError
             |> Error
 
@@ -122,6 +124,10 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
         match lMean, rMean with
         | ParamList(pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine pLst
         | _, Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
+        | _ ->
+            "The enpipe operator requires a function, transform or pipeline on the right-hand side."
+            |> TypeError
+            |> Error
 
 and varAsString var =
     match var with
@@ -137,11 +143,14 @@ and isRules syms spLst lhs rhs =
             match lMean with
             | Value lVal ->
                 match lVal with
-                // TODO: implementation for graphs, type defs, transform defs, nodes...
                 | String _ -> "str" |> Ok
                 | Float _ -> "float" |> Ok
                 | Int _ -> "int" |> Ok
                 | Bool _ -> "bool" |> Ok
+                | _ ->
+                    "Cannot use `is` operator on nodes, graphs, type definitions, functions, transforms or pipelines."
+                    |> TypeError
+                    |> Error
             | Space (Object(oTyp), _) ->  oTyp |> Ok
             | _ ->
                 "Can only check type for primative types"
