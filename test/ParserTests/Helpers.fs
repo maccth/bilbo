@@ -57,7 +57,7 @@ let runAstTest expAst codeStr =
         let expAst = overrideAstLocs ast' emptyLoc
         Expect.equal expAst astTest ""
     | Error e ->
-        failwithf "Test failed. %A" e
+        failwithf "Test errored. %A" e
 
 // TODO: Add failure tests
 (*

@@ -44,10 +44,19 @@ let nodeConsError vType nodePart =
     |> TypeError
     |> Error
 
-let paramStringError thing = 
-    "Cannot bind a parameter list to " + thing
+let bindTypeError thing cannotBeBoundTo =
+    "Cannot bind a " + thing + " to " + cannotBeBoundTo
     |> TypeError
     |> Error
+
+let bindImpError thing cannotBeBoundTo =
+    "A" + thing + "should not be bound to" + cannotBeBoundTo
+    |> ImplementationError
+    |> Error
+
+let paramListTypeError thing = bindTypeError "parameter list" thing
+
+let paramListImpError thing = bindImpError  "parameter list" thing
 
 let zeroParamFunctionError() =
     "Functions with no paramaters should be evaluated at definition time and cannot be enpiped to."

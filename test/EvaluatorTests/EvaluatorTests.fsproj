@@ -22,6 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Evaluator\Evaluator.fsproj" />
+    <ProjectReference Include="..\..\src\Parser\Parser.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

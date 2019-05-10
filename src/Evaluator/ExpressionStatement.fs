@@ -331,7 +331,7 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
             let rhs = evalExpr syms spLst eRhs
             match rhs with
             | Error e -> e |> Error
-            | Ok (ParamList _) -> paramStringError "an identifier"
+            | Ok (ParamList _) -> paramListTypeError "an identifier"
             | Ok rhsVal ->
                 Symbols.set syms vid rhsVal
     | PrintExpr (_) ->
