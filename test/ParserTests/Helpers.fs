@@ -41,6 +41,7 @@ let overrideAstLocs (ast : ProgramUnit list) (loc : Loc) =
                 match s with
                 | TypeDefL (l,tdef) -> TypeDefL (loc, tdef)
                 | TransformDefL (l,tdef) -> TransformDefL (loc, tdef)
+                | FunctionDefL(l,fdef) -> FunctionDefL(loc, fdef)
                 | ExprStatementL (l, e) -> ExprStatementL(loc, e)
                 | ImportL (l, im) -> ImportL (loc, im)
             let altered = (nlst, s') |> ProgramUnit

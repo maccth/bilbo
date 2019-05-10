@@ -4,6 +4,13 @@ open Expecto
 open Bilbo.Common.Ast
 open Bilbo.Tests.ParserTests.Helpers
 
+let idTests = [
+    "inta = 10", "inta", INT 10, "Identifier starts with int keyword, followed by letter"
+    "return_ = 20", "return_", INT 20, "Identifier starts with return, followed by underscore"
+    "import5 = 30", "import5", INT 30, "Identifier starts with import, followed by digit"
+    "is' = 40", "is'", INT 40, "Identifier starts with is, followed by prime"
+]
+
 let literalTests = [
     "a=10", "a", INT 10, "Int";
     "a=-6", "a", INT -6, "Negative int";
@@ -38,12 +45,16 @@ let eExprTests = List.map sExprTest
 
 [<Tests>]
 let tests =
-    testList "Literal tests" (eExprTests literalTests)
+    testList "Identifier tests" (eExprTests idTests)
 
 [<Tests>]
 let tests2 =
-    testList "Object expression tests" (eExprTests objExprTests)
+    testList "Literal tests" (eExprTests literalTests)
 
 [<Tests>]
 let tests3 =
+    testList "Object expression tests" (eExprTests objExprTests)
+
+[<Tests>]
+let tests4 =
     testList "Param list tests" (eExprTests paramListTests)

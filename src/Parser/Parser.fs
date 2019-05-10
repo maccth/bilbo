@@ -106,8 +106,10 @@ let keywords =
     ]
 
 let pnKeyword  =
-    let kws = List.map str keywords
-    notFollowedByL (choice kws) "keyword"
+    let kws = List.map stre keywords
+    let nextChar = (fun c -> isLetter c || isDigit c || c='_' || c=''')
+    let keywordOnly = choice kws .>>. nextCharSatisfiesNot nextChar
+    notFollowedByL keywordOnly "keyword"
 
 let idBase : Parser<string, unit> =
     let firstChar c = isLetter c
