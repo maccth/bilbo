@@ -131,6 +131,43 @@ let primTypesComparisonOperators = [
     "-128371>=-8563", false |> Bool |> Value, "Greater than equal, false, both neg"
 ]
 
+let primTypesLogicalOperators = [
+    "True and True", true |> Bool |> Value, "Bool and, trues"
+    "True and False", false |> Bool |> Value, "Bool and, mixed 1"
+    "False and True", false |> Bool |> Value, "Bool and, mixed 2"
+    "False and False", false |> Bool |> Value, "Bool and, falses"
+    "True and True and False", false |> Bool |> Value, "Bool and 3"
+    
+    "True or True", true |> Bool |> Value, "Bool or, trues"
+    "True or False", true |> Bool |> Value, "Bool or, mixed 1"
+    "False or True", true |> Bool |> Value, "Bool or, mixed 2"
+    "False or False", false |> Bool |> Value, "Bool or, falses"
+    "False or False or True", true |> Bool |> Value, "Bool or 3"
+
+    "True xor True", false |> Bool |> Value, "Bool xor, trues"
+    "True xor False", true |> Bool |> Value, "Bool xor, mixed 1"
+    "False xor True", true |> Bool |> Value, "Bool xor, mixed 2"
+    "False xor False", false |> Bool |> Value, "Bool xor, falses"
+    "True xor True xor True", true |> Bool |> Value, "Bool xor, 3s"
+
+
+    "True and False or True", true |> Bool |> Value, "Bool mixed 3s, 1"
+    "(True and False) or True", true |> Bool |> Value, "Bool mixed 3s, 2"
+    "True and (True or False)", true |> Bool |> Value, "Bool mixed 3s, 3"
+    "False or False xor True and True", true |> Bool |> Value, "Bool mixed 3s, 4"
+    "((False or False) xor True) and True", true |> Bool |> Value, "Bool mixed 3s, 5"
+
+    "0 and True", false |> Bool |> Value, "Int false"
+    "1 and True", true |> Bool |> Value, "Int true"
+    "-1 and True", true |> Bool |> Value, "Int true negative"
+    "0.0 and True", false |> Bool |> Value, "Float false"
+    "0.1 and True", true |> Bool |> Value, "Float true"
+    "-0.1 and True", true |> Bool |> Value, "Float true negative"
+    "\"\" and True", false |> Bool |> Value, "String false"
+    "\"hi\" and True", true |> Bool |> Value, "String true"
+    "\"False\" and True", true |> Bool |> Value, "String true with false quoted" 
+]
+
 let quickSingleVarAssignTest strMean mean des =
     let var = "a"
     let codeStr = var + " = " + strMean
@@ -153,3 +190,9 @@ let tests2 =
 let tests3 =
     let name = "primative type single var arithemtic operations"
     testList name (primTypesComparisonOperators |> quickSingleVarAssignTests |> singleVarTests)
+
+[<Tests>]
+let tests4 =
+    let name = "primative type single var arithemtic operations"
+    testList name (primTypesLogicalOperators |> quickSingleVarAssignTests |> singleVarTests)
+    
