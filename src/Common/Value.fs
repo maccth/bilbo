@@ -1,6 +1,7 @@
 module Bilbo.Common.Value
 
 open Bilbo.Common.Ast
+open System.Xml.Linq
 
 type SymbolTable = Map<Id, Meaning>
 
@@ -37,18 +38,26 @@ and PStage =
 and EdgeWeight = Meaning option
 and NodeId = Meaning
 and NodeLoad = Meaning
+and EdgeMap<'T> = Map<NodeId,'T>
 
 and Node = {
     id : NodeId
     load : NodeLoad
 }
 
+and Edge = {
+    source : Node
+    weight : EdgeWeight
+    target : Node
+}
+
 
 and Graph = {
     // node id -> node load
     nodes       : Map<NodeId,  NodeLoad>
+    // loads       : Map<NodeLoad, NodeId list>
     // source node id -> (target node id -> [edge weights])
-    sourceEdges : Map<NodeId , Map<NodeId , EdgeWeight list> >
+    sourceEdges : EdgeMap<EdgeMap<EdgeWeight list>>
     // tagret node id -> (source node id -> [edge weights])
-    targetEdges : Map<NodeId , Map<NodeId , EdgeWeight list> >
+    targetEdges : EdgeMap<EdgeMap<EdgeWeight list>>
 }

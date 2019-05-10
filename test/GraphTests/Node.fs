@@ -37,8 +37,6 @@ let consIntObject typ paramLst =
     let paramLst' = List.map (fun (pName,pVal) -> (pName,pVal |> Int |> Value)) paramLst
     consObject typ paramLst'
 
-let a = consIntObject "city" [("population",10); ("capital", 20)]
-
 type StringObjectNodeTest = {
     nLst    : (string * string * (string * int) list) list
     expNLst : (string * string * (string * Meaning) list) list
