@@ -79,17 +79,17 @@ let intFloatStr2 ops iiFun ifFun fiFun ffFun ssFun =
     (intFloat2 ops iiFun ifFun fiFun ffFun)
     |??> str2
 
-let graphMatcher (ops : Meaning * Meaning) rule =
+let graphMatcher (ops : Meaning * Meaning) rule conv =
     match ops with
     | Value(Graph lhs), Value(Graph rhs) ->
         rule lhs rhs 
-        |> Result.bind (Graph >> Value >> Ok)
+        |> conv
         |> Matched
     | _ -> NoMatch    
 
 let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     let ifs = intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
-    let g = lazy(graphMatcher ops Graph.addGraphs)
+    let g = lazy(graphMatcher ops Graph.addGraphs (Result.bind (Graph >> Value >> Ok)))
     ifs
     |??> g
     |> Match.underlie ("Plus rules" |> notImplementedYet)
@@ -171,16 +171,20 @@ let equalsRules ops =
     let eq = fun x y -> (x = y) |> Bool
     let ifFun = fun x y -> (float(x) = y) |> Bool
     let fiFun = fun x y -> x = float(y) |> Bool
-    intFloatStr ops eq ifFun fiFun eq eq
+    let ifs = intFloatStr ops eq ifFun fiFun eq eq
+    let g = lazy(graphMatcher ops Graph.equal (Bool >> Value >> Ok))
+    ifs
+    |??> g
     |> Match.underlie ("Equal rules" |> notImplementedYet)
 
 let notEqualsRules ops =
-    // TODO: Add non-equality for non-primative (structural types) types
-    let neq = fun x y -> (x <> y) |> Bool
-    let ifFun = fun x y -> (float(x) <> y) |> Bool
-    let fiFun = fun x y -> x <> float(y) |> Bool
-    intFloatStr ops neq ifFun fiFun neq neq
-    |> Match.underlie ("Not equal rules" |> notImplementedYet)
+    equalsRules ops
+    |> function
+    | Ok (Value(Bool(b))) -> b |> not |> Bool |> Value |> Ok
+    | Ok (_) -> "Not equal rules" |> notImplementedYet
+    | Error (ImplementationError _) ->  "Not equal rules" |> notImplementedYet
+    | Error e -> e |> Error
+
 
 let boolean ops binOp =
     let booleanTrue (v : Value) =

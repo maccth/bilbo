@@ -45,7 +45,6 @@ module Graph =
         List.fold folder (Ok g)  nLst
 
     let addEdge (g : Graph) (e : Edge) : BilboResult<Graph> =
-
         let addOneWayEdge (eMap : EdgeMap<EdgeMap<EdgeWeight list>>) (l1nid : NodeId) (l2nid : NodeId) (ew : EdgeWeight) =
             match Map.tryFind l1nid eMap with
             | None ->
@@ -61,7 +60,6 @@ module Graph =
                     ew :: ewLst
                     |> fun ews -> Map.add l2nid ews l2eMap
                     |> fun l2eMap' -> Map.add l1nid l2eMap' eMap
-
         let gWithNodes = addNodes g [e.source; e.target]
         match gWithNodes with
         | Error e -> e |> Error
@@ -117,3 +115,13 @@ module Graph =
                 | Error e -> e |> Error
                 | Ok gs5 ->
                     addEdges gs5 (edges g2)
+
+    let equal (g1 : Graph) (g2 : Graph) =
+        // The graphs will have only unique nodes, the set removes the issue of ordering
+        let g1n = nodes g1 |> Set.ofList
+        let g2n = nodes g2 |> Set.ofList
+        // The edges need to be unique, so the ordering allows comparison in the presence of
+        //  duplicated edges.
+        let g1e = edges g1 |> List.sort
+        let g2e = edges g2 |> List.sort
+        (g1n = g2n) && (g1e = g2e)
