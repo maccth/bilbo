@@ -32,6 +32,7 @@ and ExprStatementL = Loc * ExprStatement
 and ExprStatement =
     | AssignmentExpr of Expr * Expr
     | PrintExpr of Expr * Expr Option
+    | DeleteExpr of Id
     
 and Expr =
     | Var of Id

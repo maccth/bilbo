@@ -99,6 +99,7 @@ let keywords =
         "where";
         "True"; "False";
         "print";
+        "delete";
         "import";
         "is";
         "has";
@@ -359,8 +360,11 @@ let pPrintExpr =
     let dest = keyw "to" >>. pExpr
     pipe2 (keyw "print" >>. pExpr) (opt dest) (fun e d -> (e,d) |> PrintExpr)
 
+let pDeleteExpr =
+    pipe2 (keyw "delete") pId (fun _ id -> id |> DeleteExpr)
+
 let pExprStatementL fname =
-    choice [pAssignmentExpr; pPrintExpr]
+    choice [pAssignmentExpr; pPrintExpr; pDeleteExpr]
     |> Position.attachPos fname
 
 let pReturn = keyw "return" >>. pExpr

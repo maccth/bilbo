@@ -78,6 +78,12 @@ module SymbolTable =
 
         setSpace symtab vid
 
+    // TODO: Serious code sketch. Will need to permeate use of vid.spLst 
+    let remove (symtab : SymbolTable) (vid : ValueId) =
+        match Map.containsKey vid.id symtab with
+        | false -> "Cannot delete an identifier that does not exist" |> TypeError |> Error
+        | true -> Map.remove vid.id symtab |> Ok
+
 
 type Symbols = SymbolTable list
 
@@ -111,3 +117,11 @@ module Symbols =
         | [] ->
             let st' = SymbolTable.set SymbolTable.empty vid value
             Result.bind (fun s -> [s] |> Ok) st'
+
+    let remove (syms : Symbols) (vid : ValueId) : BilboResult<Symbols> =
+        let st' = SymbolTable.remove (head syms) vid
+        let swapHead newHd =
+            match syms with
+            | hd :: rest -> newHd :: rest |> Ok
+            | [] -> [newHd] |> Ok
+        Result.bind swapHead st'

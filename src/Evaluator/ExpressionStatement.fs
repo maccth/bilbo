@@ -381,6 +381,8 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
             | Ok (ParamList _) -> paramListTypeError "an identifier"
             | Ok rhsVal ->
                 Symbols.set syms vid rhsVal
+    | DeleteExpr id ->
+        Symbols.remove syms {id=id; spLst=spLst}
     | PrintExpr (_) ->
         // TODO: Implement!
         "Not implemented yet."
