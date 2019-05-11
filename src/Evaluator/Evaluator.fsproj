@@ -12,6 +12,7 @@
   <ItemGroup>
     <Compile Include="PrimativeTypes.fs" />
     <Compile Include="BinaryExpressions.fs" />
+    <Compile Include="Print.fs" />
     <Compile Include="ExpressionStatement.fs" />
     <Compile Include="Evaluator.fs" />
     <Compile Include="Main.fs" />

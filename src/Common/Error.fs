@@ -67,3 +67,8 @@ let notImplementedYet thing =
     thing + " has not been implemented yet"
     |> ImplementationError
     |> Error
+
+let printError thing=
+    "Cannot print a " + thing
+    |> TypeError
+    |> Error
