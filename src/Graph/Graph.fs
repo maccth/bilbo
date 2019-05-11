@@ -45,12 +45,13 @@ module Graph =
         List.fold folder (Ok g)  nLst
 
     let addEdge (g : Graph) (e : Edge) : BilboResult<Graph> =
+
         let addOneWayEdge (eMap : EdgeMap<EdgeMap<EdgeWeight list>>) (l1nid : NodeId) (l2nid : NodeId) (ew : EdgeWeight) =
             match Map.tryFind l1nid eMap with
             | None ->
                 Map.empty
-                |> fun m -> Map.add l2nid [ew] m
-                |> fun m -> Map.add l1nid m Map.empty
+                |> fun m1 -> Map.add l2nid [ew] m1
+                |> fun m2 -> Map.add l1nid m2 eMap
             | Some l2eMap ->
                 match Map.tryFind l2nid l2eMap with
                 | None ->
