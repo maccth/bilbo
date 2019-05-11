@@ -47,10 +47,8 @@ and evalBinExpr syms spLst lhs op rhs =
     | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
     | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
+        "Other binary operators"
+        |> notImplementedYet
 
 and evalFuncBody (syms : Symbols) spLst fst bod ret =
     let syms' : Symbols = fst :: syms
@@ -71,7 +69,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     //     let ps' = param :: ps
     //     applyArgsToPipeline syms spLst pLine' ps'
     | [] -> param |> Ok
-    | Transform(_) :: _ ->  "Transforms not implemented yet." |> ImplementationError |> Error
+    | Transform(_) :: _ ->  "Adding arg to transform pipeline" |> notImplementedYet
     | Function(fDef, fst) :: pLine' ->
         let fId, fParams, bod, ret = fDef
         match fParams with
@@ -343,11 +341,9 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | SExpr s -> evalSExpr syms spLst s
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
     | GExpr g -> evalGExpr syms spLst g
-    // | _ ->
-    //     // TODO: Implement!
-    //     "Not implemented yet."
-    //     |> ImplementationError
-    //     |> Error
+    | _ ->
+        "Other expression types"
+        |> notImplementedYet
 
 and consVid syms spLst e : BilboResult<ValueId> =
     match e with
@@ -363,11 +359,9 @@ and consVid syms spLst e : BilboResult<ValueId> =
             | Ok rVid' ->
                 {rVid' with spLst=lVid'.spLst @ [Name lVid'.id]} |> Ok
     | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
-    
+        "vId construction"
+        |> notImplementedYet
+
 and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
     match e with
     | AssignmentExpr (eLhs, eRhs) ->
@@ -384,7 +378,5 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
     | DeleteExpr id ->
         Symbols.remove syms {id=id; spLst=spLst}
     | PrintExpr (_) ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError 
-        |> Error
+        "Print statements"
+        |> notImplementedYet

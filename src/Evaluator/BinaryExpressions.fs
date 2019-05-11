@@ -4,18 +4,11 @@ open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Common
+open Bilbo.Graph.Graph
 
 type Match<'T> =
     | Matched of 'T
     | NoMatch
-
-let (<.|.>) (first : Match<'T>) (second : Lazy<Match<'T>>) =
-    match first with
-    | Matched s -> s |> Matched
-    | NoMatch ->
-        match second.Force() with
-        | Matched s -> s |> Matched
-        | NoMatch -> NoMatch
 
 module Match =
     let underlie instead m =
@@ -31,8 +24,21 @@ module Match =
             | Matched y -> y |> Matched
             | NoMatch -> NoMatch
 
-    let lcompose first second =
-        first <.|.> second
+    let lcompose (first : Match<'T>) (second : Lazy<Match<'T>>) =
+        match first with
+        | Matched x -> x |> Matched
+        | NoMatch ->
+            match second.Force() with
+            | Matched y -> y |> Matched
+            | NoMatch -> NoMatch
+
+let (|?>) first second = Match.compose first second
+
+let (<?|?>) first second = Match.compose first second
+
+let (|??>) first second = Match.lcompose first second
+
+let (<??|??>) first second = Match.lcompose first second
 
 let intFloat ops iiFun ifFun fiFun ffFun =
     let lMean,rMean = ops
@@ -51,7 +57,8 @@ let intFloatStr ops iiFun ifFun fiFun ffFun ssFun =
         match ops with
         | Value (String x), Value (String y) -> (ssFun x y) |> Value |> Ok |> Matched
         | _ -> NoMatch)
-    (intFloat ops iiFun ifFun fiFun ffFun) <.|.> str
+    (intFloat ops iiFun ifFun fiFun ffFun) 
+    |??> str
         
 let intFloat2 ops iiFun ifFun fiFun ffFun =
     let iiFun2 x y = (iiFun x y) |> Int
@@ -69,26 +76,33 @@ let intFloatStr2 ops iiFun ifFun fiFun ffFun ssFun =
             | String x, String y -> (ssFun2 x y) |> Value |> Ok |> Matched
             | _ -> NoMatch
         | _ -> NoMatch)       
-    (intFloat2 ops iiFun ifFun fiFun ffFun) <.|.> str2
+    (intFloat2 ops iiFun ifFun fiFun ffFun)
+    |??> str2
 
-let operatorErr = 
-    // TODO: Implement!
-    "Operator error."
-    |> ImplementationError
+let graphMatcher (ops : Meaning * Meaning) rule =
+    match ops with
+    | Value(Graph lhs), Value(Graph rhs) ->
+        rule lhs rhs 
+        |> Result.bind (Graph >> Value >> Ok)
+        |> Matched
+    | _ -> NoMatch    
 
 let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
-    intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    let ifs = intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
+    let g = lazy(graphMatcher ops Graph.addGraphs)
+    ifs
+    |??> g
+    |> Match.underlie ("Plus rules" |> notImplementedYet)
     // TODO: Add graph-based plus operations
 
 let minusRules ops =
     intFloat2 ops (-) (fun x y -> float(x) - y) (fun x y -> x - float(y)) (-)
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Minus rules" |> notImplementedYet)
     // TODO: Add graph-based minus operations
 
 let timesRules ops =
     intFloat2 ops (*) (fun x y -> float(x) * y) (fun x y -> x * float(y)) (*)
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Times rules" |> notImplementedYet)
 
 let zeroCheck ops =
     match ops with
@@ -104,14 +118,16 @@ let zeroCheck ops =
 let divideRules ops =
     let z = zeroCheck ops
     let eval = lazy(intFloat2 ops (/) (fun x y -> float(x) / y) (fun x y -> x / float(y)) (/))
-    z <.|.> eval
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    z
+    |??> eval
+    |> Match.underlie ("Divide rules" |> notImplementedYet)
     
 let moduloRules ops =
     let z = zeroCheck ops
     let eval = lazy(intFloat2 ops (%) (fun x y -> float(x) % y) (fun x y -> x % float(y)) (%))
-    z <.|.> eval
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    z
+    |??> eval
+    |> Match.underlie ("Modulo rules" |> notImplementedYet)
 
 let powRules ops =
     let iiFun = fun x y -> float(x) ** float(y) |> Float
@@ -119,21 +135,21 @@ let powRules ops =
     let fiFun = fun x y -> x ** float(y) |> Float    
     let ffFun = fun x y -> x ** y |> Float    
     intFloat ops iiFun ifFun fiFun ffFun
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Pow rules" |> notImplementedYet)
 
 let ltRules ops =
     let lt = fun x y -> (x < y) |> Bool
     let ifFun = fun x y -> (float(x) < y) |> Bool
     let fiFun = fun x y -> x < float(y) |> Bool
     intFloatStr ops lt ifFun fiFun lt lt
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Less than rules" |> notImplementedYet)
 
 let lteqRules ops =
     let lteq = fun x y -> (x <= y) |> Bool
     let ifFun = fun x y -> (float(x) <= y) |> Bool
     let fiFun = fun x y -> x <= float(y) |> Bool
     intFloatStr ops lteq ifFun fiFun lteq lteq
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Less than or equal rules" |> notImplementedYet)
 
 let gtRules ops =
     // Unpacking the result of lteqRules and inverting it would take as many line...
@@ -141,14 +157,14 @@ let gtRules ops =
     let ifFun = fun x y -> (float(x) > y) |> Bool
     let fiFun = fun x y -> x > float(y) |> Bool
     intFloatStr ops gt ifFun fiFun gt gt
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Greater than rules" |> notImplementedYet)
 
 let gteqRules ops =
     let gteq = fun x y -> (x >= y) |> Bool
     let ifFun = fun x y -> (float(x) >= y) |> Bool
     let fiFun = fun x y -> x >= float(y) |> Bool
     intFloatStr ops gteq ifFun fiFun gteq gteq
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Greater than or equal rules" |> notImplementedYet)
 
 let equalsRules ops =
     // TODO: Add equality for non-primative (structural types) types
@@ -156,7 +172,7 @@ let equalsRules ops =
     let ifFun = fun x y -> (float(x) = y) |> Bool
     let fiFun = fun x y -> x = float(y) |> Bool
     intFloatStr ops eq ifFun fiFun eq eq
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Equal rules" |> notImplementedYet)
 
 let notEqualsRules ops =
     // TODO: Add non-equality for non-primative (structural types) types
@@ -164,7 +180,7 @@ let notEqualsRules ops =
     let ifFun = fun x y -> (float(x) <> y) |> Bool
     let fiFun = fun x y -> x <> float(y) |> Bool
     intFloatStr ops neq ifFun fiFun neq neq
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Not equal rules" |> notImplementedYet)
 
 let boolean ops binOp =
     let booleanTrue (v : Value) =
@@ -187,16 +203,16 @@ let boolean ops binOp =
 
 let andRules (ops : Meaning * Meaning) =
     boolean ops (fun x y -> (x && y) |> Bool |> Value |> Ok)
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("And rules" |> notImplementedYet)
 
 let orRules (ops : Meaning * Meaning) =
     boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Or rules" |> notImplementedYet)
 
 let xorRules (ops : Meaning * Meaning) =
     let xor x y = (x && (not y)) || ((not x) && y)
     boolean ops (fun x y -> (xor x y) |> Bool |> Value |> Ok)
-    |> Match.underlie ("Not implemented yet." |> ImplementationError |> Error)
+    |> Match.underlie ("Xor rules" |> notImplementedYet)
 
 let nodeConsRules (ops : Meaning * Meaning) =
     let getNodePart nodeFn obj partStr =

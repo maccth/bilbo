@@ -48,10 +48,8 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
                 Symbols.set syms {id=fName; spLst=rnLst} f
         attachLoc loc syms'
     | TransformDefL(loc, _) ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
+        "Transforms"
+        |> notImplementedYet
         |> attachLoc loc
 
 let evalBilbo syms ast =

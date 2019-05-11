@@ -103,7 +103,7 @@ module Graph =
                 )
         |> List.map (fun (s,t,w) -> {source = node g s; target = node g t; weight = w})          
 
-    let addGraph (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
+    let addGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
         let gSum = addNodes empty (nodes g1)
         match gSum with
         | Error e -> e |> Error
