@@ -40,6 +40,8 @@ let (|??>) first second = Match.lcompose first second
 
 let (<??|??>) first second = Match.lcompose first second
 
+let (|..>) m instead = Match.underlie instead m
+
 let intFloat ops iiFun ifFun fiFun ffFun =
     let lMean,rMean = ops
     match lMean, rMean with
@@ -92,13 +94,14 @@ let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     let g = lazy(graphMatcher ops Graph.addGraphs (Result.bind (Graph >> Value >> Ok)))
     ifs
     |??> g
-    |> Match.underlie ("Plus rules" |> notImplementedYet)
-    // TODO: Add graph-based plus operations
+    |..> ("Plus rules" |> notImplementedYet)
 
 let minusRules ops =
-    intFloat2 ops (-) (fun x y -> float(x) - y) (fun x y -> x - float(y)) (-)
-    |> Match.underlie ("Minus rules" |> notImplementedYet)
-    // TODO: Add graph-based minus operations
+    let ifl = intFloat2 ops (-) (fun x y -> float(x) - y) (fun x y -> x - float(y)) (-)
+    let g = lazy(graphMatcher ops Graph.subGraphs (Result.bind (Graph >> Value >> Ok)))
+    ifl
+    |??> g
+    |..> ("Minus rules" |> notImplementedYet)
 
 let timesRules ops =
     intFloat2 ops (*) (fun x y -> float(x) * y) (fun x y -> x * float(y)) (*)
@@ -227,6 +230,7 @@ let nodeConsRules (ops : Meaning * Meaning) =
             | Value.Node n -> n |> nodeFn |> Ok
             | Type _ -> nodeConsError "type definition" partStr
             | Pipeline _ -> nodeConsError "function or transform" partStr
+            | Graph _ -> nodeConsError "graph" partStr
         | Space (Object oTyp, symTab) -> obj |> Ok
         | Space _ -> nodeConsError "namespace" partStr
         | ParamList _ -> nodeConsError "parameter list" partStr

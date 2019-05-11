@@ -4,6 +4,17 @@ open Bilbo.Common.Value
 open Bilbo.Common.Error
 open Bilbo.Common.SymbolTable
 
+// Haskell style list "multi-set difference"
+// ==============================
+// credit : https://stackoverflow.com/questions/59711/haskell-list-difference-operator-in-f
+// edited by maccth
+let flip f x y = f y x
+let rec delete x = function
+  | [] -> []
+  | h :: t when x = h -> t
+  | h :: t -> h :: delete x t
+let inline ( /-/ ) xs ys = List.fold (flip delete) xs ys
+
 module Graph =
 
     let empty : Graph = {nodes=Map.empty; sourceEdges=Map.empty; targetEdges=Map.empty} 
@@ -116,6 +127,23 @@ module Graph =
                 | Ok gs5 ->
                     addEdges gs5 (edges g2)
 
+    let subGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
+        // Implements
+        //  e = e1 - e2
+        //  n = n1 - (n2 - nodes(e2))
+        let e2 = edges g2
+        let n1 = nodes g1 |> Set.ofList
+        let n2 = nodes g2 |> Set.ofList
+        let ne2 : Set<Node> =
+            e2
+            |> List.collect (fun e -> [e.source;e.target]) 
+            |> Set.ofList
+        let e = edges g1 /-/ e2
+        let n = n1 - (n2 - ne2) |> Set.toList
+        let gN = addNodes empty n
+        let gNE = Result.bind (fun g -> addEdges g e) gN
+        gNE
+        
     let equal (g1 : Graph) (g2 : Graph) =
         // The graphs will have only unique nodes, the set removes the issue of ordering
         let g1n = nodes g1 |> Set.ofList

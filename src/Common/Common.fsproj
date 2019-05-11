@@ -10,6 +10,7 @@
     <Compile Include="Ast.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="Value.fs" />
+    <Compile Include="Type.fs" />
     <Compile Include="Error.fs" />
     <Compile Include="SymbolTable.fs" />
   </ItemGroup>

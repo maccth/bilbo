@@ -22,7 +22,6 @@ and Value =
     | Pipeline  of Pipeline
     | Node of Node
     | Graph of Graph
-    // TODO: Graphs and paths
     // TODO: Pipelines with <|>
 
 and Pipeline = PStage list
@@ -39,6 +38,7 @@ and EdgeWeight = Meaning option
 and NodeId = Meaning
 and NodeLoad = Meaning
 and EdgeMap<'T> = Map<NodeId,'T>
+and NodeMap<'T> = Map<NodeId,'T>
 
 and Node = {
     id : NodeId
@@ -54,7 +54,7 @@ and Edge = {
 
 and Graph = {
     // node id -> node load
-    nodes       : Map<NodeId,  NodeLoad>
+    nodes       : NodeMap<NodeLoad>
     // loads       : Map<NodeLoad, NodeId list>
     // source node id -> (target node id -> [edge weights])
     sourceEdges : EdgeMap<EdgeMap<EdgeWeight list>>
