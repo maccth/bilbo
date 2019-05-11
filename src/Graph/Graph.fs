@@ -79,3 +79,41 @@ module Graph =
             | Error e -> e |> Error
             | Ok g' -> addEdge g' edge
         List.fold folder (Ok g) eLst
+
+    let node (g : Graph) id =
+        g.nodes
+        |> Map.find id
+        |> fun load -> {id=id; load=load}
+   
+    let nodes (g : Graph) =
+        g.nodes
+        |> Map.toList
+        |> List.map (fun (id,load) -> {id=id; load=load})
+
+    let edges (g : Graph) =
+        g.sourceEdges
+        |> Map.toList
+        |> fun eMapLst ->
+            eMapLst
+            |> List.collect (fun (s,eMap2) -> 
+                eMap2 
+                |> Map.toList
+                |> List.map (fun (t,ews) -> (s,t,ews))
+                |> List.collect (fun (s,t,ews) -> List.map (fun w -> (s,t,w)) ews)           
+                )
+        |> List.map (fun (s,t,w) -> {source = node g s; target = node g t; weight = w})          
+
+    let addGraph (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
+        let gSum = addNodes empty (nodes g1)
+        match gSum with
+        | Error e -> e |> Error
+        | Ok gs1 ->
+            let gs2 = addEdges gs1 (edges g1)
+            match gs2 with
+            | Error e -> e |> Error
+            | Ok gs3 ->
+                let gs4 = addNodes gs3 (nodes g2)
+                match gs4 with
+                | Error e -> e |> Error
+                | Ok gs5 ->
+                    addEdges gs5 (edges g2)
