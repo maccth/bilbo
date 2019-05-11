@@ -62,3 +62,8 @@ let zeroParamFunctionError() =
     "Functions with no paramaters should be evaluated at definition time and cannot be enpiped to."
     |> ImplementationError
     |> Error
+
+let notImplementedYet thing =
+    thing + " has not been implemented yet"
+    |> ImplementationError
+    |> Error

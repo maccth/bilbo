@@ -1,7 +1,6 @@
 module Bilbo.Common.Value
 
 open Bilbo.Common.Ast
-open System.Xml.Linq
 
 type SymbolTable = Map<Id, Meaning>
 
@@ -22,6 +21,7 @@ and Value =
     | Bool of bool
     | Pipeline  of Pipeline
     | Node of Node
+    | Graph of Graph
     // TODO: Graphs and paths
     // TODO: Pipelines with <|>
 

@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.fsproj" />
     <ProjectReference Include="..\Parser\Parser.fsproj" />
+    <ProjectReference Include="..\Graph\Graph.fsproj" />
   </ItemGroup>
 
 </Project>

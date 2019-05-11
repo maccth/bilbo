@@ -6,7 +6,7 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.PrimativeTypes
 open Bilbo.Evaluator.BinaryExpressions
-open Bilbo.Common
+open Bilbo.Graph.Graph
 
 let rec evalBinOperands syms spLst lhs rhs =
     let valL = evalExpr syms spLst lhs
@@ -271,7 +271,6 @@ and evalDot syms spLst lhs rhs =
 
 and evalSExpr syms spLst s : BilboResult<Meaning> =
     match s with
-    // | SExpr.Unit -> Unit |> Value |> Ok
     | Literal l -> evalLiteral l
     | ObjExpr(t,attrs) -> evalObjExpr syms spLst t attrs
     | TypeCast(t,e) -> evalTypeCast syms spLst t e
@@ -290,17 +289,65 @@ and evalSExpr syms spLst s : BilboResult<Meaning> =
         | Ok lst -> lst |> ParamList |> Ok
         | Error e -> e |> Error
 
+and evalEdgeOp syms spLst lhs rhs (eOp : EdgeOp) =
+    let w : BilboResult<EdgeWeight> =
+        match eOp with
+        | Left None | Right None | Bidir None -> None |> Ok
+        | Left (Some(we))
+        | Right (Some(we))
+        | Bidir (Some(we)) ->
+            let wRes = evalExpr syms spLst we
+            match wRes with
+            | Error e -> e |> Error
+            | Ok w -> w |> Some |> Ok
+    match w,eOp with
+    | Error e, _ -> e |> Error
+    | Ok w', Left _ ->  [{source=rhs; target=lhs; weight=w'}] |> Ok
+    | Ok w', Right _ -> [{source=lhs; target=rhs; weight=w'}] |> Ok
+    | Ok w', Bidir _ -> [{source=lhs; target=rhs; weight=w'}; {source=rhs; target=lhs; weight=w'}] |> Ok
+
+and evalGExpr syms spLst ge : BilboResult<Meaning> =
+    match ge with
+    | PathExpr pe ->
+        match pe with
+        | PathComp _ -> "Path comprehensions" |> notImplementedYet
+        | Path peLst ->
+            let pathScan (g : BilboResult<Graph>) (pe : PathElem) =
+                match g with
+                | Error e -> e |> Error
+                | Ok g' -> 
+                    match pe with
+                    | PathElem.Edge (lhs,eOp,rhs) ->
+                        let lhsRes = evalExpr syms spLst lhs
+                        let rhsRes = evalExpr syms spLst rhs
+                        match lhsRes,rhsRes with
+                        | Error e, _ -> e |> Error
+                        | _, Error e -> e |> Error
+                        | Ok (Value(Node l)), Ok (Value(Node r)) ->
+                            let eLstRes = evalEdgeOp syms spLst l r eOp
+                            match eLstRes with
+                            | Error e -> e |> Error
+                            | Ok eLst -> Graph.addEdges g' eLst
+                    | PathElem.Node e ->
+                        let n = evalExpr syms spLst e
+                        match n with
+                        | Ok (Value(Node n')) -> Graph.addNode g' n'
+            peLst
+            |> List.fold pathScan (Ok Graph.empty)
+            |> Result.bind (Graph >> Value >> Ok)
+
 and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
     | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | SExpr s -> evalSExpr syms spLst s
-    | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs 
-    | _ ->
-        // TODO: Implement!
-        "Not implemented yet."
-        |> ImplementationError
-        |> Error
+    | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
+    | GExpr g -> evalGExpr syms spLst g
+    // | _ ->
+    //     // TODO: Implement!
+    //     "Not implemented yet."
+    //     |> ImplementationError
+    //     |> Error
 
 and consVid syms spLst e : BilboResult<ValueId> =
     match e with
