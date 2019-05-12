@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Include="Graph.fs" />
+    <Compile Include="Isomorphism.fs" />    
     <Compile Include="Library.fs" />
   </ItemGroup>
 
