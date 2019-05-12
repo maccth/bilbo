@@ -6,6 +6,7 @@ open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.PrimativeTypes
 open Bilbo.Evaluator.BinaryExpressions
+open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 
 let rec evalBinOperands syms spLst lhs rhs =
@@ -399,6 +400,16 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
                 Symbols.set syms vid rhsVal
     | DeleteExpr id ->
         Symbols.remove syms {id=id; spLst=spLst}
-    | PrintExpr (_) ->
-        "Print statements"
-        |> notImplementedYet
+    | PrintExpr (thing,place) ->
+        match place with
+        | None ->
+            let strRes =         
+                thing
+                |> evalExpr syms spLst
+                |> Result.bind print
+            match strRes with
+            | Error e -> e |> Error
+            | Ok str ->
+                printfn "%s" str
+                syms |> Ok          
+        | Some _ -> "Printing to files" |> notImplementedYet
