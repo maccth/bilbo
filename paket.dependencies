@@ -3,3 +3,4 @@ nuget FParsec 1.0.3
 nuget Expecto
 nuget Expecto.FsCheck
 nuget FAKE
+nuget Argu

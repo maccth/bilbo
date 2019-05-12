@@ -1,11 +1,33 @@
 module Bilbo.Common.Cli
 
 open System
+open Argu
 
-let cli (cliArgs : string []) replName fileHandler repl startState =
-    match cliArgs.Length with
-    | l when l <> 1 ->
-        printfn replName
+// Argu tutorial
+// https://fsprojects.github.io/Argu/tutorial.html
+
+type CliArgs =
+    | BilboFile of string
+    | Debug
+with
+    interface IArgParserTemplate with
+        member s.Usage =
+            match s with
+            | BilboFile _ -> "specify the Bilbo file"
+            | Debug _ -> "specify whether debug information should be printed"
+
+let cli (cliArgs : string []) (replName : string) fileHandler repl startState =
+    // TODO: create useage list for release
+    let argParser = ArgumentParser.Create<CliArgs>(programName = replName)
+    let args = argParser.Parse cliArgs
+    match args.Contains BilboFile with
+    | true ->
+        let file = args.GetResult BilboFile
+        let result = file |> fileHandler
+        printfn "%A" result
+    | _ ->
+        let debugInfo = args.Contains Debug
+        printfn "%s" replName
         let mutable codeIn = ""
         let mutable stillReading = false
         let mutable eval = startState
@@ -21,13 +43,10 @@ let cli (cliArgs : string []) replName fileHandler repl startState =
                 | Error e ->
                     printfn "%A" e
                 | Ok evalOk ->
-                    printfn "%A" evalOk
+                    if debugInfo then
+                        printfn "%A" evalOk
                     eval <- evalOk
                 codeIn <- ""
                 stillReading <- false
             else
                 stillReading <- true
-    | _ ->
-        let file =  cliArgs.[0]
-        let result = file |> fileHandler
-        printfn "%A" result
