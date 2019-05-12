@@ -209,7 +209,32 @@ and evalTypeCast syms spLst typ e =
         |> Error
     | Error err -> err |> Error
 
-and evalObjExpr syms spLst typ attrs : BilboResult<Meaning> =
+and evalObjExpr syms spLst (oe : ObjExpr)  =
+    match oe with
+    | ObjInstan (typ,attrs) -> evalObjInstan syms spLst typ attrs
+    | ParamObjInstan (typ,attrs) ->
+        let typeDef = Symbols.find syms {spLst=spLst; id=typ}
+        match typeDef with
+        | Error e -> e |> Error
+        | Ok (Value(Type(_, expAttrs))) ->
+            let givenAttrs = attrs |> Map.ofList
+            let folder attrLst attr =
+                match attrLst with
+                | Error e -> e |> Error
+                | Ok lst ->
+                    match Map.tryFind attr givenAttrs with
+                    | None ->
+                        "No value bound to attribute \"" + attr + "\" in object instantiation of type " + typ
+                        |> FieldError
+                        |> Error
+                    | Some v -> (v) :: lst |> Ok 
+            let attrLst = List.fold folder (Ok []) expAttrs
+            match attrLst with
+            | Error e -> e |> Error
+            | Ok attrLst' -> evalObjInstan syms spLst typ (List.rev attrLst')
+        | _ -> typ |> typeNotDefined                                                                              
+
+and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
     let evalAttrs attrsIn : BilboResult<Meaning list> =
         let rec evalAttrsRec attrsIn attrsOut =
             match attrsIn with
@@ -242,10 +267,7 @@ and evalObjExpr syms spLst typ attrs : BilboResult<Meaning> =
                 |> fun sp -> (Object tName, sp)
                 |> Space
                 |> Ok
-    | _ ->
-        "Type " + "\"" + typ + "\" is not defined."
-        |> NameError
-        |> Error
+    | _ -> typ |> typeNotDefined
 
 and evalDot syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
@@ -270,7 +292,7 @@ and evalDot syms spLst lhs rhs =
 and evalSExpr syms spLst s : BilboResult<Meaning> =
     match s with
     | Literal l -> evalLiteral l
-    | ObjExpr(t,attrs) -> evalObjExpr syms spLst t attrs
+    | ObjExpr oe -> evalObjExpr syms spLst oe
     | TypeCast(t,e) -> evalTypeCast syms spLst t e
     | SExpr.ParamList (eLst) ->
         let meanLst = List.map (evalExpr syms spLst) eLst

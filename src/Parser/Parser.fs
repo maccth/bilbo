@@ -162,11 +162,18 @@ exprOpp.TermParser <- pExprTerm <|> brackets pExpr;
 
 let pObjInstan =
     let attrs = (csv pExpr) |> brackets
-    let consObj aLst tName = (tName, aLst) |> ObjExpr |> SExpr
+    let consObj aLst tName = (tName, aLst) |> ObjInstan |> ObjExpr |> SExpr
     attrs |>> consObj
 
+let pParamObjInstan =
+    let param = pipe3 pId (str "=") pExpr (fun pName _ e -> (pName,e))
+    let attrs = csv param |> brackets
+    let consObj aLst tName = (tName, aLst) |> ParamObjInstan |> ObjExpr |> SExpr
+    attrs |>> consObj
+
+
 // TODO: potentially add object field indexing obj["field1"]
-let postIds = pObjInstan
+let postIds = chance [pObjInstan; pParamObjInstan]
 
 let checkPostIds s p =
     match p with

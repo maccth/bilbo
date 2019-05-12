@@ -72,3 +72,8 @@ let printError thing=
     "Cannot print a " + thing
     |> TypeError
     |> Error
+
+let typeNotDefined typ =
+    "Type " + "\"" + typ + "\" is not defined."
+    |> NameError
+    |> Error

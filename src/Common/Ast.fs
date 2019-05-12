@@ -53,7 +53,9 @@ and GExpr =
 
 and TypeCast = PrimTypeName * Expr
 
-and ObjExpr = TypeName * Expr list
+and ObjExpr =
+    | ObjInstan of TypeName * Expr list
+    | ParamObjInstan of TypeName * (Attribute * Expr) list
 
 and BinOp =
     | NodeCons
