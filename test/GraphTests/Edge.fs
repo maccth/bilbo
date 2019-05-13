@@ -1,22 +1,14 @@
 module Bilbo.Tests.GraphTests.Edge
 
 open Expecto
-open Bilbo.Common.Ast
 open Bilbo.Common.Value
-open Bilbo.Common.Error
-open Bilbo.Common.SymbolTable
 open Bilbo.Graph.Graph
-open Bilbo.Common
+open Bilbo.Tests.GraphTests.Helpers
 
-let bilboStr = String >> Value
-let bilboInt = Int >> Value
-let bilbo1 = 1 |> bilboInt
-let nd id = {id=id|>bilboStr; load=bilbo1}
-
-let a = nd "a"
-let b = nd "b"
-let c = nd "c"
-let d = nd "d"
+let a = nd1 "a"
+let b = nd1 "b"
+let c = nd1 "c"
+let d = nd1 "d"
 
 let eLst = [
     (a, Some 40,    b)
@@ -64,7 +56,7 @@ let consStringIntELst lst =
     List.map stringIntE lst        
 
 let g = Graph.empty
-let gGot = Graph.addEdges g (eLst |> consStringIntELst)
+let gGot = Graph.addEdges (eLst |> consStringIntELst) g
 
 
 [<Tests>]

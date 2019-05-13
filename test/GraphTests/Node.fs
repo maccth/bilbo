@@ -104,7 +104,7 @@ let consStringObjNodeLst lst =
     List.map consStringObjNode lst
 
 let consAddNodeTest nLst expNLst des =
-    let gGot = Graph.addNodes Graph.empty nLst
+    let gGot = Graph.addNodes nLst Graph.empty
     let gExp = {Graph.empty with nodes = expNLst}
     testCase des <| fun _ ->
         match gGot with

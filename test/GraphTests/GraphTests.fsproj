@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Helpers.fs" />
     <Compile Include="Node.fs" />
     <Compile Include="Edge.fs" />
     <Compile Include="Isomorphism.fs" />

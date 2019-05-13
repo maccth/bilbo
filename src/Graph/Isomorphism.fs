@@ -14,7 +14,7 @@ module Graph =
 
     let sgiAll hostGraph subgraph =
         let rec search hg sg sgNodesLeft mapping =
-            let mapNode (n : Node) = Map.find n.id mapping |> Graph.node hg
+            let mapNode (n : Node) = Map.find n.id mapping |> fun i -> Graph.node i hg
             let mapEdge e = {e with source = mapNode e.source; target = mapNode e.target}
             let edgesInSg = Graph.edges sg
             let edgeInCurrentSg e = (Map.containsKey e.source.id mapping) && (Map.containsKey e.target.id mapping)
@@ -49,7 +49,7 @@ module Graph =
 
     let sgiFirst hostGraph subgraph =
         let rec search hg sg sgNodesLeft mapping =
-            let mapNode (n : Node) = Map.find n.id mapping |> Graph.node hg
+            let mapNode (n : Node) = Map.find n.id mapping |> fun i -> Graph.node i hg
             let mapEdge e = {e with source = mapNode e.source; target = mapNode e.target}
             let edgesInSg = Graph.edges sg
             let edgeInCurrentSg e = (Map.containsKey e.source.id mapping) && (Map.containsKey e.target.id mapping)

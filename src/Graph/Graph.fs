@@ -19,7 +19,7 @@ module Graph =
 
     let empty : Graph = {nodes=Map.empty; sourceEdges=Map.empty; targetEdges=Map.empty} 
 
-    let addNode (g : Graph) (n : Node) : BilboResult<Graph> =
+    let addNode (n : Node) (g : Graph) : BilboResult<Graph> =
         let nodesStart = g.nodes
         let nodesNew load = Map.add n.id load nodesStart
         let gNew load = {g with nodes = nodesNew load}
@@ -48,14 +48,14 @@ module Graph =
                             let loadNew = (Object "Object", st'') |> Space
                             gNew loadNew |> Ok
                     
-    let addNodes (g : Graph) (nLst : Node list) =
+    let addNodes (nLst : Node list) (g : Graph) =
         let folder (g : BilboResult<Graph>) n =
             match g with
             | Error e -> e |> Error
-            | Ok g' -> addNode g' n
+            | Ok g' -> addNode n g'
         List.fold folder (Ok g)  nLst
 
-    let addEdge (g : Graph) (e : Edge) : BilboResult<Graph> =
+    let addEdge (e : Edge) (g : Graph) : BilboResult<Graph> =
         let addOneWayEdge (eMap : EdgeMap<EdgeMap<EdgeWeight list>>) (l1nid : NodeId) (l2nid : NodeId) (ew : EdgeWeight) =
             match Map.tryFind l1nid eMap with
             | None ->
@@ -71,7 +71,7 @@ module Graph =
                     ew :: ewLst
                     |> fun ews -> Map.add l2nid ews l2eMap
                     |> fun l2eMap' -> Map.add l1nid l2eMap' eMap
-        let gWithNodes = addNodes g [e.source; e.target]
+        let gWithNodes = addNodes [e.source; e.target] g
         match gWithNodes with
         | Error e -> e |> Error
         | Ok gOk ->
@@ -82,14 +82,14 @@ module Graph =
             |> fun (targetEMap,g4) -> {g4 with targetEdges=targetEMap}
             |> Ok
 
-    let addEdges (g : Graph) (eLst : Edge list) =
+    let addEdges (eLst : Edge list) (g : Graph) =
         let folder (g : BilboResult<Graph>) edge =
             match g with
             | Error e -> e |> Error
-            | Ok g' -> addEdge g' edge
+            | Ok g' -> addEdge edge g'
         List.fold folder (Ok g) eLst
 
-    let node (g : Graph) id =
+    let node id (g : Graph) =
         g.nodes
         |> Map.find id
         |> fun load -> {id=id; load=load}
@@ -110,22 +110,22 @@ module Graph =
                 |> List.map (fun (t,ews) -> (s,t,ews))
                 |> List.collect (fun (s,t,ews) -> List.map (fun w -> (s,t,w)) ews)           
                 )
-        |> List.map (fun (s,t,w) -> {source = node g s; target = node g t; weight = w})          
+        |> List.map (fun (s,t,w) -> {source = node s g; target = node t g; weight = w})          
 
     let addGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
-        let gSum = addNodes empty (nodes g1)
+        let gSum = addNodes (nodes g1) empty
         match gSum with
         | Error e -> e |> Error
         | Ok gs1 ->
-            let gs2 = addEdges gs1 (edges g1)
+            let gs2 = addEdges (edges g1) gs1
             match gs2 with
             | Error e -> e |> Error
             | Ok gs3 ->
-                let gs4 = addNodes gs3 (nodes g2)
+                let gs4 = addNodes (nodes g2) gs3
                 match gs4 with
                 | Error e -> e |> Error
                 | Ok gs5 ->
-                    addEdges gs5 (edges g2)
+                    addEdges (edges g2) gs5
 
     let subGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
         // Implements
@@ -140,8 +140,8 @@ module Graph =
             |> Set.ofList
         let e = edges g1 /-/ e2
         let n = n1 - (n2 - ne2) |> Set.toList
-        let gN = addNodes empty n
-        let gNE = Result.bind (fun g -> addEdges g e) gN
+        let gN = addNodes n empty
+        let gNE = Result.bind (fun g -> addEdges e g) gN
         gNE
         
     let equal (g1 : Graph) (g2 : Graph) =

@@ -348,11 +348,11 @@ and evalGExpr syms spLst ge : BilboResult<Meaning> =
                             let eLstRes = evalEdgeOp syms spLst l r eOp
                             match eLstRes with
                             | Error e -> e |> Error
-                            | Ok eLst -> Graph.addEdges g' eLst
+                            | Ok eLst -> Graph.addEdges eLst g'
                     | PathElem.Node e ->
                         let n = evalExpr syms spLst e
                         match n with
-                        | Ok (Value(Node n')) -> Graph.addNode g' n'
+                        | Ok (Value(Node n')) -> Graph.addNode n' g'
             peLst
             |> List.fold pathScan (Ok Graph.empty)
             |> Result.bind (Graph >> Value >> Ok)
