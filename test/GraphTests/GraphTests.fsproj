@@ -31,5 +31,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Graph\Graph.fsproj" />
+    <ProjectReference Include="..\..\src\Common\Common.fsproj" />
   </ItemGroup>
 </Project>

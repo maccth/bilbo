@@ -19,29 +19,17 @@ let eLst = [
     (d, None,       a) // 5
 ]
 
-let gExp =
+let gExp : Graph =
     {
-        nodes = ["a"; "b"; "c"; "d"] |> List.map (fun id -> (id |> bilboStr, b1)) |> Map.ofList
-        sourceEdges =  Map.ofList [
-            bilboStr "a",
-                Map.ofList [bilboStr "b", [(200 |> bInt |> Some),1; (40 |> bInt |> Some),0]];
-            bilboStr "b",
-                Map.ofList [bilboStr "d", [None,3]; bilboStr "c", [15 |> bInt |> Some,2]];
-            bilboStr "c",
-                Map.ofList [bilboStr "a", [(30 |> bInt |> Some),4]];                    
-            bilboStr "d",
-                Map.ofList [bilboStr "a",[None,5]];
-        ];
-        targetEdges = Map.ofList [
-            bilboStr "b",
-                Map.ofList [bilboStr "a", [200 |> bInt |> Some,1; 40 |> bInt |> Some,0]];
-            bilboStr "d",
-                Map.ofList [bilboStr "b", [None,3]];
-            bilboStr "c",
-                Map.ofList [bilboStr "b", [15 |> bInt |> Some,2]];        
-            bilboStr "a",
-                Map.ofList [bilboStr "d", [None,5]; bilboStr "c", [30 |> bInt |> Some,4]];               
-        ]
+        nodes = ["a"; "b"; "c"; "d"] |> List.map (fun id -> (id |> bStr, b1)) |> Map.ofList
+        edges = Map.ofList [
+                (0, {Edge.source=a; weight=Some (bInt 40); target=b})
+                (1, {Edge.source=a; weight=Some (bInt 200); target=b})
+                (2, {Edge.source=b; weight=Some (bInt 15); target=c})
+                (3, {Edge.source=b; weight=None; target=d})
+                (4, {Edge.source=c; weight=Some (bInt 30); target=a})
+                (5, {Edge.source=d; weight=None; target=a})
+            ]
         edgeIdCount = 6
     }
 
@@ -58,7 +46,6 @@ let consStringIntELst lst =
 
 let g = Graph.empty
 let gGot = Graph.addEdges (eLst |> consStringIntELst) g
-
 
 [<Tests>]
 let test =
