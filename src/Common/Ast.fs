@@ -72,20 +72,12 @@ and BinOp =
     // Transform
     | MulApp | UpToApp
 
-    // Graph
-    // | GAdd
-    // | GSub
-
-    // Match
-    // | And
-
 and PreOp =
     // Simple
     | Not | Amp | DblAmp
     // Transform
     | Dollar
-    // Match
-    // | Not
+
 
 and PostOp =
     // Transform
@@ -135,10 +127,24 @@ and MatchStatement =
     Expr Option * MatchCase list
 
 and MatchCase =
-    | Case of Expr * WhereClause Option * ExprStatementL list * TerminatingStatement
+    | Pattern of PGraphExpr * WhereClause Option * ExprStatementL list * TerminatingStatement
     | CatchAll of WhereClause Option * ExprStatementL list * TerminatingStatement
 
-and WhereClause = Expr list
+and PGraphExpr =
+    | PGraph of PathExpr
+    | PGraphBinExpr of PGraphExpr * PGraphBinOp * PGraphExpr
+    | PGraphPreExpr of PGraphPreOp * PGraphExpr
+
+and PGraphBinOp = 
+    | PGAdd
+    | PGSub
+    | PGAnd
+    | PGOr
+
+and PGraphPreOp =
+    | PGNot
+
+and WhereClause = Expr
 
 and TerminatingStatement =
     | Return of Expr

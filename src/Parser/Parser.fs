@@ -171,7 +171,6 @@ let pParamObjInstan =
     let consObj aLst tName = (tName, aLst) |> ParamObjInstan |> ObjExpr |> SExpr
     attrs |>> consObj
 
-
 // TODO: potentially add object field indexing obj["field1"]
 let postIds = chance [pObjInstan; pParamObjInstan]
 
@@ -198,11 +197,9 @@ let pTypeCasts =
     let pType = types |> List.map (fun (s,t) -> str s |>> fun _ -> t) |> choice
     pipe2 pType (brackets pExpr) (fun t e -> (t,e) |> TypeCast |> SExpr)
     
-
 let pParamList = pExpr |> csv2 |> brackets |>> ParamList |>> SExpr
 
 let pSExpr = choice [pParamList; pTypeCasts; pPostIds; pLiteral]
-
 
 // Vaguely based on Python 3 operator precedence
 // https://docs.python.org/3/reference/expressions.html#operator-precedence
@@ -280,69 +277,78 @@ let addBinOp (op, prec, nf, assoc, astOp) =
 List.map addBinOp binExprOps |> ignore
 
 
+/// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
+let pLeftEdgeOps weight =
+    tuple3 (str "<") (opt weight) (opt (str ">"))
+    |>> function
+    | l, e, Some r -> e |> Bidir
+    | l, e, None -> e |> Left
+
+/// Right edge operators `>`, `e>`
+let pRightEdgeOps weight =
+    tuple2 (opt weight) (str ">") |>> fst |>> Right
+
+let pEdgeOp weight = (pLeftEdgeOps weight <|> pRightEdgeOps weight) <?> "edge"
+
+let edge weight node = pEdgeOp weight .>> followedBy (str (",") .>>. node)
+
+let commaEdge weight node = str "," >>. edge weight node
+
+let pathElem weight node =
+    node .>>. opt (pipe2 (followedBy (commaEdge weight node)) (commaEdge weight node) (fun x y -> y))
+
+let compOp weight load =
+    let setId = pipe2 ((notFollowedBy (str "&&")) >>. str "&") (str "=") (fun _ _ -> SetId)
+    let setLoad = pipe3 (str "&&") (str "=") load (fun _ _ e -> e |> SetLoad)
+    let addEdge = (pEdgeOp weight) |>> AddEdge
+    choice [setId; setLoad; addEdge]
+
+let compOps weight load =
+    let co = compOp weight load
+    pipe3 (followedBy (csv1 co .>>. str ":")) (csv1 co) (str ":") <|
+        fun _ compOps' _ -> compOps'
+
+let consPathElem (elems,prevEdge) el (*Expr * EdgeOp Option)*) =
+    // n2 <--prevEdge--> n1 <--nextEdge--> 
+    // prevEdge is the incoming edge operator from n1 to n1
+    // nextEdge is the outgoing edge operator from n1
+    let n1, nextEdge = el
+    match prevEdge with
+    | None -> ((n1 |> Node) :: elems), nextEdge
+    | Some e ->
+        match elems with
+        | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
+        | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
+        | [] ->
+            "First element cannot have incoming edge."
+            |> ImplementationError
+            |> FSharp.Core.Error
+            |> failwithf "%A"
+
+let consPath p =
+    List.fold consPathElem ([],None) p
+    |> function
+    | (lst, None) -> lst
+    | (lst, Some e) ->
+        "Final element cannot have outgoing edge."
+        |> ImplementationError
+        |> FSharp.Core.Error
+        |> failwithf "%A"
+    |> List.rev
+
 /// The 'general' (higher-order parser) for path expressions.
 /// `pWeight`, `pNode`, and `pLoad` are the parsers for the edge weight, node, and node load expressions respectively.
 let gpPathExpr pWeight pNode pLoad =
-    let weight = pWeight
-    /// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
-    let pLeftEdgeOps =
-        tuple3 (str "<") (opt weight) (opt (str ">"))
-        |>> function
-        | l, e, Some r -> e |> Bidir
-        | l, e, None -> e |> Left
+    let weight = pWeight <?> "weight"
+    let node = pNode <?> "node"
+    let load = pLoad <?> "load"
 
-    /// Right edge operators `>`, `e>`
-    let pRightEdgeOps =
-        tuple2 (opt weight) (str ">") |>> fst |>> Right
-
-    let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) <?> "edge"
-
-    let pNodeExpr = pNode <?> "node"
+    let compOps' = compOps weight load <?> "Path comprehension operators"
+    let pathElem' = pathElem weight node
 
     let pPathExpr =
-        let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
-        let commaEdge = str "," >>. edge
-        let pathElem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
-        let compOp =
-            let setId = pipe2 ((notFollowedBy (str "&&")) >>. str "&") (str "=") (fun _ _ -> SetId)
-            let setLoad = pipe3 (str "&&") (str "=") pLoad (fun _ _ e -> e |> SetLoad)
-            let addEdge = pEdgeOp |>> AddEdge
-            choice [setId; setLoad; addEdge]
-        let compOps =
-            pipe3 (followedBy ((csv1 compOp) .>>. str ":")) (csv1 compOp) (str ":") <|
-                fun _ compOps' _ -> compOps'
         let path =
-             (opt compOps .>>. csv pathElem) |> between (str "[") (str "]")
-
-        let consPathElem (elems,prevEdge) el (*Expr * EdgeOp Option)*) =
-            // n2 <--prevEdge--> n1 <--nextEdge--> 
-            // prevEdge is the incoming edge operator from n1 to n1
-            // nextEdge is the outgoing edge operator from n1
-            let n1, nextEdge = el
-            match prevEdge with
-            | Some e ->
-                match elems with
-                | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
-                | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
-                | [] ->
-                    "First element cannot have incoming edge."
-                    |> ImplementationError
-                    |> FSharp.Core.Error
-                    |> failwithf "%A"
-
-            | None -> ((n1 |> Node) :: elems), nextEdge
-
-        let consPath p =
-            List.fold consPathElem ([],None) p
-            |> function
-            | (lst, None) -> lst
-            | (lst, Some e) ->
-                "Final element cannot have outgoing edge."
-                |> ImplementationError
-                |> FSharp.Core.Error
-                |> failwithf "%A"
-            |> List.rev
-
+             (opt compOps' .>>. csv pathElem') |> between (str "[") (str "]")
         path
         |>> function
             | Some compOps, elems ->
@@ -385,24 +391,40 @@ let pTerminatingStatement =
     (pReturn |>> Return <|> pBecome)
     |> fun p -> p <?> "terminating statement (`return` or `become`)" 
 
+let pPatternPath =
+    let weight = pVar <?> "weight"
+    let node = pVar <?> "node"
+    let pathElem' = pathElem weight node
+    let pPathExpr =
+        let path =
+             (csv pathElem') |> between (str "[") (str "]")
+        path
+        |>> consPath
+        |>> Path
+        |>> PGraph
+        |> fun p -> p <?> "pattern path expression";
+    pPathExpr
+
+let al = Associativity.Left
+let patternGraphOpp = new OperatorPrecedenceParser<PGraphExpr,unit,unit>()
+let pPGExpr = patternGraphOpp.ExpressionParser
+patternGraphOpp.TermParser <- pPatternPath <|> brackets pPGExpr
+patternGraphOpp.AddOperator(PrefixOperator("not", ws, 11, true, (fun x -> (PGNot, x) |> PGraphPreExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("and", ws, 7, al, (fun l r -> (l, PGAnd, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("or", ws, 5, al, (fun l r -> (l, PGOr, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("+", ws, 10, al, (fun l r -> (l, PGAdd, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("-", (notFollowedBy (str ">")) >>. ws, 10, al, (fun l r -> (l, PGSub, r) |> PGraphBinExpr))) 
+
 let pMatchCase fname =
-    let cons lhs where _arrow body term =
-        match lhs with
-        | Var v when v="_" ->
-            (where,body,term) |> CatchAll
-        | _ ->
-            (lhs, where,body,term) |> Case
-    let body = many (pExprStatementL fname)
-    let whereClause = (keyw "where") >>. many pExpr
-    // The patternGraph parser does not work instead of pExpr below because path
-    //  expressions such as [a,>,b] + [b,>,c] are valid. However, if patternGraph
-    //  is used, this will not parse because of the + operator. To use patternGraph
-    //  a new opp will have to be setup for the graph operators allowed.
-    // The motivation behind the patternGraph parser is that only variables are allowed in the lhs
-    //  pattern graph
-    // let patternGraph = gpPathExpr pVar pVar pVar
-    let matcher = (str ("_") |>> Var) <|> pExpr
-    let p = pipe5 matcher (opt whereClause) (str "->") body pTerminatingStatement cons
+    let body = many (pExprStatementL fname) 
+    let whereClause = (keyw "where") >>. pExpr
+    let consPattern (pat : PGraphExpr) where _arrow body term =
+        (pat,where,body,term) |> Pattern 
+    let consAll _undersocre where _arrow body term =
+        (where,body,term) |> CatchAll    
+    let pPat = pipe5 (pPGExpr) (opt whereClause) (str "->") body pTerminatingStatement consPattern
+    let pAll = pipe5 (str "_") (opt whereClause) (str "->") body pTerminatingStatement consAll
+    let p = pAll <|> pPat
     p <?> "match case"
 
 let pMatchStatement fname =

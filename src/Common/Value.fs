@@ -67,19 +67,19 @@ and ValueId = {
 }
 
 and UnboundNodeId = Meaning
+and UnboundEdgeWeight = Meaning option
 
 and UnboundNode = {
     nid : UnboundNodeId
-    vid : ValueId
 }
 
 and UnboundEdge = {
     source  : UnboundNode
-    weight  : ValueId option
+    weight  : UnboundEdgeWeight 
     target  : UnboundNode 
 }
 
 and UnboundGraph = {
-    nodes   : Map<UnboundNodeId,ValueId>
+    nodes   : Set<UnboundNode>
     edges   : UnboundEdge list
 }

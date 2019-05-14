@@ -81,17 +81,68 @@ and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResu
         | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
 
 and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) =
-    hg |> Graph |> Value |> Ok
+    "Match case evaluation" |> notImplementedYet     
 
 and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
     match case with
     | CatchAll (where,bod,term) -> "Catch all cases" |> notImplementedYet
-    | Case (pgExpr,where,bod,term) ->
-        let (sgRes : BilboResult<UnboundGraph>) = evalPatternGraph syms spLst pgExpr 
-        hg |> Graph |> Value |> Ok
+    | Pattern (pgExpr,where,bod,term) ->
+        let pgRes = evalPatternGraph syms spLst pgExpr
+        "Unbound-bound subgraph-graph isomorphism not implemted" |> notImplementedYet        
 
 and evalPatternGraph syms spLst pgExpr : BilboResult<UnboundGraph> =
-    "Evaluating pattern graph to get unbound graph" |> notImplementedYet
+    match pgExpr with
+    | PGraph pe -> evalPatternPathExpr pe UnboundGraph.empty
+    | PGraphBinExpr _ -> "Pattern graph binary operations" |> notImplementedYet
+    | PGraphPreExpr _ -> "Pattern graph prefix operations" |> notImplementedYet
+
+and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) (ug : UnboundGraph) : BilboResult<UnboundGraph> =
+    let evalExprWithinPg (e : Expr) =
+        match e with
+        | Var v -> v |> String |> Value |> Ok
+        | _ -> "Can only use identifiers to be bound in pattern graph" |> TypeError |> Error
+    let node nid = {nid=nid}
+    let edge s w t = {source = node s; weight = w; target = node t}
+    let evalPgEdgeOp ln edgeOp rn =
+        let w : BilboResult<UnboundEdgeWeight> =
+            match edgeOp with
+            | Left None | Right None | Bidir None -> None |> Ok
+            | Left (Some we) | Right (Some we) | Bidir (Some we) ->
+                evalExprWithinPg we
+                |> Result.bind (Some >> Ok)
+        match w, edgeOp with
+        | Error e, _  -> e |> Error
+        | Ok w', Left _ -> [edge ln w' rn] |> Ok            
+        | Ok w', Right _ -> [edge rn w' ln] |> Ok
+        | Ok w', Bidir _ -> [edge ln w' rn; edge rn w' ln] |> Ok
+    match pe with
+    | PathComp _ -> "Path comprehensions in pattern graph will not be implemented" |> notImplementedYet
+    | Path peLst ->
+        let evalPathElem (*syms spLst*) (elem : PathElem) (ug : UnboundGraph) =
+            match elem with
+            | PathElem.Node(n) ->
+                match evalExprWithinPg n with
+                | Error e -> e |> Error
+                | Ok id ->
+                    ug
+                    |> UnboundGraph.addNode (node id)
+                    |> Ok
+            | PathElem.Edge(lNode, edg, rNode) ->
+                let lnRes = evalExprWithinPg lNode
+                let rnRes = evalExprWithinPg rNode
+                match lnRes, rnRes with
+                | Error e, _ -> e |> Error
+                | _, Error e -> e |> Error
+                | Ok ln, Ok rn ->
+                    match evalPgEdgeOp ln edg rn with
+                    | Error e -> e |> Error
+                    | Ok eLst ->
+                        ug
+                        |> UnboundGraph.addEdges eLst
+                        |> Ok
+        let folder ug elem =
+            Result.bind (fun ug -> evalPathElem (*syms spLst*) elem ug) ug     
+        List.fold folder (Ok UnboundGraph.empty) peLst
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
@@ -103,7 +154,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
         // "Applying arg to transform pipelines" |> notImplementedYet
         let tName,tParams,preMatchBod,tMatch = tDef
         match tParams with
-        // | [] -> zeroParamFunctionError()
+        | [] -> "Zero param transforms" |> notImplementedYet
         | hd :: paramsLeft ->
             let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
             match tst' with
