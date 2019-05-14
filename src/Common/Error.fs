@@ -77,3 +77,27 @@ let typeNotDefined typ =
     "Type " + "\"" + typ + "\" is not defined."
     |> NameError
     |> Error
+
+let notMatchingWithinGraph typ =
+    "Can only match within graphs but attempted to match within " + typ + " type."
+    |> TypeError
+    |> Error
+
+let nonNodeInPathEdge typL typR =
+    let mes =
+        "Only nodes can appear on either side of an edge. "
+        + "Attempted to create an edge with type "
+        + typL + " on the left and type "
+        + typR + " on the right."
+    mes
+    |> TypeError
+    |> Error    
+
+let nonNodeInPath typ =
+    let mes =
+        "Only nodes or edges can be used as elements of path expressions. "
+        + "Attempted to use "
+        + typ + "."
+    mes
+    |> TypeError
+    |> Error 

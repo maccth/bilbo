@@ -4,6 +4,7 @@ open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
+open Bilbo.Common.Type
 open Bilbo.Evaluator.PrimativeTypes
 open Bilbo.Evaluator.BinaryExpressions
 open Bilbo.Evaluator.Print
@@ -67,8 +68,30 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
     | Error e -> e |> Error
     | Ok syms'' -> evalExpr syms'' spLst ret
 
-and evalMatchStatement (syms : Symbols) spLst tst mat : BilboResult<Meaning> =
-    10 |> Int |> Value |> Ok
+and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResult<Meaning> =
+    let matG,cases = mat
+    let syms' = SymbolTable.empty :: syms
+    match matG with
+    | None -> "Implicit input transforms" |> notImplementedYet
+    | Some gExpr ->
+        let gRes = evalExpr syms' spLst gExpr
+        match gRes with
+        | Error e -> e |> Error
+        | Ok (Value(Graph g)) -> evalMatchCases syms' spLst cases g
+        | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
+
+and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) =
+    hg |> Graph |> Value |> Ok
+
+and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
+    match case with
+    | CatchAll (where,bod,term) -> "Catch all cases" |> notImplementedYet
+    | Case (pgExpr,where,bod,term) ->
+        let (sgRes : BilboResult<UnboundGraph>) = evalPatternGraph syms spLst pgExpr 
+        hg |> Graph |> Value |> Ok
+
+and evalPatternGraph syms spLst pgExpr : BilboResult<UnboundGraph> =
+    "Evaluating pattern graph to get unbound graph" |> notImplementedYet
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
@@ -92,7 +115,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                     match symsUpdated with
                     | Error e -> e |> Error
                     | Ok syms' ->
-                        let res = evalMatchStatement syms' spLst tst tMatch
+                        let res = evalMatchStatement syms' spLst tMatch
                         Result.bind (applyArgToPipeline syms spLst pLineRest) res
                 // | _ ->
                 //     // NOTE: not pure implementation of currying. 
@@ -383,10 +406,13 @@ and evalGExpr syms spLst ge : BilboResult<Meaning> =
                             match eLstRes with
                             | Error e -> e |> Error
                             | Ok eLst -> Graph.addEdges eLst g'
+                        | Ok l, Ok r -> (l |> typeStr, r |> typeStr) ||> nonNodeInPathEdge
                     | PathElem.Node e ->
                         let n = evalExpr syms spLst e
                         match n with
+                        | Error e -> e |> Error
                         | Ok (Value(Node n')) -> Graph.addNode n' g'
+                        | Ok n' -> n' |> typeStr |> nonNodeInPath 
             peLst
             |> List.fold pathScan (Ok Graph.empty)
             |> Result.bind (Graph >> Value >> Ok)
