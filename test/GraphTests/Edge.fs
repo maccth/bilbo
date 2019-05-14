@@ -11,37 +11,38 @@ let c = nd1 "c"
 let d = nd1 "d"
 
 let eLst = [
-    (a, Some 40,    b)
-    (a, Some 200,   b)
-    (b, None,       d)
-    (b, Some 15,    c)
-    (c, Some 30,    a)
-    (d, None,       a)
+    (a, Some 40,    b) // 0
+    (a, Some 200,   b) // 1
+    (b, Some 15,    c) // 2
+    (b, None,       d) // 3
+    (c, Some 30,    a) // 4
+    (d, None,       a) // 5
 ]
 
 let gExp =
     {
-        nodes = ["a"; "b"; "c"; "d"] |> List.map (fun id -> (id |> bilboStr, bilbo1)) |> Map.ofList
+        nodes = ["a"; "b"; "c"; "d"] |> List.map (fun id -> (id |> bilboStr, b1)) |> Map.ofList
         sourceEdges =  Map.ofList [
             bilboStr "a",
-                Map.ofList [bilboStr "b", [200 |> bilboInt |> Some; 40 |> bilboInt |> Some]];
+                Map.ofList [bilboStr "b", [(200 |> bInt |> Some),1; (40 |> bInt |> Some),0]];
             bilboStr "b",
-                Map.ofList [bilboStr "d", [None]; bilboStr "c", [15 |> bilboInt |> Some]];
+                Map.ofList [bilboStr "d", [None,3]; bilboStr "c", [15 |> bInt |> Some,2]];
             bilboStr "c",
-                Map.ofList [bilboStr "a", [30 |> bilboInt |> Some]];                    
+                Map.ofList [bilboStr "a", [(30 |> bInt |> Some),4]];                    
             bilboStr "d",
-                Map.ofList [bilboStr "a",[None]];
+                Map.ofList [bilboStr "a",[None,5]];
         ];
         targetEdges = Map.ofList [
             bilboStr "b",
-                Map.ofList [bilboStr "a", [200 |> bilboInt |> Some; 40 |> bilboInt |> Some]];
+                Map.ofList [bilboStr "a", [200 |> bInt |> Some,1; 40 |> bInt |> Some,0]];
             bilboStr "d",
-                Map.ofList [bilboStr "b", [None]];
+                Map.ofList [bilboStr "b", [None,3]];
             bilboStr "c",
-                Map.ofList [bilboStr "b", [15 |> bilboInt |> Some]];        
+                Map.ofList [bilboStr "b", [15 |> bInt |> Some,2]];        
             bilboStr "a",
-                Map.ofList [bilboStr "d", [None]; bilboStr "c", [30 |> bilboInt |> Some]];               
-        ] 
+                Map.ofList [bilboStr "d", [None,5]; bilboStr "c", [30 |> bInt |> Some,4]];               
+        ]
+        edgeIdCount = 6
     }
 
 let consStringIntELst lst =
@@ -50,7 +51,7 @@ let consStringIntELst lst =
         | None -> {Edge.source=s; weight=None; target=t}
         | Some i ->
             i
-            |> bilboInt
+            |> bInt
             |> Some
             |> fun w' -> {Edge.source=s; weight=w'; target=t}
     List.map stringIntE lst        

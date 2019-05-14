@@ -18,7 +18,7 @@ let inline ( /-/ ) xs ys = List.fold (flip delete) xs ys
 
 module Graph =
 
-    let empty : Graph = {nodes=Map.empty; sourceEdges=Map.empty; targetEdges=Map.empty} 
+    let empty : Graph = {nodes=Map.empty; sourceEdges=Map.empty; targetEdges=Map.empty; edgeIdCount=0} 
 
     let addNode (n : Node) (g : Graph) : BilboResult<Graph> =
         let nodesStart = g.nodes
@@ -57,19 +57,20 @@ module Graph =
         List.fold folder (Ok g)  nLst
 
     let addEdge (e : Edge) (g : Graph) : BilboResult<Graph> =
-        let addOneWayEdge (eMap : EdgeMap<EdgeMap<EdgeWeight list>>) (l1nid : NodeId) (l2nid : NodeId) (ew : EdgeWeight) =
+        let count = g.edgeIdCount
+        let addOneWayEdge (eMap : EdgeMap<EdgeMap<(EdgeWeight*EdgeId)list>>) (l1nid : NodeId) (l2nid : NodeId) (ew : EdgeWeight) =
             match Map.tryFind l1nid eMap with
             | None ->
                 Map.empty
-                |> fun m1 -> Map.add l2nid [ew] m1
+                |> fun m1 -> Map.add l2nid [(ew,count)] m1
                 |> fun m2 -> Map.add l1nid m2 eMap
             | Some l2eMap ->
                 match Map.tryFind l2nid l2eMap with
                 | None ->
-                    Map.add l2nid [ew] l2eMap
+                    Map.add l2nid [(ew,count)] l2eMap
                     |> fun l2eMap' -> Map.add l1nid l2eMap' eMap
                 | Some ewLst ->
-                    ew :: ewLst
+                    (ew,count) :: ewLst
                     |> fun ews -> Map.add l2nid ews l2eMap
                     |> fun l2eMap' -> Map.add l1nid l2eMap' eMap
         let gWithNodes = addNodes [e.source; e.target] g
@@ -81,6 +82,7 @@ module Graph =
             |> fun (sourceEMap,g2) -> {g2 with sourceEdges=sourceEMap}
             |> fun g3 -> (addOneWayEdge g3.targetEdges e.target.id e.source.id e.weight),g3
             |> fun (targetEMap,g4) -> {g4 with targetEdges=targetEMap}
+            |> fun g5 -> {g5 with edgeIdCount=count+1}
             |> Ok
 
     let addEdges (eLst : Edge list) (g : Graph) =
@@ -100,7 +102,7 @@ module Graph =
         |> Map.toList
         |> List.map (fun (id,load) -> {id=id; load=load})
 
-    let edges (g : Graph) : Edge list =
+    let edgeData (g : Graph) =
         g.sourceEdges
         |> Map.toList
         |> fun eMapLst ->
@@ -109,10 +111,17 @@ module Graph =
                 eMap2 
                 |> Map.toList
                 |> List.map (fun (t,ews) -> (s,t,ews))
-                |> List.collect (fun (s,t,ews) -> List.map (fun w -> (s,t,w)) ews)           
-                )
-        |> List.map (fun (s,t,w) -> {source = node s g; target = node t g; weight = w})          
+                |> List.collect (fun (s,t,ews) -> List.map (fun (w,i) -> (s,t,w,i)) ews)           
+                )    
 
+    let edges (g : Graph) : Edge list =
+        edgeData g
+        |> List.map (fun (s,t,w,i) -> {source=node s g; target=node t g; weight=w})
+
+    let idEdges (g : Graph) : (Edge*EdgeId) list =
+        edgeData g
+        |> List.map (fun (s,t,w,i) -> ({source=node s g; target=node t g; weight=w},i))
+                    
     let addGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
         let gSum = addNodes (nodes g1) empty
         match gSum with
@@ -158,7 +167,7 @@ module Graph =
 
 module UnboundGraph =
 
-    let empty : UnboundGraph = {nodes=Set.empty ; edges=[]}
+    let empty : UnboundGraph = {nodes=Set.empty; edges=[]; edgeIdCount=0}
 
     let addNode (n : UnboundNode) (ug : UnboundGraph) : UnboundGraph =
         {ug with nodes = Set.add n ug.nodes}
@@ -167,16 +176,22 @@ module UnboundGraph =
         {ug with nodes = (Set.ofList nLst) + ug.nodes}
 
     let addEdge (e : UnboundEdge) (ug : UnboundGraph) : UnboundGraph =
-        {ug with edges = e::ug.edges}
+        let count = ug.edgeIdCount
+        {ug with edges = (e,count)::ug.edges; edgeIdCount=count+1}
 
     let addEdges (eLst : UnboundEdge list) (ug : UnboundGraph) : UnboundGraph =
-         {ug with edges = eLst@ug.edges}
+        let (count',edges') = List.fold (fun (c,eLst') e -> ((c+1),((e,c)::eLst'))) (ug.edgeIdCount,ug.edges) eLst
+        {ug with edges=edges'; edgeIdCount=count'}
 
     let nodes (ug : UnboundGraph) =
         ug.nodes |> Set.toList
     
     let edges (ug : UnboundGraph) =
         ug.edges
+        |> List.map (fun (e,i) -> e)
+
+    let idEdges (ug : UnboundGraph) =
+        ug.edges 
 
     let addGraphs (ug1 : UnboundGraph) (ug2 : UnboundGraph) =
         empty

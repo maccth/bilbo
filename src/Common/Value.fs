@@ -34,9 +34,10 @@ and PStage =
 
 
 // Useful type definitions for readability
-and EdgeWeight = Meaning option
 and NodeId = Meaning
 and NodeLoad = Meaning
+and EdgeWeight = Meaning option
+and EdgeId = int
 and EdgeMap<'T> = Map<NodeId,'T>
 and NodeMap<'T> = Map<NodeId,'T>
 
@@ -53,12 +54,13 @@ and Edge = {
 
 and Graph = {
     // node id -> node load
-    nodes       : NodeMap<NodeLoad>
+    nodes       : Map<NodeId, NodeLoad>
     // loads       : Map<NodeLoad, NodeId list>
     // source node id -> (target node id -> [edge weights])
-    sourceEdges : EdgeMap<EdgeMap<EdgeWeight list>>
+    sourceEdges : EdgeMap<EdgeMap<(EdgeWeight*EdgeId) list>>
     // tagret node id -> (source node id -> [edge weights])
-    targetEdges : EdgeMap<EdgeMap<EdgeWeight list>>
+    targetEdges : EdgeMap<EdgeMap<(EdgeWeight*EdgeId) list>>
+    edgeIdCount : EdgeId
 }
 
 and ValueId = {
@@ -81,5 +83,6 @@ and UnboundEdge = {
 
 and UnboundGraph = {
     nodes   : Set<UnboundNode>
-    edges   : UnboundEdge list
+    edges   : (UnboundEdge*EdgeId) list
+    edgeIdCount : EdgeId      
 }
