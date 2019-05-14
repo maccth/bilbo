@@ -279,81 +279,86 @@ let addBinOp (op, prec, nf, assoc, astOp) =
 
 List.map addBinOp binExprOps |> ignore
 
-let weight = pExpr
 
-/// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
-let pLeftEdgeOps =
-    tuple3 (str "<") (opt weight) (opt (str ">"))
-    |>> function
-    | l, e, Some r -> e |> Bidir
-    | l, e, None -> e |> Left
+/// The 'general' (higher-order parser) for path expressions.
+/// `pWeight`, `pNode`, and `pLoad` are the parsers for the edge weight, node, and node load expressions respectively.
+let gpPathExpr pWeight pNode pLoad =
+    let weight = pWeight
+    /// Left and bidirectional edge operators `<`, `<e`, `<>` `<e>`
+    let pLeftEdgeOps =
+        tuple3 (str "<") (opt weight) (opt (str ">"))
+        |>> function
+        | l, e, Some r -> e |> Bidir
+        | l, e, None -> e |> Left
 
-/// Right edge operators `>`, `e>`
-let pRightEdgeOps =
-    tuple2 (opt weight) (str ">") |>> fst |>> Right
+    /// Right edge operators `>`, `e>`
+    let pRightEdgeOps =
+        tuple2 (opt weight) (str ">") |>> fst |>> Right
 
-let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) <?> "edge"
+    let pEdgeOp = (pLeftEdgeOps <|> pRightEdgeOps) <?> "edge"
 
-let pNodeExpr = pExpr <?> "node"
+    let pNodeExpr = pNode <?> "node"
 
-let pPathExpr =
-    let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
-    let commaEdge = str "," >>. edge
-    let pathElem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
-    let compOp =
-        let setId = pipe2 ((notFollowedBy (str "&&")) >>. str "&") (str "=") (fun _ _ -> SetId)
-        let setLoad = pipe3 (str "&&") (str "=") pExpr (fun _ _ e -> e |> SetLoad)
-        let addEdge = pEdgeOp |>> AddEdge
-        choice [setId; setLoad; addEdge]
-    let compOps =
-        pipe3 (followedBy ((csv1 compOp) .>>. str ":")) (csv1 compOp) (str ":") <|
-            fun _ compOps' _ -> compOps'
-    let path =
-         (opt compOps .>>. csv pathElem) |> between (str "[") (str "]")
-           
-    let consPathElem (elems,prevEdge) (el : Expr * EdgeOp Option) =
-        // n2 <--prevEdge--> n1 <--nextEdge--> 
-        // prevEdge is the incoming edge operator from n1 to n1
-        // nextEdge is the outgoing edge operator from n1
-        let n1, nextEdge = el
-        match prevEdge with
-        | Some e ->
-            match elems with
-            | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
-            | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
-            | [] ->
-                "First element cannot have incoming edge."
+    let pPathExpr =
+        let edge = pEdgeOp .>> followedBy (str (",") .>>. pNodeExpr)
+        let commaEdge = str "," >>. edge
+        let pathElem = pNodeExpr .>>. opt (pipe2 (followedBy commaEdge) (commaEdge) (fun x y -> y))
+        let compOp =
+            let setId = pipe2 ((notFollowedBy (str "&&")) >>. str "&") (str "=") (fun _ _ -> SetId)
+            let setLoad = pipe3 (str "&&") (str "=") pLoad (fun _ _ e -> e |> SetLoad)
+            let addEdge = pEdgeOp |>> AddEdge
+            choice [setId; setLoad; addEdge]
+        let compOps =
+            pipe3 (followedBy ((csv1 compOp) .>>. str ":")) (csv1 compOp) (str ":") <|
+                fun _ compOps' _ -> compOps'
+        let path =
+             (opt compOps .>>. csv pathElem) |> between (str "[") (str "]")
+
+        let consPathElem (elems,prevEdge) el (*Expr * EdgeOp Option)*) =
+            // n2 <--prevEdge--> n1 <--nextEdge--> 
+            // prevEdge is the incoming edge operator from n1 to n1
+            // nextEdge is the outgoing edge operator from n1
+            let n1, nextEdge = el
+            match prevEdge with
+            | Some e ->
+                match elems with
+                | Node n2 :: elems' -> (((n2,e,n1) |> Edge) :: elems'), nextEdge
+                | Edge (_,_,n2) :: elems' -> (((n2,e,n1) |> Edge) :: elems), nextEdge
+                | [] ->
+                    "First element cannot have incoming edge."
+                    |> ImplementationError
+                    |> FSharp.Core.Error
+                    |> failwithf "%A"
+
+            | None -> ((n1 |> Node) :: elems), nextEdge
+
+        let consPath p =
+            List.fold consPathElem ([],None) p
+            |> function
+            | (lst, None) -> lst
+            | (lst, Some e) ->
+                "Final element cannot have outgoing edge."
                 |> ImplementationError
                 |> FSharp.Core.Error
                 |> failwithf "%A"
+            |> List.rev
 
-        | None -> ((n1 |> Node) :: elems), nextEdge
+        path
+        |>> function
+            | Some compOps, elems ->
+                (compOps, (consPath elems))
+                |> PathComp
+            | None, elems ->
+                elems 
+                |> consPath
+                |> Path
+        |>> PathExpr
+        |>> GExpr
+        |> fun p -> p <?> "path expression"
+    pPathExpr    
 
-    let consPath p =
-        List.fold consPathElem ([],None) p
-        |> function
-        | (lst, None) -> lst
-        | (lst, Some e) ->
-            "Final element cannot have outgoing edge."
-            |> ImplementationError
-            |> FSharp.Core.Error
-            |> failwithf "%A"
-        |> List.rev
 
-    path
-    |>> function
-        | Some compOps, elems ->
-            (compOps, (consPath elems))
-            |> PathComp
-        | None, elems ->
-            elems 
-            |> consPath
-            |> Path
-    |>> PathExpr
-    |>> GExpr
-    |> fun p -> p <?> "path expression"
-
-let pGExpr = pPathExpr
+let pGExpr = gpPathExpr pExpr pExpr pExpr
 
 let exprs = [pSExpr; pVar; pGExpr;]
 do pExprTermRef := chance exprs
@@ -389,6 +394,13 @@ let pMatchCase fname =
             (lhs, where,body,term) |> Case
     let body = many (pExprStatementL fname)
     let whereClause = (keyw "where") >>. many pExpr
+    // The patternGraph parser does not work instead of pExpr below because path
+    //  expressions such as [a,>,b] + [b,>,c] are valid. However, if patternGraph
+    //  is used, this will not parse because of the + operator. To use patternGraph
+    //  a new opp will have to be setup for the graph operators allowed.
+    // The motivation behind the patternGraph parser is that only variables are allowed in the lhs
+    //  pattern graph
+    // let patternGraph = gpPathExpr pVar pVar pVar
     let matcher = (str ("_") |>> Var) <|> pExpr
     let p = pipe5 matcher (opt whereClause) (str "->") body pTerminatingStatement cons
     p <?> "match case"

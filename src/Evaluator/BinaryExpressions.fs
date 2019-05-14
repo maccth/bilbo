@@ -98,7 +98,7 @@ let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
 
 let minusRules ops =
     let ifl = intFloat2 ops (-) (fun x y -> float(x) - y) (fun x y -> x - float(y)) (-)
-    let g = lazy(graphMatcher ops Graph.subGraphs (Result.bind (Graph >> Value >> Ok)))
+    let g = lazy(graphMatcher ops Graph.subtractGraphs (Result.bind (Graph >> Value >> Ok)))
     ifl
     |??> g
     |..> ("Minus rules" |> notImplementedYet)

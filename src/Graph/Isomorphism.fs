@@ -15,9 +15,9 @@ module Graph =
     let sgiAll hostGraph subgraph =
         let rec search hg sg sgNodesLeft mapping =
             let mapNode (n : Node) = Map.find n.id mapping |> fun i -> Graph.node i hg
-            let mapEdge e = {e with source = mapNode e.source; target = mapNode e.target}
+            let mapEdge (e : Edge) = {e with source = mapNode e.source; target = mapNode e.target}
             let edgesInSg = Graph.edges sg
-            let edgeInCurrentSg e = (Map.containsKey e.source.id mapping) && (Map.containsKey e.target.id mapping)
+            let edgeInCurrentSg (e : Edge) = (Map.containsKey e.source.id mapping) && (Map.containsKey e.target.id mapping)
             let edgesInCurrentSg = List.filter edgeInCurrentSg edgesInSg
             let mappedEdgesInCurrentSg = List.map mapEdge edgesInCurrentSg
             let edgesInHg = Graph.edges hg |> set
@@ -50,9 +50,9 @@ module Graph =
     let sgiFirst hostGraph subgraph =
         let rec search hg sg sgNodesLeft mapping =
             let mapNode (n : Node) = Map.find n.id mapping |> fun i -> Graph.node i hg
-            let mapEdge e = {e with source = mapNode e.source; target = mapNode e.target}
+            let mapEdge (e : Edge) = {e with source = mapNode e.source; target = mapNode e.target}
             let edgesInSg = Graph.edges sg
-            let edgeInCurrentSg e = (Map.containsKey e.source.id mapping) && (Map.containsKey e.target.id mapping)
+            let edgeInCurrentSg (e : Edge) = (Map.containsKey e.source.id mapping) && (Map.containsKey e.target.id mapping)
             let edgesInCurrentSg = List.filter edgeInCurrentSg edgesInSg
             let mappedEdgesInCurrentSg = List.map mapEdge edgesInCurrentSg
             let edgesInHg = Graph.edges hg |> set

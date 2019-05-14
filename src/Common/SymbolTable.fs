@@ -4,12 +4,6 @@ open Bilbo.Common.Value
 open Bilbo.Common.Ast
 open Bilbo.Common.Error
 
-type ValueId =
-    {
-        spLst : SpaceId list;
-        id : Id;
-    }
-
 module SymbolTable =
     let empty : SymbolTable = Map.empty
        

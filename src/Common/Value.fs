@@ -41,16 +41,15 @@ and EdgeMap<'T> = Map<NodeId,'T>
 and NodeMap<'T> = Map<NodeId,'T>
 
 and Node = {
-    id : NodeId
+    id   : NodeId
     load : NodeLoad
 }
 
 and Edge = {
-    source : Node
-    weight : EdgeWeight
-    target : Node
+    source  : Node
+    weight  : EdgeWeight
+    target  : Node
 }
-
 
 and Graph = {
     // node id -> node load
@@ -60,4 +59,27 @@ and Graph = {
     sourceEdges : EdgeMap<EdgeMap<EdgeWeight list>>
     // tagret node id -> (source node id -> [edge weights])
     targetEdges : EdgeMap<EdgeMap<EdgeWeight list>>
+}
+
+and ValueId = {
+    spLst   : SpaceId list
+    id      : Id
+}
+
+and UnboundNodeId = Meaning
+
+and UnboundNode = {
+    nid : UnboundNodeId
+    vid : ValueId
+}
+
+and UnboundEdge = {
+    source  : UnboundNode
+    weight  : ValueId option
+    target  : UnboundNode 
+}
+
+and UnboundGraph = {
+    nodes   : Map<UnboundNodeId,ValueId>
+    edges   : UnboundEdge list
 }

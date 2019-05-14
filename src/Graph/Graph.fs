@@ -15,6 +15,7 @@ let rec delete x = function
   | h :: t -> h :: delete x t
 let inline ( /-/ ) xs ys = List.fold (flip delete) xs ys
 
+
 module Graph =
 
     let empty : Graph = {nodes=Map.empty; sourceEdges=Map.empty; targetEdges=Map.empty} 
@@ -99,7 +100,7 @@ module Graph =
         |> Map.toList
         |> List.map (fun (id,load) -> {id=id; load=load})
 
-    let edges (g : Graph) =
+    let edges (g : Graph) : Edge list =
         g.sourceEdges
         |> Map.toList
         |> fun eMapLst ->
@@ -127,7 +128,7 @@ module Graph =
                 | Ok gs5 ->
                     addEdges (edges g2) gs5
 
-    let subGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
+    let subtractGraphs (g1 : Graph) (g2 : Graph) : BilboResult<Graph> =
         // Implements
         //  e = e1 - e2
         //  n = n1 - (n2 - nodes(e2))
@@ -153,3 +154,56 @@ module Graph =
         let g1e = edges g1 |> List.sort
         let g2e = edges g2 |> List.sort
         (g1n = g2n) && (g1e = g2e)
+
+
+module UnboundGraph =
+
+    let empty : UnboundGraph = {nodes=Map.empty; edges=[]}
+
+    let addNode (n : UnboundNode) (ug : UnboundGraph) : UnboundGraph =
+        let nodes' = Map.add n.nid n.vid ug.nodes
+        {ug with nodes=nodes'}
+
+    let addNodes (nLst : UnboundNode list) (ug : UnboundGraph) : UnboundGraph =
+        List.fold (fun ug n -> addNode n ug) ug nLst
+
+    let addEdge (e : UnboundEdge) (ug : UnboundGraph) : UnboundGraph =
+        {ug with edges = e::ug.edges}
+
+    let addEdges (eLst : UnboundEdge list) (ug : UnboundGraph) : UnboundGraph =
+        List.fold (fun ug e -> addEdge e ug) ug eLst
+
+    let node nid (ug : UnboundGraph) =
+        ug.nodes
+        |> Map.find nid
+        |> fun vid -> {nid=nid; vid=vid}
+
+    let nodes (ug : UnboundGraph) =
+        ug.nodes
+        |> Map.toList
+        |> List.map (fun (nid,vid) -> {nid=nid; vid=vid})        
+    
+    let edges (ug : UnboundGraph) =
+        ug.edges
+
+    let addGraphs (ug1 : UnboundGraph) (ug2 : UnboundGraph) =
+        empty
+        |> addNodes (nodes ug1)
+        |> addEdges (edges ug1)    
+        |> addNodes (nodes ug2)
+        |> addEdges (edges ug2)
+
+    let subtractGraphs (ug1 : UnboundGraph) (ug2 : UnboundGraph) =
+        // Also implements Bilbo graph subtraction
+        let e2 = edges ug2
+        let n1 = nodes ug1 |> Set.ofList
+        let n2 = nodes ug2 |> Set.ofList
+        let ne2 =
+            e2
+            |> List.collect (fun e -> [e.source;e.target]) 
+            |> Set.ofList
+        let e = edges ug1 /-/ e2
+        let n = n1 - (n2 - ne2) |> Set.toList
+        empty
+        |> addNodes n
+        |> addEdges e

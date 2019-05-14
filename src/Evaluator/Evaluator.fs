@@ -47,10 +47,13 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
                 let f = (fDef, fst) |> Function |> fun s -> [s] |> Pipeline |> Value
                 Symbols.set syms {id=fName; spLst=rnLst} f
         attachLoc loc syms'
-    | TransformDefL(loc, _) ->
-        "Transforms"
-        |> notImplementedYet
-        |> attachLoc loc
+    | TransformDefL(loc, tDef) ->
+        let tName,tParams,tBod,tMatch = tDef
+        let tst = Symbols.head syms
+        // TODO: distinguish between 0 param transforms and paramed transforms
+        let t = (tDef, tst) |> Transform |> fun t -> [t] |> Pipeline |> Value
+        let syms' = Symbols.set syms {id=tName; spLst=rnLst} t
+        attachLoc loc syms'
 
 let evalBilbo syms ast =
     let rec evalRec syms ast  =

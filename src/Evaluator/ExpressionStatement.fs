@@ -51,18 +51,24 @@ and evalBinExpr syms spLst lhs op rhs =
         "Other binary operators"
         |> notImplementedYet
 
-and evalFuncBody (syms : Symbols) spLst fst bod ret =
-    let syms' : Symbols = fst :: syms
+and evalPStageBody (syms : Symbols) spLst st bod =
+    let syms' : Symbols = st :: syms
     let folder syms (es : ExprStatementL) =
         match syms with
         | Error e -> e |> Error
         | Ok syms' ->
             let loc,es' = es
             evalExprStatement syms' spLst es'
-    let symsPostFunc = List.fold folder (Ok syms') bod
+    List.fold folder (Ok syms') bod
+
+and evalFuncBody (syms : Symbols) spLst fst bod ret =
+    let symsPostFunc = evalPStageBody syms spLst fst bod
     match symsPostFunc with
     | Error e -> e |> Error
     | Ok syms'' -> evalExpr syms'' spLst ret
+
+and evalMatchStatement (syms : Symbols) spLst tst mat : BilboResult<Meaning> =
+    10 |> Int |> Value |> Ok
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
@@ -70,8 +76,36 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     //     let ps' = param :: ps
     //     applyArgsToPipeline syms spLst pLine' ps'
     | [] -> param |> Ok
-    | Transform(_) :: _ ->  "Adding arg to transform pipeline" |> notImplementedYet
-    | Function(fDef, fst) :: pLine' ->
+    | Transform(tDef, tst) :: pLineRest ->
+        // "Applying arg to transform pipelines" |> notImplementedYet
+        let tName,tParams,preMatchBod,tMatch = tDef
+        match tParams with
+        // | [] -> zeroParamFunctionError()
+        | hd :: paramsLeft ->
+            let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
+            match tst' with
+            | Error e -> e |> Error
+            | Ok tstUpdated ->
+                match paramsLeft with
+                | [] ->
+                    let symsUpdated = evalPStageBody syms spLst tstUpdated preMatchBod
+                    match symsUpdated with
+                    | Error e -> e |> Error
+                    | Ok syms' ->
+                        let res = evalMatchStatement syms' spLst tst tMatch
+                        Result.bind (applyArgToPipeline syms spLst pLineRest) res
+                // | _ ->
+                //     // NOTE: not pure implementation of currying. 
+                //     // We don't move on in the pipeline until we the funciton has all its args)
+                //     ((fId, paramsLeft, bod, ret), fstUpdated)
+                //     |> Function
+                //     |> fun p -> p :: pLineRest
+                //     |> Pipeline
+                //     |> Value
+                //     |> Ok
+                    // let funcAsParam = ^^^
+                    // applyArgToPipeline syms spLst pLine' funcAsParam
+    | Function(fDef, fst) :: pLineRest ->
         let fId, fParams, bod, ret = fDef
         match fParams with
         | [] -> zeroParamFunctionError()
@@ -85,13 +119,13 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                     let funcResultAsParam = evalFuncBody syms spLst fstUpdated bod ret
                     match funcResultAsParam with
                     | Error e -> e |> Error
-                    | Ok param' -> applyArgToPipeline syms spLst pLine' param'
+                    | Ok param' -> applyArgToPipeline syms spLst pLineRest param'
                 | _ ->
                     // NOTE: not pure implementation of currying. 
                     // We don't move on in the pipeline until we the funciton has all its args)
                     ((fId, paramsLeft, bod, ret), fstUpdated)
                     |> Function
-                    |> fun p -> p :: pLine'
+                    |> fun p -> p :: pLineRest
                     |> Pipeline
                     |> Value
                     |> Ok
@@ -310,7 +344,7 @@ and evalSExpr syms spLst s : BilboResult<Meaning> =
         | Ok lst -> lst |> ParamList |> Ok
         | Error e -> e |> Error
 
-and evalEdgeOp syms spLst lhs rhs (eOp : EdgeOp) =
+and evalEdgeOp syms spLst (lhs : Node) (rhs : Node) (eOp : EdgeOp) =
     let w : BilboResult<EdgeWeight> =
         match eOp with
         | Left None | Right None | Bidir None -> None |> Ok
@@ -323,9 +357,9 @@ and evalEdgeOp syms spLst lhs rhs (eOp : EdgeOp) =
             | Ok w -> w |> Some |> Ok
     match w,eOp with
     | Error e, _ -> e |> Error
-    | Ok w', Left _ ->  [{source=rhs; target=lhs; weight=w'}] |> Ok
-    | Ok w', Right _ -> [{source=lhs; target=rhs; weight=w'}] |> Ok
-    | Ok w', Bidir _ -> [{source=lhs; target=rhs; weight=w'}; {source=rhs; target=lhs; weight=w'}] |> Ok
+    | Ok w', Left _ -> [{Edge.source=rhs; target=lhs; weight=w'}] |> Ok
+    | Ok w', Right _ -> [{Edge.source=lhs; target=rhs; weight=w'}] |> Ok
+    | Ok w', Bidir _ -> [{Edge.source=lhs; target=rhs; weight=w'}; {source=rhs; target=lhs; weight=w'}] |> Ok
 
 and evalGExpr syms spLst ge : BilboResult<Meaning> =
     match ge with

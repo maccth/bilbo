@@ -47,12 +47,12 @@ let gExp =
 let consStringIntELst lst =
     let stringIntE (s,w,t) =
         match w with
-        | None -> {source=s; weight=None; target=t}
+        | None -> {Edge.source=s; weight=None; target=t}
         | Some i ->
             i
             |> bilboInt
             |> Some
-            |> fun w' -> {source=s; weight=w'; target=t}
+            |> fun w' -> {Edge.source=s; weight=w'; target=t}
     List.map stringIntE lst        
 
 let g = Graph.empty
