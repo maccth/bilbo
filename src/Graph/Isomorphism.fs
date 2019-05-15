@@ -114,16 +114,16 @@ module Graph =
 
     let sgiAll hostGraph subgraph =
         let rec edgeSearch hg sg (sgEdgesLeft : EdgeId list) nMapping eMapping =
-            let mapNode (n : Node) = Map.find n.id nMapping |> fun i -> Graph.node i hg
             match sgEdgesLeft with
-            | [] -> eMapping |> Some
+            | [] -> Set.ofList [eMapping]
             | _ ->
+                let mapNode (n : Node) = Map.find n.id nMapping |> fun i -> Graph.node i hg
                 let allHgEdges = hg |> Graph.idEdges |> List.map fst
-                let hgEdgeIsMappedTo eid = isMappedTo eid eMapping
-                let unmappedHgEdges = List.filter (hgEdgeIsMappedTo >> not) allHgEdges
+                let hgEdgeMappedTo eid = isMappedTo eid eMapping
+                let hgEdgesNotMappedTo = List.filter (hgEdgeMappedTo >> not) allHgEdges
                 let sgEdgesToBeMapped =
                     List.map (fun eid -> (eid, List.filter (fun e2 -> e2 <> eid) sgEdgesLeft)) sgEdgesLeft
-                let possibleEdgeMappings = List.allPairs sgEdgesToBeMapped unmappedHgEdges
+                let possibleEdgeMappings = List.allPairs sgEdgesToBeMapped hgEdgesNotMappedTo
                 let consistentMapping sgEId hgEId =
                     let sgE = Graph.edge sgEId sg
                     let hgE = Graph.edge hgEId hg
@@ -139,16 +139,13 @@ module Graph =
                     possibleEdgeMappings
                     |> List.filter (fun ((sge,_), hge) -> consistentMapping sge hge)
                 match consistentEdgeMappings with
-                | [] -> None
+                | [] -> Set.empty
                 | _ ->
-                    let folder currentMapping ((sgEdgeToTry,sgEdgesNowLeft), hgEdgeToTry) = 
-                        match currentMapping with
-                        | Some a -> a |> Some
-                        | None ->
-                            let mappingAttempt = Map.add sgEdgeToTry hgEdgeToTry eMapping
-                            let searchRes = edgeSearch hg sg sgEdgesNowLeft nMapping mappingAttempt
-                            searchRes
-                    List.fold folder None consistentEdgeMappings
+                    let folder validMappings ((sgEdgeToTry,sgEdgesNowLeft), hgEdgeToTry) = 
+                        let mappingAttempt = Map.add sgEdgeToTry hgEdgeToTry eMapping
+                        let searchRes = edgeSearch hg sg sgEdgesNowLeft nMapping mappingAttempt
+                        searchRes + validMappings
+                    List.fold folder Set.empty consistentEdgeMappings
 
         let nMaps = nodeSgiAll hostGraph subgraph |> Set.toList
         match nMaps with
@@ -157,8 +154,5 @@ module Graph =
             let subGEdges = subgraph |> Graph.idEdges |> List.map fst
             let folder neMaps nMap =
                 let eMapRes = edgeSearch hostGraph subgraph subGEdges nMap Map.empty
-                match eMapRes with
-                | None -> neMaps
-                | Some eMap -> (nMap,eMap) :: neMaps
-            List.fold folder [] nMaps
-            |> Set.ofList
+                neMaps + Set.map (fun eMap -> (nMap,eMap)) eMapRes
+            List.fold folder Set.empty nMaps

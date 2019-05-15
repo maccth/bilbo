@@ -165,3 +165,27 @@ let test7 =
     let gotMapping = Graph.sgiAll weightedHostG testG    
     testCase "SGI enumeration test with mixed weighted/unweighted edges in host and pattern. 4 valis isos." <| fun _ ->
         Expect.equal (set gotMapping) expMaps ""
+
+[<Tests>]
+let test8 =
+    // [A, >, B, >, C] + [A,>,B] 
+    let weightedHostG =
+        Graph.empty
+        |> Graph.addEdge (A .>. B) 
+        |-> Graph.addEdge (A .>. B) 
+        |--> Graph.addEdge (B .>. C) 
+    // [a,>,b,>,c]
+    let testG =
+        Graph.empty
+        |> Graph.addEdge (a .>. b)
+        |--> Graph.addEdge (b .>. c)
+    let expMaps =
+        [
+            ["a","A"; "b","B"; "c","C"], [0,0; 1,2]
+            ["a","A"; "b","B"; "c","C"], [0,1; 1,2]
+        ]
+        |> List.map (fun (nMap,eMap) -> consNMapping nMap, consEMapping eMap)
+        |> Set.ofList
+    let gotMapping = Graph.sgiAll weightedHostG testG    
+    testCase "SGI enumeration test with multiple isos, same node mapping, different edge mapping." <| fun _ ->
+        Expect.equal (set gotMapping) expMaps ""
