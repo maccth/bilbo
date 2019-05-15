@@ -150,6 +150,12 @@ module UnboundGraph =
     let addEdges (eLst : UnboundEdge list) (ug : UnboundGraph) : UnboundGraph =
         List.fold (fun ug' e -> addEdge e ug') ug eLst
 
+    let edge (id : UnboundEdgeId) (ug : UnboundGraph) =
+        ug.edges
+        |> Set.toList
+        |> Map.ofList
+        |> Map.find id
+    
     let nodes (ug : UnboundGraph) =
         ug.nodes |> Set.toList
 

@@ -63,6 +63,7 @@ and ValueId = {
 }
 
 and UnboundNodeId = Meaning
+and UnboundEdgeId = EdgeId
 and UnboundEdgeWeight = Meaning option
 
 and UnboundNode = {
@@ -77,6 +78,6 @@ and UnboundEdge = {
 
 and UnboundGraph = {
     nodes   : Set<UnboundNode>
-    edges   : Set<EdgeId*UnboundEdge>
+    edges   : Set<UnboundEdgeId*UnboundEdge>
     edgeIdCount : EdgeId      
 }
