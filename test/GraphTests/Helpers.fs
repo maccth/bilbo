@@ -14,7 +14,7 @@ let (.<.) nL nR = nR .>. nL
 let (.<>.) nL nR = [nL .>. nR; nR .>. nL]
 
 let (..>.) nL nR w = {Edge.source=nL; target=nR; weight=Some w}
-let (.<..) nL nR w = {Edge.source=nL; target=nR; weight=Some w}
+let (.<..) nL nR w = {Edge.source=nR; target=nL; weight=Some w}
 
 let (|-->) l r =
     l |-> r
