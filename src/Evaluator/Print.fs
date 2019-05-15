@@ -14,7 +14,7 @@ let rec print (mean : Meaning) : BilboResult<string> =
     | Space (Object tName, st) -> objPrint tName st
     | Value v ->
         match v with
-        | String s -> s |> Ok
+        | String s -> "\"" + s + "\"" |> Ok
         | Float f -> f |> string |> Ok 
         | Int i -> i |> string |> Ok
         | Bool b when b -> "True" |> Ok
