@@ -44,8 +44,8 @@ let test =
         [("b","B"); ("a","C"); ("d","D";)]
     ]
     let expMappings = consNMappings mappings |> Set.ofList
-    let gotMappings = Graph.sgiAll mainHostG testG
-    testCase "SGI enumeration test" <| fun _ ->
+    let gotMappings = Graph.nodeSgiAll mainHostG testG
+    testCase "Node-induced SGI enumeration test" <| fun _ ->
         Expect.equal gotMappings expMappings ""
  
 [<Tests>]
@@ -55,10 +55,10 @@ let test2 =
         Graph.empty
         |> Graph.addEdge (b .>. a)
         |--> Graph.addEdge (a .>. d)
-    let gotMapping = Graph.sgiFirst mainHostG testG
+    let gotMapping = Graph.nodeSgiFirst mainHostG testG
     let mapping = [("b","A"); ("a","B"); ("d","C")]
-    let expMapping = mapping |> consNMapping |> Some
-    testCase "SGI test, one iso" <| fun _ ->
+    let expMapping = mapping |> consNMapping |> fun m -> Set.ofList [m]
+    testCase "Node-induced SGI test, one iso" <| fun _ ->
         Expect.equal gotMapping expMapping ""
 
 [<Tests>]
@@ -68,10 +68,10 @@ let test3 =
         Graph.empty
         |> Graph.addEdge ((b ..>. a) b1)
         |--> Graph.addEdge ((a ..>. d) b1)
-    let gotMapping = Graph.sgiFirst mainHostG testG
+    let gotMapping = Graph.nodeSgiFirst mainHostG testG
     let mapping = [("b","A"); ("a","B"); ("d","C")]
-    let expMapping = mapping |> consNMapping |> Some
-    testCase "SGI test, unweighetd vs weighted edges." <| fun _ ->
+    let expMapping = mapping |> consNMapping |> fun m -> Set.ofList [m]
+    testCase "Node-induced SGI test, unweighetd vs weighted edges." <| fun _ ->
         Expect.equal gotMapping expMapping ""
 
 [<Tests>]
@@ -87,7 +87,7 @@ let test4 =
         Graph.empty
         |> Graph.addEdge ((b ..>. a) b1)
         |--> Graph.addEdge ((a ..>. d) b1)
-    let gotMapping = Graph.sgiFirstWithEdge weightedHostG testG    
+    let gotMapping = Graph.sgiFirst weightedHostG testG    
     let nMap = [("b","A"); ("a","B"); ("d","C")]
     let expNMap = nMap |> consNMapping
     let expEMap = [(0,0); (1,1)] |> consEMapping
@@ -108,7 +108,7 @@ let test5 =
         Graph.empty
         |> Graph.addEdge ((b ..>. a) (bInt 5))
         |--> Graph.addEdge ((a ..>. d) b1)
-    let gotMapping = Graph.sgiFirstWithEdge weightedHostG testG    
+    let gotMapping = Graph.sgiFirst weightedHostG testG    
     let nMap = [("b","A"); ("a","B"); ("d","C")]
     let expNMap = nMap |> consNMapping
     let expEMap = [(0,0); (1,1)] |> consEMapping
@@ -134,7 +134,7 @@ let test6 =
     let expNMap = [("a","A"); ("b","B"); ("d","C")] |> consNMapping
     let expEMap = [(0,1); (1,2); (2,0)] |> consEMapping
     let expMap = (Some (expNMap, expEMap))    
-    let gotMapping = Graph.sgiFirstWithEdge weightedHostG testG    
+    let gotMapping = Graph.sgiFirst weightedHostG testG    
     testCase "SGI test, mixed weighted/unweighted with valid iso." <| fun _ ->
         Expect.equal gotMapping expMap ""
 
@@ -162,6 +162,6 @@ let test7 =
         ]
         |> List.map (fun (nMap,eMap) -> consNMapping nMap, consEMapping eMap)
         |> Set.ofList
-    let gotMapping = Graph.sgiAllWithEdge weightedHostG testG    
+    let gotMapping = Graph.sgiAll weightedHostG testG    
     testCase "SGI enumeration test with mixed weighted/unweighted edges in host and pattern. 4 valis isos." <| fun _ ->
         Expect.equal (set gotMapping) expMaps ""
