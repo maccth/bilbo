@@ -1,7 +1,6 @@
 module Bilbo.Tests.EvaluatorTests.Function
 
 open Bilbo.Common.Value
-open Bilbo.Common.SymbolTable
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 

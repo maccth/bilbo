@@ -12,6 +12,7 @@
     <Compile Include="Helpers.fs" />
     <Compile Include="Expression.fs" />
     <Compile Include="Function.fs" />
+    <Compile Include="Transforms.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
