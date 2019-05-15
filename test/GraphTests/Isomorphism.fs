@@ -91,7 +91,7 @@ let test4 =
     let nMap = [("b","A"); ("a","B"); ("d","C")]
     let expNMap = nMap |> consNMapping
     let expEMap = [(0,0); (1,1)] |> consEMapping
-    let expMap = (Some (expNMap, expEMap))
+    let expMap = [expNMap, expEMap] |> Set.ofList
     testCase "SGI test, weighted vs. weighetd edges, different weight." <| fun _ ->
         Expect.equal gotMapping expMap ""
 
@@ -112,7 +112,7 @@ let test5 =
     let nMap = [("b","A"); ("a","B"); ("d","C")]
     let expNMap = nMap |> consNMapping
     let expEMap = [(0,0); (1,1)] |> consEMapping
-    let expMap = (Some (expNMap, expEMap))
+    let expMap = [expNMap, expEMap] |> Set.ofList
     testCase "SGI test, weighted vs. weighetd edges, even more different weight." <| fun _ ->
         Expect.equal gotMapping expMap ""
 
@@ -133,7 +133,7 @@ let test6 =
         |--> Graph.addEdge (a .>. b)
     let expNMap = [("a","A"); ("b","B"); ("d","C")] |> consNMapping
     let expEMap = [(0,1); (1,2); (2,0)] |> consEMapping
-    let expMap = (Some (expNMap, expEMap))    
+    let expMap = [expNMap, expEMap] |> Set.ofList
     let gotMapping = Graph.sgiFirst weightedHostG testG    
     testCase "SGI test, mixed weighted/unweighted with valid iso." <| fun _ ->
         Expect.equal gotMapping expMap ""
