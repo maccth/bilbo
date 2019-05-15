@@ -62,7 +62,7 @@ and ValueId = {
     id      : Id
 }
 
-and UnboundNodeId = Meaning
+and UnboundNodeId = NodeId
 and UnboundEdgeId = EdgeId
 and UnboundEdgeWeight = Meaning option
 

@@ -1,14 +1,17 @@
 module Bilbo.Evaluator.ExpressionStatement
 
+open Bilbo.Common.Extensions
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
+open Bilbo.Common.Type
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
-open Bilbo.Common.Type
 open Bilbo.Evaluator.PrimativeTypes
 open Bilbo.Evaluator.BinaryExpressions
 open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
+open Bilbo.Graph.Isomorphism
+open Bilbo.Common
 
 let rec evalBinOperands syms spLst lhs rhs =
     let valL = evalExpr syms spLst lhs
@@ -81,14 +84,76 @@ and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResu
         | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
 
 and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) =
-    "Match case evaluation" |> notImplementedYet     
+    match cases with
+    | [only] -> evalMatchCase syms spLst hg only
+    | _ -> "Multiple match statements" |> notImplementedYet
+
+and addNodesToSyms spLst (nLst : Node list) (nMap : Map<NodeId,UnboundNodeId>) (syms : Symbols) =
+    let nLst' : (Node*UnboundNodeId) list = nLst |> List.map (fun n -> n, Map.find n.id nMap)
+    let folder syms (n,ubnid) =
+        match syms with
+        | Error e -> e |> Error
+        | Ok syms' ->
+            match strFromMean ubnid with
+            | None -> "Unbound node id is not string variable" |> ImplementationError |> Error
+            | Some id ->
+                Symbols.set syms' {id=id; spLst=spLst} (n |> Node |> Value)
+           
+    List.fold folder (Ok syms) nLst'
+
+and addEdgesToSyms spLst (pg : UnboundGraph) (eLst : Edge list) (eMap : Map<Edge,UnboundEdgeId>) (syms : Symbols) =
+    let getEdgeSymbolId e =
+        let ubeid = Map.find e eMap
+        UnboundGraph.edge ubeid pg
+        |> fun ube -> ube.weight
+        |> Option.bind strFromMean
+    let eLst' : (Edge*Id option) list = eLst |> List.map (fun e -> e, getEdgeSymbolId e)
+    let folder syms (e:Edge,id) =
+        match syms with
+        | Error e -> e |> Error
+        | Ok syms' ->
+            match id with
+            | None -> syms' |> Ok
+            | Some id' ->
+                match e.weight with
+                | None -> "Unbound weighted edge was bound to unweighted edge" |> ImplementationError |> Error
+                | Some w ->
+                    Symbols.set syms' {id=id'; spLst=spLst} (w)
+    List.fold folder (Ok syms) eLst'
 
 and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
     match case with
     | CatchAll (where,bod,term) -> "Catch all cases" |> notImplementedYet
     | Pattern (pgExpr,where,bod,term) ->
         let pgRes = evalPatternGraph syms spLst pgExpr
-        "Unbound-bound subgraph-graph isomorphism not implemted" |> notImplementedYet        
+        match pgRes with
+        | Error e -> e |> Error
+        | Ok pg ->
+            let mappings = Graph.unboundSgiFirst hg pg |> Set.toList
+            match mappings with
+            // TODO: go onto next match
+            | [] -> "No matches exist in that graph" |> ValueError |> Error
+            // TODO: generalise this for all graphs
+            | (nMap,eMap) :: rest ->
+                let (g, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
+                match g with    
+                | Error e -> e |> Error
+                | Ok g' ->
+                    let symsWithSgElems =
+                        syms
+                        |> addNodesToSyms spLst (Graph.nodes g') revNMap
+                        |-> addEdgesToSyms spLst pg (Graph.edges g') revEMap
+                    match symsWithSgElems with
+                    | Error e -> e |> Error
+                    | Ok [] -> "The symbol table list cannot be empty inside pipeline" |> ImplementationError |> Error
+                    | Ok (stHd :: rest) ->
+                        match term with
+                        | Become _ -> "Become statements" |> notImplementedYet
+                        | Return ret ->
+                            evalFuncBody rest spLst stHd bod ret                    
+
+and idFromUnboundNode (n : UnboundNode) : Id option = n.nid |> strFromMean
+and ifFromUnboundEdge (e : UnboundEdge) : Id option = Option.bind strFromMean e.weight
 
 and evalPatternGraph syms spLst pgExpr : BilboResult<UnboundGraph> =
     match pgExpr with
@@ -239,6 +304,11 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
 and varAsString var =
     match var with
     | Var(str) -> str |> Some 
+    | _ -> None
+
+and strFromMean (mean : Meaning) =
+    match mean with
+    | Value(String str) -> str |> Some
     | _ -> None
 
 and isRules syms spLst lhs rhs =

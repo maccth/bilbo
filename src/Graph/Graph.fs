@@ -189,3 +189,24 @@ module UnboundGraph =
         empty
         |> addNodes n
         |> addEdges e
+
+    let bind (g : Graph) (ug : UnboundGraph) (nMap: Map<UnboundNodeId,NodeId>) (eMap : Map<UnboundEdgeId,EdgeId>) =
+        let mapNode (un : UnboundNode) = Map.find un.nid nMap |> fun id -> Graph.node id g, (id, un.nid)
+        let mapEdge (ueId : UnboundEdgeId) = Map.find ueId eMap |> fun id -> Graph.edge id g, (Graph.edge id g, ueId)
+        let mappedNodes, revNMap =
+            ug
+            |> nodes
+            |> List.map (fun n -> n |> mapNode)
+            |> List.unzip
+            |> fun (mN, revM) -> (mN, Map.ofList revM)
+        let mappedEdges, revEMap =
+            ug
+            |> idEdges
+            |> List.map (fst >> mapEdge)
+            |> List.unzip
+            |> fun (mE,revM) -> (mE, Map.ofList revM)
+        let sg =        
+            Graph.empty
+            |> Graph.addEdges mappedEdges
+            |-> Graph.addNodes mappedNodes
+        (sg, revNMap, revEMap)        
