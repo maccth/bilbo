@@ -143,10 +143,30 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
                     | Error e -> e |> Error
                     | Ok [] -> "The symbol table list cannot be empty inside pipeline" |> ImplementationError |> Error
                     | Ok (stHd :: rest) ->
-                        match term with
-                        | Become _ -> "Become statements" |> notImplementedYet
-                        | Return ret ->
-                            evalFuncBody rest spLst stHd bod ret                    
+                        match evalWhere (stHd :: rest) spLst where with
+                        | Error e -> e |> Error
+                        | Ok false ->
+                            // TODO: go onto next match
+                            "Where clause failed" |> ValueError |> Error
+                        | Ok true ->                             
+                            match term with
+                            | Become _ -> "Become statements" |> notImplementedYet
+                            | Return ret ->
+                                evalFuncBody rest spLst stHd bod ret                    
+
+and evalWhere syms spLst where =
+    match where with
+    | None -> true |> Ok
+    | Some e ->
+        match evalExpr syms spLst e with
+        // TODO: add 'in where clause' error once error lists have been implemented
+        | Error e -> e |> Error
+        | Ok (Value v) ->
+            match typeConvert CastBool v with
+            | Error e -> e |> Error
+            | Ok (Bool b) -> b |> Ok
+            | _ -> v |> typeStrValue |> nonBoolInWhereClause
+        | Ok mean -> mean |> typeStr |> nonBoolInWhereClause
 
 and evalPatternGraph syms spLst pgExpr : BilboResult<UnboundGraph> =
     match pgExpr with

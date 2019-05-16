@@ -112,3 +112,19 @@ let nonPStageOnEnpipeRhs typR =
     + "right-hand side but instead had " + typR +  "."
     |> TypeError
     |> Error
+
+let nonBoolInWhereClause typ =
+    "The value of a where clause must evaluate to a bool however it "
+    + "evaluated to a " + typ + "."
+    |> TypeError
+    |> Error
+
+let typeCastError typeFrom typeTo =
+    "Cannot convert type " + typeFrom + " to type " + typeTo
+    |> TypeError
+    |> Error
+
+let typeCastValueError typeFrom typeTo =
+    "Cannot convert this value of type " + typeFrom + " to type " + typeTo
+    |> ValueError
+    |> Error

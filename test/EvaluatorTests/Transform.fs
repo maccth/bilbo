@@ -126,6 +126,14 @@ let singleMatchMultipleParamTransformTests = [
     """, "Pipeline of multiple param transforms, applied partially"
 ]
 
+let singleMatchWithWhere = [
+    nodes + """
+    def weight(g) = match g | [a,x>,b] where x>10
+    g = [na,7>,nb]
+    a = g >> weight
+    """, "Should not match. Where clause fails"
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
