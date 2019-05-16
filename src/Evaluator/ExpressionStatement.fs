@@ -71,16 +71,13 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
     | Ok syms'' -> evalExpr syms'' spLst ret
 
 and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResult<Meaning> =
-    let matG,cases = mat
+    let gExpr,cases = mat
     let syms' = SymbolTable.empty :: syms
-    match matG with
-    | None -> "Implicit input transforms" |> notImplementedYet
-    | Some gExpr ->
-        let gRes = evalExpr syms' spLst gExpr
-        match gRes with
-        | Error e -> e |> Error
-        | Ok (Value(Graph g)) -> evalMatchCases syms' spLst cases g
-        | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
+    let gRes = evalExpr syms' spLst gExpr
+    match gRes with
+    | Error e -> e |> Error
+    | Ok (Value(Graph g)) -> evalMatchCases syms' spLst cases g
+    | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
 
 and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) =
     match cases with
@@ -94,7 +91,7 @@ and addNodesToSyms spLst (nLst : Node list) (nMap : Map<NodeId,UnboundNodeId>) (
         | Error e -> e |> Error
         | Ok syms' ->
             match strFromMean ubnid with
-            | None -> "Unbound node id is not string variable" |> ImplementationError |> Error
+            | None -> "Unbound node id is not a string variable" |> ImplementationError |> Error
             | Some id ->
                 Symbols.set syms' {id=id; spLst=spLst} (n |> Node |> Value)
            
@@ -150,9 +147,6 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
                         | Become _ -> "Become statements" |> notImplementedYet
                         | Return ret ->
                             evalFuncBody rest spLst stHd bod ret                    
-
-and idFromUnboundNode (n : UnboundNode) : Id option = n.nid |> strFromMean
-and ifFromUnboundEdge (e : UnboundEdge) : Id option = Option.bind strFromMean e.weight
 
 and evalPatternGraph syms spLst pgExpr : BilboResult<UnboundGraph> =
     match pgExpr with
@@ -212,15 +206,11 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) (ug : UnboundGraph) : Bil
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
     match pLine with
-    // | ParamStage ps :: pLine'->
-    //     let ps' = param :: ps
-    //     applyArgsToPipeline syms spLst pLine' ps'
     | [] -> param |> Ok
     | Transform(tDef, tst) :: pLineRest ->
-        // "Applying arg to transform pipelines" |> notImplementedYet
         let tName,tParams,preMatchBod,tMatch = tDef
         match tParams with
-        | [] -> "Zero param transforms" |> notImplementedYet
+        | [] -> zeroParamTransformError()
         | hd :: paramsLeft ->
             let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
             match tst' with
@@ -234,17 +224,13 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                     | Ok syms' ->
                         let res = evalMatchStatement syms' spLst tMatch
                         Result.bind (applyArgToPipeline syms spLst pLineRest) res
-                // | _ ->
-                //     // NOTE: not pure implementation of currying. 
-                //     // We don't move on in the pipeline until we the funciton has all its args)
-                //     ((fId, paramsLeft, bod, ret), fstUpdated)
-                //     |> Function
-                //     |> fun p -> p :: pLineRest
-                //     |> Pipeline
-                //     |> Value
-                //     |> Ok
-                    // let funcAsParam = ^^^
-                    // applyArgToPipeline syms spLst pLine' funcAsParam
+                | _ ->
+                    ((tName, paramsLeft,preMatchBod,tMatch), tstUpdated)
+                    |> Transform
+                    |> fun p -> p :: pLineRest
+                    |> Pipeline
+                    |> Value
+                    |> Ok         
     | Function(fDef, fst) :: pLineRest ->
         let fId, fParams, bod, ret = fDef
         match fParams with
@@ -261,22 +247,17 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                     | Error e -> e |> Error
                     | Ok param' -> applyArgToPipeline syms spLst pLineRest param'
                 | _ ->
-                    // NOTE: not pure implementation of currying. 
-                    // We don't move on in the pipeline until we the funciton has all its args)
                     ((fId, paramsLeft, bod, ret), fstUpdated)
                     |> Function
                     |> fun p -> p :: pLineRest
                     |> Pipeline
                     |> Value
                     |> Ok
-                    // let funcAsParam = ^^^
-                    // applyArgToPipeline syms spLst pLine' funcAsParam
 
 and applyArgsToPipeline syms spLst pLine args =
     match args with
-    | [] -> "Control should have passed onto single arg handler." |> ImplementationError |> Error
-    | [arg] ->
-        applyArgToPipeline syms spLst pLine arg
+    | [] -> "Control should have passed onto single argument handler." |> ImplementationError |> Error
+    | [arg] -> applyArgToPipeline syms spLst pLine arg
     | arg :: rest ->
         let evalRes = applyArgToPipeline syms spLst pLine arg
         match evalRes with
@@ -295,12 +276,9 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
     | _, Error e -> e |> Error
     | Ok lMean, Ok rMean ->
         match lMean, rMean with
-        | ParamList(pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine pLst
+        | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine pLst
         | _, Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
-        | _ ->
-            "The enpipe operator requires a function, transform or pipeline on the right-hand side."
-            |> TypeError
-            |> Error
+        | _ -> rMean |> typeStr |> nonPStageOnEnpipeRhs
 
 and varAsString var =
     match var with

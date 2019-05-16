@@ -63,6 +63,11 @@ let zeroParamFunctionError() =
     |> ImplementationError
     |> Error
 
+let zeroParamTransformError() =
+    "Transforms with no paramaters are not valid and this should be caught at parse time."
+    |> ImplementationError
+    |> Error
+
 let notImplementedYet thing =
     thing + " has not been implemented yet"
     |> ImplementationError
@@ -101,3 +106,9 @@ let nonNodeInPath typ =
     mes
     |> TypeError
     |> Error 
+
+let nonPStageOnEnpipeRhs typR =
+    "The enpipe operator requires a function, transform or pipeline on the "
+    + "right-hand side but instead had " + typR +  "."
+    |> TypeError
+    |> Error

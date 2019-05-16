@@ -65,7 +65,7 @@ let tuple6 a b c d e f =
 
 let pipe6 a b c d e f func =
     tuple6 a b c d e f
-    |>> func
+    |>> fun (a,b,c,d,e,f) -> func a b c d e f
 
 /// `chance [p1; p2; p3]` is equivalent to `choice [attempt p1; attempt p2; p3]`
 let chance pLst =
@@ -427,10 +427,34 @@ let pMatchCase fname =
     let p = pAll <|> pPat
     p <?> "match case"
 
-let pMatchStatement fname =
-    let cases = (str "|") >>. sepBy1 (pMatchCase fname) (str "|")
-    let p = pipe3 (keyw "match") (opt pExpr) cases (fun _m e c -> (e,c) |> MatchStatement)
-    p <?> "match statement"
+let pMatchCases fname = (str "|") >>. sepBy1 (pMatchCase fname) (str "|")
+
+let pMatchStatement fname : Parser<MatchStatement,unit>=
+    pipe3 (keyw "match") (pExpr) (pMatchCases fname) (fun _m e c -> (e,c))
+
+let pExplicitTransform fname =
+    let paramCsv = csv1 pId <?> "input parameters for transform"
+    let paramBrac = brackets paramCsv <|> paramCsv 
+    let exprs = many (pExprStatementL fname)
+    let mat = pMatchStatement fname
+    pipe6 (keyw "def") pId paramBrac (str "=") exprs mat
+        (fun _ name paramLst _ exprs mat -> (name,paramLst,exprs,mat))
+
+// TODO: Implicit (point-free / unix-style) transforms. Not for this version of Bilbo. Maybe v2.
+// Code sketch of parsers...
+// let pImplicitMatch fname : Parser<ImplicitMatch,unit> =
+//     (keyw "match") >>. (pMatchCases fname)
+// 
+// let pImplicitTransform fname =
+//     let exprs = many (pExprStatementL fname)
+//     let mat = pImplicitMatch fname
+//     pipe5 (keyw "def") pId (ws |> brackets |> opt) exprs mat
+//         (fun _ name _ exprs mat -> (name,exprs,mat) |> ImplicitTransform)
+
+let pTransformDef fname =
+    pExplicitTransform fname <?> "transform definition"
+    |> Position.attachPos fname
+    |> Position.bind TransformDefL
 
 let defStart fname =
     let paramCsv = csv pId
@@ -438,16 +462,6 @@ let defStart fname =
     let exprs = many (pExprStatementL fname)
     pipe5 (keyw "def") pId paramBrac (str "=") exprs 
         (fun _ name paramLst _ exprs -> (name, paramLst, exprs))
-
-let pTransformDef fname =
-    let matches = pMatchStatement fname
-    let cons (name, paramLst, exprs) matches =
-        (name, paramLst, exprs, matches) |> TransformDef 
-    let p = pipe2 (defStart fname) matches cons
-    let p' = p <?> "transform definition"
-    p'
-    |> Position.attachPos fname
-    |> Position.bind TransformDefL
 
 let pFunctionDef fname =
     let cons (name, paramLst, exprs) ret =

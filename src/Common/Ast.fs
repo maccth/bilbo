@@ -117,14 +117,21 @@ and EdgeOp =
     | Left of Expr Option
     | Bidir of Expr Option
 
-and TransformDef =
-    Id * (Param list) * (ExprStatementL list) * MatchStatement
+and TransformDef = Id * (Param list) * (ExprStatementL list) * MatchStatement
+
+    // TODO: Implicit (point-free / unix-style) transforms. Not for this version of Bilbo. Maybe v2.
+    // Code sketch of types...
+    // and TransformDef =   
+    //     | ExplicitTransform of Id * (Param list) * (ExprStatementL list) * ExplicitMatch
+    //     | ImplicitTransform of Id * (ExprStatementL list) * ImplicitMatch
+    // 
+    // and ImplicitMatch = MatchCase list
+    // and ExplicitMatch = Expr * MatchCase list
 
 and FunctionDef =
     Id * (Param list) * (ExprStatementL list) * Expr
 
-and MatchStatement =
-    Expr Option * MatchCase list
+and MatchStatement = Expr * MatchCase list
 
 and MatchCase =
     | Pattern of PGraphExpr * WhereClause Option * ExprStatementL list * TerminatingStatement

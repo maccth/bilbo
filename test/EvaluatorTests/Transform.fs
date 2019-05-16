@@ -32,6 +32,8 @@ let retMidOut = """
 
 let retWeight = "def weight(g) = match g | [r,s>,t] -> return s"
 
+let retWeightAddN = "def weightAddN(n,g) = match g | [a,x>,b] -> return x+n"
+
 let add100 = "def add100(n) = return n+100"
 
 let singleMatchSingleParamTransformTests = [
@@ -99,6 +101,31 @@ let singleMatchSingleParamTransformTests = [
     """, "Return weight found in subgraph and piped through 2 stage pipeline.";
 ]
 
+let singleMatchMultipleParamTransformTests = [
+    nodes + retWeightAddN + """
+    a = 2234
+    g = [nc,a-10>,nd,ne]
+    b = (10,g) >> weightAddN
+    """, "Multiple param transform, uses non-graph param in return, transform is never partial.";
+
+    nodes + retWeightAddN  + """
+    a = 2234
+    n = 86312
+    t = 86312 >> weightAddN
+    g = [nc,a-n>,nd,ne]
+    b = g >> t
+    """, "Multiple param transform, uses non-graph param in return, transform applied partially."
+
+    nodes + """
+    def incWeight(g,n) = match g | [a,x>,b] -> return [a,x+n>,b]
+    g = [na,100>,nb]
+    p = g >> incWeight |> incWeight
+    p' = 20 >> p
+    a = 30 >> p'
+    b = [na,100+20+30>,nb]
+    """, "Pipeline of multiple param transforms, applied partially"
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -107,9 +134,16 @@ let quickTwinVarTests tLst =
     |> List.map (fun (c,d) -> quickTwinVarTest c d)
     |> twinVarTests
 
-[<Tests>]
+[<FTests>]
 let test =
     let name =
         "Single param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchSingleParamTransformTests |> quickTwinVarTests)
+
+[<FTests>]
+let test2 =
+    let name =
+        "Multiple param transforms with explict matching."
+        + "No where statements and a single match case that will match a single subgraph."
+    testList name (singleMatchMultipleParamTransformTests |> quickTwinVarTests)

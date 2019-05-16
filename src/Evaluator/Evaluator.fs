@@ -48,9 +48,8 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
                 Symbols.set syms {id=fName; spLst=rnLst} f
         attachLoc loc syms'
     | TransformDefL(loc, tDef) ->
-        let tName,tParams,tBod,tMatch = tDef
+        let tName,_,_,_ = tDef
         let tst = Symbols.head syms
-        // TODO: distinguish between 0 param transforms and paramed transforms
         let t = (tDef, tst) |> Transform |> fun t -> [t] |> Pipeline |> Value
         let syms' = Symbols.set syms {id=tName; spLst=rnLst} t
         attachLoc loc syms'
