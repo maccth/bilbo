@@ -486,7 +486,11 @@ let pTypeDef fname =
 let pImport fname =
     let file = keyw "import" >>. pStr
     let nspace = keyw "as" >>. pId
-    let p = file .>>. nspace |>> Import
+    let cons fp sp =
+        match sp with
+        | None -> fp |> ImportTo
+        | Some spName ->  (fp, spName) |> ImportAs
+    let p = pipe2 file (opt nspace) cons
     let p' = p <?> "import"
     p'
     |> Position.attachPos fname
@@ -525,19 +529,27 @@ let getAst reply fSucc fFail : BilboResult<Program>=
         fFail msg err u
 
 let rec resolveImports (astIn : ProgramUnit list) : BilboResult<Program> =
-    let rec resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
+    let rec extendAst loc imLine astRest ast fp nLst  =
+        let importedLines = pBilboFile fp nLst
+        match importedLines with
+        | FSharp.Core.Ok importedLines' -> 
+            // Keep import statement for semantic analysis to record the namespace
+            let importLine = imLine
+            // TODO: Construct AST in reverse by prepending and then reverse at the end
+            let astOut' = List.append ast (importLine :: importedLines')
+            resolveImports' astRest astOut'
+        | FSharp.Core.Error e ->
+            e |> FSharp.Core.Error
+    and resolveImports' (astIn : ProgramUnit list) (astOut : ProgramUnit list) =
         match astIn with
-        |  (nLst, ImportL (loc, (fp, nsp))) :: rest ->
-            let importedLines = pBilboFile fp (Name nsp :: nLst)
-            match importedLines with
-            | FSharp.Core.Ok importedLines' -> 
-                // Keep import statement for semantic analysis to record the namespace
-                let importLine = (nLst, ImportL (loc, Import(fp, nsp)))
-                // TODO: Construct AST in reverse by prepending and then reverse at the end
-                let astOut' = List.append astOut (importLine :: importedLines')
-                resolveImports' rest astOut'
-            | FSharp.Core.Error e ->
-                e |> FSharp.Core.Error
+        |  (nLst, ImportL (loc,im)) :: rest ->
+            match im with
+            | ImportTo fp ->
+                let imLine = (nLst, ImportL (loc, ImportTo fp))
+                extendAst loc imLine rest astOut fp nLst
+            | ImportAs (fp, nsp) ->
+                let imLine = (nLst, ImportL (loc, ImportAs (fp, nsp)))
+                extendAst loc imLine rest astOut fp (Name nsp :: nLst)
         | line :: rest ->
             resolveImports' (rest) (astOut @ [line])
         | [] -> astOut |> FSharp.Core.Ok

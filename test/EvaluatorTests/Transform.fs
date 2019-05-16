@@ -162,21 +162,21 @@ let quickTwinVarTests tLst =
     |> List.map (fun (c,d) -> quickTwinVarTest c d)
     |> twinVarTests
 
-[<FTests>]
+[<Tests>]
 let test =
     let name =
         "Single param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchSingleParamTransformTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test2 =
     let name =
         "Multiple param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchMultipleParamTransformTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test3 =
     let name =
         "Same node appears more than once in pattern graph"

@@ -30,9 +30,13 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
     | ExprStatementL (loc, e) ->
         evalExprStatement syms rnLst e
         |> attachLoc loc
-    | ImportL (loc, (fp, alias)) ->
-        let syms' = Symbols.set syms {spLst=nLst ; id=alias;} ((Namespace, SymbolTable.empty) |> Space)
-        attachLoc loc syms'
+    | ImportL (loc, im) ->
+        let syms' =
+            match im with
+            | ImportAs (_fp,alias) ->
+                Symbols.set syms {spLst=nLst ; id=alias} ((Namespace, SymbolTable.empty) |> Space)
+            | ImportTo (_fp) -> syms |> Ok       
+        attachLoc loc syms' 
     | FunctionDefL(loc, fDef) ->
         let fName,fParams,fBod,fRet = fDef
         let fst = Symbols.head syms

@@ -23,7 +23,9 @@ and Statement =
     | ExprStatementL of ExprStatementL
     | ImportL of Loc * Import
 
-and Import = FilePath * string
+and Import =
+    | ImportTo of FilePath
+    | ImportAs of FilePath * string
     
 and TypeDef = TypeName * Attribute list
     
@@ -118,15 +120,14 @@ and EdgeOp =
     | Bidir of Expr Option
 
 and TransformDef = Id * (Param list) * (ExprStatementL list) * MatchStatement
-
-    // TODO: Implicit (point-free / unix-style) transforms. Not for this version of Bilbo. Maybe v2.
-    // Code sketch of types...
-    // and TransformDef =   
-    //     | ExplicitTransform of Id * (Param list) * (ExprStatementL list) * ExplicitMatch
-    //     | ImplicitTransform of Id * (ExprStatementL list) * ImplicitMatch
-    // 
-    // and ImplicitMatch = MatchCase list
-    // and ExplicitMatch = Expr * MatchCase list
+// TODO: Implicit (point-free / unix-style) transforms. Not for this version of Bilbo. Maybe v2.
+// Code sketch of types...
+// and TransformDef =   
+//     | ExplicitTransform of Id * (Param list) * (ExprStatementL list) * ExplicitMatch
+//     | ImplicitTransform of Id * (ExprStatementL list) * ImplicitMatch
+// 
+// and ImplicitMatch = MatchCase list
+// and ExplicitMatch = Expr * MatchCase list
 
 and FunctionDef =
     Id * (Param list) * (ExprStatementL list) * Expr
