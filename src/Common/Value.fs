@@ -24,6 +24,11 @@ and Value =
     | Graph of Graph
     // TODO: Pipelines with <|>
 
+and ValueId = {
+    spLst   : SpaceId list
+    id      : Id
+}
+
 and Pipeline = PStage list
 and ParamList = Meaning list
 
@@ -50,21 +55,22 @@ and Edge = {
     target  : Node
 }
 
-and Graph = {
-    // node id -> node load
-    nodes   : Map<NodeId, NodeLoad>
-    edges   : Map<EdgeId, Edge>
-    edgeIdCount : EdgeId
+and EdgeInfo = {
+    source  : NodeId
+    weight  : EdgeWeight
+    target  : NodeId
+    id      : EdgeId
 }
 
-and ValueId = {
-    spLst   : SpaceId list
-    id      : Id
+and Graph = {
+    nodes   : Map<NodeId, NodeLoad>
+    edges   : Map<EdgeId, EdgeInfo>
+    edgeIdCount : EdgeId
 }
 
 and UnboundNodeId = NodeId
 and UnboundEdgeId = EdgeId
-and UnboundEdgeWeight = Meaning option
+and UnboundEdgeWeight = EdgeWeight
 
 and UnboundNode = {
     nid : UnboundNodeId
@@ -76,8 +82,15 @@ and UnboundEdge = {
     target  : UnboundNode 
 }
 
+and UnboundEdgeInfo = {
+    source  : UnboundNodeId
+    weight  : UnboundEdgeWeight
+    target  : UnboundNodeId
+    id      : EdgeId
+}
+
 and UnboundGraph = {
     nodes   : Set<UnboundNode>
-    edges   : Set<UnboundEdgeId*UnboundEdge>
+    edges   : Map<UnboundEdgeId,UnboundEdgeInfo>
     edgeIdCount : EdgeId      
 }

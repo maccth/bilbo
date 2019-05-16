@@ -5,11 +5,6 @@ open Bilbo.Common.Value
 open Bilbo.Graph.Graph
 open Bilbo.Tests.GraphTests.Helpers
 
-let a = nd1 "a"
-let b = nd1 "b"
-let c = nd1 "c"
-let d = nd1 "d"
-
 let eLst = [
     (a, Some 40,    b) // 0
     (a, Some 200,   b) // 1
@@ -19,16 +14,17 @@ let eLst = [
     (d, None,       a) // 5
 ]
 
+
 let gExp : Graph =
     {
-        nodes = ["a"; "b"; "c"; "d"] |> List.map (fun id -> (id |> bStr, b1)) |> Map.ofList
+        nodes = ["a",10; "b",20; "c",30; "d",40] |> List.map (fun (id,ld) -> (id |> bStr, ld |> bInt)) |> Map.ofList
         edges = Map.ofList [
-                (0, {Edge.source=a; weight=Some (bInt 40); target=b})
-                (1, {Edge.source=a; weight=Some (bInt 200); target=b})
-                (2, {Edge.source=b; weight=Some (bInt 15); target=c})
-                (3, {Edge.source=b; weight=None; target=d})
-                (4, {Edge.source=c; weight=Some (bInt 30); target=a})
-                (5, {Edge.source=d; weight=None; target=a})
+                (0, {EdgeInfo.source=bStr "a"; weight=Some (bInt 40);   target=bStr "b"; id=0})
+                (1, {EdgeInfo.source=bStr "a"; weight=Some (bInt 200);  target=bStr "b"; id=1})
+                (2, {EdgeInfo.source=bStr "b"; weight=Some (bInt 15);   target=bStr "c"; id=2})
+                (3, {EdgeInfo.source=bStr "b"; weight=None;             target=bStr "d"; id=3})
+                (4, {EdgeInfo.source=bStr "c"; weight=Some (bInt 30);   target=bStr "a"; id=4})
+                (5, {EdgeInfo.source=bStr "d"; weight=None;             target=bStr "a"; id=5})
             ]
         edgeIdCount = 6
     }

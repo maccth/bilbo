@@ -62,8 +62,10 @@ module Graph =
         g
         |> addNode e.source
         |-> addNode e.target
-        |=> fun g' -> g',(Map.add id e g'.edges)
-        |=> fun (g',edges') -> {g' with edges=edges'; edgeIdCount=id+1}
+        |=> fun g' ->
+            let eInfo = {EdgeInfo.source=e.source.id; weight=e.weight; target=e.target.id; id=id}
+            let edges' = Map.add id eInfo  g'.edges
+            {g' with edges=edges'; edgeIdCount=id+1}
 
     let addEdges (eLst : Edge list) (g : Graph) =
         let folder (g : BilboResult<Graph>) edge =
@@ -77,9 +79,14 @@ module Graph =
         |> Map.find id
         |> fun load -> {id=id; load=load}
 
-    let edge id (g : Graph) =
+    let edge id (g : Graph) : Edge =
         g.edges
         |> Map.find id
+        |> fun eInfo -> {
+            source = node eInfo.source g
+            weight = eInfo.weight
+            target = node eInfo.target g
+        }
    
     let nodes (g : Graph) =
         g.nodes
@@ -89,6 +96,7 @@ module Graph =
     let idEdges (g : Graph) =
         g.edges
         |> Map.toList
+        |> List.map (fun (eid,_) -> eid, edge eid g)
 
     let edges (g : Graph) : Edge list =
         idEdges g
@@ -105,18 +113,19 @@ module Graph =
         // Implements
         //  e = e1 - e2
         //  n = n1 - (n2 - nodes(e2))
+        let e1 = edges g1
         let e2 = edges g2
+        let e = e1 /-/ e2
         let n1 = nodes g1 |> Set.ofList
         let n2 = nodes g2 |> Set.ofList
         let ne2 : Set<Node> =
             e2
             |> List.collect (fun e -> [e.source;e.target]) 
             |> Set.ofList
-        let e = edges g1 /-/ e2
         let n = n1 - (n2 - ne2) |> Set.toList
-        let gN = addNodes n empty
-        let gNE = Result.bind (fun g -> addEdges e g) gN
-        gNE
+        empty
+        |> addNodes n
+        |-> addEdges e
         
     let equal (g1 : Graph) (g2 : Graph) =
         // The graphs will only have unique nodes, the set removes the issue of ordering
@@ -131,7 +140,7 @@ module Graph =
 
 module UnboundGraph =
 
-    let empty : UnboundGraph = {nodes=Set.empty; edges=Set.empty; edgeIdCount=0}
+    let empty : UnboundGraph = {nodes=Set.empty; edges=Map.empty; edgeIdCount=0}
 
     let addNode (n : UnboundNode) (ug : UnboundGraph) : UnboundGraph =
         {ug with nodes = Set.add n ug.nodes}
@@ -144,24 +153,30 @@ module UnboundGraph =
         ug
         |> addNode e.source
         |> addNode e.target
-        |> fun ug' -> ug',(Set.add (id,e)  ug'.edges)
-        |> fun (ug'',edges') -> {ug'' with edges=edges'; edgeIdCount=id+1}
+        |> fun ug' ->
+            let eInfo = {source=e.source.nid; weight=e.weight; target=e.target.nid; id=id}
+            let edges' = Map.add id eInfo ug.edges
+            {ug' with edges=edges'; edgeIdCount=id+1}
         
     let addEdges (eLst : UnboundEdge list) (ug : UnboundGraph) : UnboundGraph =
         List.fold (fun ug' e -> addEdge e ug') ug eLst
 
     let edge (id : UnboundEdgeId) (ug : UnboundGraph) =
         ug.edges
-        |> Set.toList
-        |> Map.ofList
         |> Map.find id
-    
+        |> fun eInfo -> {
+            source = {nid=eInfo.source}
+            weight = eInfo.weight
+            target = {nid=eInfo.target}
+        }
+
     let nodes (ug : UnboundGraph) =
         ug.nodes |> Set.toList
 
     let idEdges (ug : UnboundGraph) =
         ug.edges
-        |> Set.toList
+        |> Map.toList
+        |> List.map (fun (eid,_) -> eid, edge eid ug)
     
     let edges (ug : UnboundGraph) =
         ug
@@ -177,14 +192,15 @@ module UnboundGraph =
 
     let subtractGraphs (ug1 : UnboundGraph) (ug2 : UnboundGraph) =
         // Also implements Bilbo graph subtraction
+        let e1 = edges ug1 
         let e2 = edges ug2
+        let e = e1 /-/ e2
         let n1 = ug1.nodes
         let n2 = ug2.nodes
         let ne2 =
             e2
             |> List.collect (fun e -> [e.source;e.target]) 
             |> Set.ofList
-        let e = edges ug1 /-/ e2
         let n = n1 - (n2 - ne2) |> Set.toList
         empty
         |> addNodes n
