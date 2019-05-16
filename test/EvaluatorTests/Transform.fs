@@ -134,6 +134,26 @@ let singleMatchWithWhere = [
     """, "Should not match. Where clause fails"
 ]
 
+let singleMatchNodeMatchesMultipleTimes = [
+    nodes + """
+    def tran(g) = match g | [a,>,b,>,a,>,c] -> return b
+    a = [na,>,nb,>,na,>,nc] >> tran
+    b = nb
+    """, "Node matches twice in pattern. I";
+
+    nodes + """
+    def tran(g) = match g | [a,>,b,>,a,>,c] -> return b
+    a = [nb,>,nc,>,nb,>,nd] >> tran
+    b = nc
+    """, "Node matches twice in pattern. II";
+
+    nodes + """
+    def tran(g) = match g | [a,<>,b,>,c] -> return b
+    a = [nc,<>,nd,>,na] >> tran
+    b = nd
+    """, "Node matches twice in pattern. III"
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -155,3 +175,9 @@ let test2 =
         "Multiple param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchMultipleParamTransformTests |> quickTwinVarTests)
+
+[<FTests>]
+let test3 =
+    let name =
+        "Same node appears more than once in pattern graph"
+    testList name (singleMatchNodeMatchesMultipleTimes |> quickTwinVarTests)
