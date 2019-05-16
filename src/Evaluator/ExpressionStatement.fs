@@ -11,7 +11,6 @@ open Bilbo.Evaluator.BinaryExpressions
 open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
-open Bilbo.Common
 
 let rec evalBinOperands syms spLst lhs rhs =
     let valL = evalExpr syms spLst lhs
@@ -171,14 +170,16 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) (ug : UnboundGraph) : Bil
     let evalPgEdgeOp ln edgeOp rn =
         let w : BilboResult<UnboundEdgeWeight> =
             match edgeOp with
-            | Left None | Right None | Bidir None -> None |> Ok
+            | Left None | Right None | Bidir None ->
+                None |> Ok
             | Left (Some we) | Right (Some we) | Bidir (Some we) ->
-                evalExprWithinPg we
-                |> Result.bind (Some >> Ok)
+                we
+                |> evalExprWithinPg
+                |=> Some
         match w, edgeOp with
         | Error e, _  -> e |> Error
-        | Ok w', Left _ -> [edge ln w' rn] |> Ok            
-        | Ok w', Right _ -> [edge rn w' ln] |> Ok
+        | Ok w', Right _ -> [edge ln w' rn] |> Ok            
+        | Ok w', Left _ -> [edge rn w' ln] |> Ok
         | Ok w', Bidir _ -> [edge ln w' rn; edge rn w' ln] |> Ok
     match pe with
     | PathComp _ -> "Path comprehensions in pattern graph will not be implemented" |> notImplementedYet
