@@ -1,8 +1,7 @@
 module Bilbo.Evaluator.Print
 
-open Bilbo.Common.Ast
+open Bilbo.Common.Extensions
 open Bilbo.Common.Value
-open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Common.Type
 open Bilbo.Graph.Graph
@@ -21,7 +20,7 @@ let rec print (mean : Meaning) : BilboResult<string> =
         | Bool b -> "False" |> Ok
         | Pipeline _ -> mean |> typeStr |> printError 
         | Node n -> nodePrint n
-        | Graph _ -> "Graph printing" |> notImplementedYet
+        | Graph g -> graphPrint g
         | Type _ -> "Type definition printing" |> notImplementedYet
  
 and nodePrint n =
@@ -56,3 +55,54 @@ and objPrint tName (st : SymbolTable) =
         | Ok s, Ok s2 -> tName + "(" + s + s2 + ")" |> Ok
         | Error e, _ -> e |> Error
         | _, Error e -> e |> Error
+
+and edgePrint (e : Edge) =
+    let s = nodePrint e.source
+    let t = nodePrint e.target
+    let edgeW =
+        match e.weight with
+        | None -> ">" |> Ok
+        | Some w ->
+            w
+            |> print
+            |=> fun wStr -> wStr + ">"
+    match s,edgeW,t with
+    | Error e, _, _ 
+    | _, Error e, _
+    | _, _, Error e -> e |> Error
+    | Ok s', Ok w', Ok t' ->
+        "[" + s' + ", " + w' + ", " + t' + "]" |> Ok
+
+and graphPrint (g : Graph) =
+    // First print print the edges then the nodes that do not appear in any edges (as a single path)
+    // So [a,>,b,c] should be printed as [a,>,b] + [c]
+    // and [a,>,b,c,d] as [a,>,b] + [c,d]
+    let strFold join lst =
+        let folder join prevPart elem  =
+            match prevPart, elem with
+            | Error e, _ -> e |> Error
+            | _, Error e -> e |> Error
+            | Ok s1, Ok s2 -> s1 + join + s2 |> Ok
+        match lst with
+        | [one] -> one
+        | first :: rest -> List.fold (folder join) first rest
+        | _ -> List.fold (folder join) (Ok "") lst
+    let plusFold = strFold " + "
+    let commaFold = strFold ", "
+    let edges = Graph.edges g |> List.sort
+    let edgeStrs = edges |> List.map edgePrint
+    let edgeStr = plusFold edgeStrs
+    let endPoints = edges |> List.collect (fun e -> [e.source; e.target]) |> Set.ofList
+    let nodeStrs = (Graph.nodes g |> set) - endPoints |> Set.toList |> List.sort |> List.map nodePrint
+    let nodeStr =
+        let addBrac s = "["+s+"]"|> Ok
+        match nodeStrs with
+        | [one] -> Result.bind addBrac one
+        | _ ->
+            nodeStrs
+            |> commaFold
+            |-> (fun s -> "["+s+"]"|> Ok)
+    match edgeStr, nodeStr with
+    | Ok "", _ -> nodeStr
+    | _, Ok "" -> edgeStr
+    | _ -> plusFold [edgeStr; nodeStr]
