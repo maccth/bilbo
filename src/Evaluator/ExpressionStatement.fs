@@ -125,20 +125,20 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
         match pgRes with
         | Error e -> e |> Error
         | Ok pg ->
-            let mappings = Graph.unboundSgiFirst hg pg |> Set.toList
+            let mappings = Graph.unboundSgiAll hg pg |> Set.toList
             match mappings with
             // TODO: go onto next match
             | [] -> "No matches exist in that graph" |> ValueError |> Error
             // TODO: generalise this for all graphs
             | (nMap,eMap) :: rest ->
-                let (g, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
-                match g with    
+                let (sgRes, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
+                match sgRes with    
                 | Error e -> e |> Error
-                | Ok g' ->
+                | Ok sg ->
                     let symsWithSgElems =
                         syms
-                        |> addNodesToSyms spLst (Graph.nodes g') revNMap
-                        |-> addEdgesToSyms spLst pg (Graph.edges g') revEMap
+                        |> addNodesToSyms spLst (Graph.nodes sg) revNMap
+                        |-> addEdgesToSyms spLst pg (Graph.edges sg) revEMap
                     match symsWithSgElems with
                     | Error e -> e |> Error
                     | Ok [] -> "The symbol table list cannot be empty inside pipeline" |> ImplementationError |> Error
@@ -150,9 +150,28 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
                             "Where clause failed" |> ValueError |> Error
                         | Ok true ->                             
                             match term with
-                            | Become _ -> "Become statements" |> notImplementedYet
-                            | Return ret ->
-                                evalFuncBody rest spLst stHd bod ret                    
+                            | Become bExpr -> evalBecome (stHd :: rest) spLst hg sg bExpr
+                            | Return ret -> evalFuncBody rest spLst stHd bod ret                    
+
+and evalBecome syms spLst hg sg bExpr =
+    let bgRes = evalExpr syms spLst bExpr
+    match bgRes with
+    | Error e -> e |> Error
+    | Ok (Value(Graph bg)) ->
+        let eR = Graph.edges bg |> Set.ofList
+        let eL = Graph.edges sg 
+        let eHg = Graph.edges hg 
+        let eOut = (eHg /-/ eL) |> Set.ofList |> (+) eR |> Set.toList 
+        let nR = Graph.nodes bg |> Set.ofList
+        let nL = Graph.nodes sg |> Set.ofList
+        let nHg = Graph.nodes hg |> Set.ofList
+        let nOut = nHg - (nL - nR) + nR |> Set.toList
+        Graph.empty
+        |> Graph.addEdges eOut
+        |-> Graph.addNodes nOut
+        |=> Graph
+        |=> Value
+    | _ -> "special [+] and [-] graphs" |> notImplementedYet    
 
 and evalWhere syms spLst where =
     match where with

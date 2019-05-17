@@ -29,17 +29,20 @@ let A = ndSi "A" 1
 let B = ndSi "B" 2
 let C = ndSi "C" 3
 let D = ndSi "D" 4
+let E = ndSi "E" 5
 
 let a = ndSi "a" 10
 let b = ndSi "b" 20
 let c = ndSi "c" 30
 let d = ndSi "d" 40
+let e = ndSi "e" 50
 
 // The unbound equivalent nodes for pattern graphs
 let a' = und "a"
 let b' = und "b"
 let c' = und "c"
 let d' = und "d"
+let e' = und "e"
 
 let (|-->) l r =
     l |-> r

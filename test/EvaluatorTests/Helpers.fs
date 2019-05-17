@@ -4,6 +4,7 @@ open Expecto
 open Bilbo.Common.Value
 open Bilbo.Parser.Parser
 open Bilbo.Evaluator.Evaluator
+open Bilbo.Graph.Graph
 open Bilbo.Common.SymbolTable
 
 let oneVarSyms id mean : Symbols =
@@ -43,6 +44,11 @@ let singleVarTest testData =
 let singleVarTests testDataLst =
     testDataLst |> List.map singleVarTest
 
+let graphEquals (gotG : Graph) (expG : Graph) =
+    let nodes = Graph.nodes >> List.sort
+    let edges = Graph.edges >> List.sort
+    Expect.equal (nodes gotG, edges gotG) (nodes expG, edges expG) "Graph equality"
+
 let runTwinVarTest codeStr var1 var2 =
     let gotSymsRes = codeStr |> bilboStringParser |> bilboEvaluator
     match gotSymsRes with
@@ -51,6 +57,7 @@ let runTwinVarTest codeStr var1 var2 =
         let mean1Res = Symbols.find gotSyms {id=var1; spLst=[]}
         let mean2Res = Symbols.find gotSyms {id=var2; spLst=[]}
         match mean1Res, mean2Res with
+        | Ok (Value(Graph g1)), Ok (Value(Graph(g2))) -> graphEquals g1 g2
         | Ok m1, Ok m2 -> Expect.equal m1 m2 ""
         | Error e, _ 
         | _, Error e -> failwithf "Test failed. %A" e

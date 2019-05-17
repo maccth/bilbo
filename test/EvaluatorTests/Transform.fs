@@ -30,13 +30,33 @@ let retMidOut = """
         | [x,<,y,>,z] -> return y
 """
 
-let retWeight = "def weight(g) = match g | [r,s>,t] -> return s"
+let retWeight = """
+    def weight(g) = match g | [r,s>,t] -> return s
+"""
 
-let retWeightAddN = "def weightAddN(n,g) = match g | [a,x>,b] -> return x+n"
+let retWeightAddN = """
+    def weightAddN(n,g) = match g | [a,x>,b] -> return x+n
+"""
 
-let add100 = "def add100(n) = return n+100"
+let add100 = """
+    def add100(n) = return n+100
+"""
+
+let becSwap = """
+    def swap(g) = match g | [a,>,b] -> become [a,<,b]
+"""
+
+let becSwapW = """
+    def swapW(g) = match g | [a,x>,b] -> become [a,<x,b]
+"""
 
 let singleMatchSingleParamTransformTests = [
+    nodes + """
+    def empty(g) = match g | [] -> return 100
+    a = 100
+    b = [na] >> empty
+    """, "Match on empty graph, return int";
+
     retNode + """
     a = "aNode"::23984
     b = [a] >> node
@@ -85,6 +105,12 @@ let singleMatchSingleParamTransformTests = [
     b = 200
     a = [na,b>,nb] >> weight
     """, "Return weight found in subgraph.";
+
+    nodes + """
+    def biWeight(g) = match g | [a,<x>,b] -> return x
+    b = 200
+    a = [na,<>,nb,<b>,nc,>,nd] >> biWeight
+    """, "Return weight, uses <> in pattern graph.";
 
     nodes + add100 + """
     def weightAdd(g) = match g | [a,x>,b] -> return x >> add100
@@ -154,6 +180,33 @@ let singleMatchNodeMatchesMultipleTimes = [
     """, "Node matches twice in pattern. III"
 ]
 
+let singleMatchBecomeTests = [
+    nodes + becSwap + """
+    g = [na,>,nb]
+    a = g >> swap
+    b = [na,<,nb]
+    """, "Become test. No other edges or nodes. Equivalent to return."
+
+    nodes + becSwap + """
+    g = [na,>,nb,nc,nd]
+    a = g >> swap
+    b = [na,<,nb,nc,nd]
+    """, "Become test. Edge swap with no other edges but other nodes."
+
+    nodes + becSwapW + """
+    g = [na,>,nb,40>,nc,<>,nd]
+    a = g >> swapW
+    b = [na,>,nb,<40,nc,<>,nd]
+    """, "Become test. Edge swap with other edges but no other (non-endpoint) nodes."
+
+
+    nodes + becSwapW + """
+    g = [ne,nf,na,>,nb,40>,nc,<>,nd]
+    a = g >> swapW
+    b = [ne,nf,na,>,nb,<40,nc,<>,nd]
+    """, "Become test. Edge swap with other edges and other nodes."
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -178,6 +231,10 @@ let test2 =
 
 [<Tests>]
 let test3 =
-    let name =
-        "Same node appears more than once in pattern graph"
+    let name = "Same node appears more than once in pattern graph"
     testList name (singleMatchNodeMatchesMultipleTimes |> quickTwinVarTests)
+
+[<Tests>]
+let test4 =
+    let name = "Single match become tests"
+    testList name (singleMatchBecomeTests |> quickTwinVarTests)
