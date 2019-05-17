@@ -566,7 +566,7 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | _ ->
         "Other expression types"
         |> notImplementedYet
-
+        
 and consVid syms spLst e : BilboResult<ValueId> =
     match e with
     | Var v -> {spLst=spLst; id=v} |> Ok

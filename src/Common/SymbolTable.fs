@@ -24,7 +24,7 @@ module SymbolTable =
             match Map.tryFind vid.id st with
             | Some v -> v |> Ok
             | _ ->
-                "Field " + "\"" + vid.id + "\"" + " is not is not defined"
+                "Field " + "\"" + vid.id + "\"" + " is not defined"
                 |> NameError
                 |> Error              
         vid

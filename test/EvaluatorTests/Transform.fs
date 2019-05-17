@@ -125,6 +125,13 @@ let singleMatchSingleParamTransformTests = [
     a = [na,c>,nb] >> weight >> add100
     b = c >> add100 >> add100
     """, "Return weight found in subgraph and piped through 2 stage pipeline.";
+
+    nodes + """
+    newNode = "NewNode"::29384
+    def changeNode(g) = match g | [a,>,b,>,c] -> return [a,>,newNode,>,c]
+    a = [nd,>,nb] + [nb,>,na] >> changeNode
+    b = [na,<,newNode,<,nd] 
+    """, "Returning graph where node is swapped for a different node captured by closure"
 ]
 
 let singleMatchMultipleParamTransformTests = [

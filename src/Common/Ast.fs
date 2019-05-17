@@ -43,6 +43,7 @@ and Expr =
     | BinExpr of Expr * BinOp * Expr
     | PrefixExpr of PreOp  * Expr
     | PostfixExpr of Expr * PostOp
+    | SpecialExpr of SpecialExpr
 
 and SExpr =
     | ObjExpr of ObjExpr
@@ -80,11 +81,13 @@ and PreOp =
     // Transform
     | Dollar
 
-
 and PostOp =
     // Transform
     | ALAPApp
     | MaybeApp
+
+and SpecialExpr =
+    | PosPatternGraph
 
 and Literal =
     | StrLit of string

@@ -94,3 +94,8 @@ and UnboundGraph = {
     edges   : Map<UnboundEdgeId,UnboundEdgeInfo>
     edgeIdCount : EdgeId      
 }
+
+and SpecialValues = {
+    posPatternGraph : Graph option
+    negPatternGraph : Graph option
+}

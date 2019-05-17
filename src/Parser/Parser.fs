@@ -118,12 +118,7 @@ let idBase : Parser<string, unit> =
     let upToLastChar = many1Satisfy2 firstChar middleChar
     let lastChar = manyChars (pchar ''') .>> ws
     let id = (pipe2 upToLastChar lastChar (+))
-    let specialVars =
-        [
-            "(++)"; // For the positive and negative application conditions in a match
-            "(--)";
-        ] |> List.map str |> choice
-    let p = id <|> specialVars
+    let p = id
     p <?> "variable identifier"
 
 let pId : Parser<string, unit> = pnKeyword >>. idBase
@@ -348,7 +343,7 @@ let gpPathExpr pWeight pNode pLoad =
 
     let pPathExpr =
         let path =
-             (opt compOps' .>>. csv pathElem') |> between (str "[") (str "]")
+             (opt compOps' .>>. csv pathElem') |> between (notFollowedBy (str "[+]") >>. str "[") (str "]")
         path
         |>> function
             | Some compOps, elems ->
@@ -366,7 +361,9 @@ let gpPathExpr pWeight pNode pLoad =
 
 let pGExpr = gpPathExpr pExpr pExpr pExpr
 
-let exprs = [pSExpr; pVar; pGExpr;]
+let pPosPatternGraph = keyw "[+]" |>> fun _ -> PosPatternGraph |> SpecialExpr
+
+let exprs = [pSExpr; pVar; pGExpr; pPosPatternGraph]
 do pExprTermRef := chance exprs
    
 let pAssignmentExpr =
