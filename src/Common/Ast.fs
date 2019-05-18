@@ -74,6 +74,8 @@ and BinOp =
     | Enpipe
     // Transform
     | MulApp | UpToApp
+    // Collections
+    | Collect
 
 and PreOp =
     // Simple

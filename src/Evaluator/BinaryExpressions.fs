@@ -146,7 +146,7 @@ let equalsRules ops =
     ifs
     |??> n
     |??> g
-    |> Match.underlie ("Equal rules" |> notImplementedYet)
+    |..> ("Equal rules" |> notImplementedYet)
 
 let notEqualsRules ops =
     equalsRules ops

@@ -202,36 +202,37 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 14, al, NodeCons;
-        ".", 13, al, Dot
+        "::", 15, al, NodeCons;
+        ".", 14, al, Dot
 
-        "^", 12, ar, Pow;
+        "^", 13, ar, Pow;
 
-        "**", 11, al, MulApp;
-        "*!*",11, al, UpToApp;
+        "**", 12, al, MulApp;
+        "*!*",12, al, UpToApp;
         // Times is defined below
-        "/", 11, al, Divide;
-        "%", 11, al, Percent;
+        "/", 12, al, Divide;
+        "%", 12, al, Percent;
 
-        "+", 10, al, Plus;
+        "+", 12, al, Plus;
         // Minus is defined below
 
-        "<", 9, al, LessThan;
-        "<=", 9, al, LessThanEq;
+        "<", 10, al, LessThan;
+        "<=", 10, al, LessThanEq;
         // Greater than is defined below
-        ">=", 9, al, GreaterThanEq;
-        "==", 9, al, Equal;
-        "is", 9, al, Is;
-        "has", 9, al, Has;
-        "!=", 9, al, NotEqual;
+        ">=", 10, al, GreaterThanEq;
+        "==", 10, al, Equal;
+        "is", 10, al, Is;
+        "has", 10, al, Has;
+        "!=", 10, al, NotEqual;
 
         // "not" has precedence 10, but is prefix (unary)
-        "and", 7, al, And;
-        "xor", 6, al, Xor;
-        "or", 5, al, Or;
+        "and", 8, al, And;
+        "xor", 7, al, Xor;
+        "or", 6, al, Or;
 
-        "<|>", 4, al, OrPipe;
-        "|>", 3, al, Pipe;
+        "<|>", 5, al, OrPipe;
+        "|>", 4, al, Pipe;
+        "|&|", 3, al, Collect; 
         ">>", 2, al, Enpipe;
     ] |> List.map (fun (op, prec, assoc, astOp) -> (op, prec, None, assoc, astOp))
 
@@ -239,23 +240,23 @@ let binExprOps2 =
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 11, (str "*") <|> (str "!") , al, Times;
+        "*", 12, (str "*") <|> (str "!") , al, Times;
         // Stops conflicts with `->`
-        "-", 10, str ">", al, Minus;
+        "-", 11, str ">", al, Minus;
         // Stops conflicts with
         //   `x>,y` in path expressions
         //   `[a>:b,>,c]` in path comprehensions
         //   `a >> y` for function application
-        ">", 9, (str ",") <|> (str ":") <|> (str ">"), al, GreaterThan;
+        ">", 10, (str ",") <|> (str ":") <|> (str ">"), al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
 
-exprOpp.AddOperator(PrefixOperator("&&", ws, 13, true, fun x -> (DblAmp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 13, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&&", ws, 14, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 14, true, fun x -> (Amp,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("not", ws, 10, true, fun x -> (Not,x) |> PrefixExpr))
 
-exprOpp.AddOperator(PrefixOperator("$", ws, 13 , true, fun x -> (Dollar,x) |> PrefixExpr))
-exprOpp.AddOperator(PostfixOperator("!", ws, 12, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
-exprOpp.AddOperator(PostfixOperator("?", ws, 12, true, fun x -> (x, MaybeApp) |> PostfixExpr))
+exprOpp.AddOperator(PrefixOperator("$", ws, 14 , true, fun x -> (Dollar,x) |> PrefixExpr))
+exprOpp.AddOperator(PostfixOperator("!", ws, 13, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 13, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 let binExprOps = List.append binExprOps1 binExprOps2
 
@@ -406,11 +407,11 @@ let al = Associativity.Left
 let patternGraphOpp = new OperatorPrecedenceParser<PGraphExpr,unit,unit>()
 let pPGExpr = patternGraphOpp.ExpressionParser
 patternGraphOpp.TermParser <- pPatternPath <|> brackets pPGExpr
-patternGraphOpp.AddOperator(PrefixOperator("not", ws, 11, true, (fun x -> (PGNot, x) |> PGraphPreExpr))) 
-patternGraphOpp.AddOperator(InfixOperator("and", ws, 7, al, (fun l r -> (l, PGAnd, r) |> PGraphBinExpr))) 
-patternGraphOpp.AddOperator(InfixOperator("or", ws, 5, al, (fun l r -> (l, PGOr, r) |> PGraphBinExpr))) 
-patternGraphOpp.AddOperator(InfixOperator("+", ws, 10, al, (fun l r -> (l, PGAdd, r) |> PGraphBinExpr))) 
-patternGraphOpp.AddOperator(InfixOperator("-", (notFollowedBy (str ">")) >>. ws, 10, al, (fun l r -> (l, PGSub, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(PrefixOperator("not", ws, 12, true, (fun x -> (PGNot, x) |> PGraphPreExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("and", ws, 8, al, (fun l r -> (l, PGAnd, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("or", ws, 6, al, (fun l r -> (l, PGOr, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("+", ws, 11, al, (fun l r -> (l, PGAdd, r) |> PGraphBinExpr))) 
+patternGraphOpp.AddOperator(InfixOperator("-", (notFollowedBy (str ">")) >>. ws, 11, al, (fun l r -> (l, PGSub, r) |> PGraphBinExpr))) 
 
 let pMatchCase fname =
     let body = many (pExprStatementL fname) 
@@ -424,7 +425,8 @@ let pMatchCase fname =
     let p = pAll <|> pPat
     p <?> "match case"
 
-let pMatchCases fname = (str "|") >>. sepBy1 (pMatchCase fname) (str "|")
+let orStick = notFollowedBy (str "|&|") >>. str "|"
+let pMatchCases fname = orStick >>. sepBy1 (pMatchCase fname) orStick
 
 let pMatchStatement fname : Parser<MatchStatement,unit>=
     pipe3 (keyw "match") (pExpr) (pMatchCases fname) (fun _m e c -> (e,c))

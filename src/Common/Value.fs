@@ -22,6 +22,7 @@ and Value =
     | Pipeline  of Pipeline
     | Node of Node
     | Graph of Graph
+    | Collection of Collection
     // TODO: Pipelines with <|>
 
 and ValueId = {
@@ -100,3 +101,5 @@ and UnboundGraph = {
 //     posPatternGraph : Graph option
 //     negPatternGraph : Graph option
 // }
+
+and Collection = Graph list
