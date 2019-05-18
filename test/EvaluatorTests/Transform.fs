@@ -214,6 +214,57 @@ let singleMatchBecomeTests = [
     """, "Become test. Edge swap with other edges and other nodes."
 ]
 
+let multipleMatchCasesTransformTests = [
+    nodes + """
+    def graph(g) =
+        match g
+        | [a] -> return g
+        | [] ->
+            n = "startNode"::200
+            return [n]
+    a = [na] >> graph
+    b = [na]        
+    ""","Match first case, doesn't go to second."
+
+    nodes + """
+    def graph(g) =
+        match g
+        | [a] -> return g
+        | [] ->
+            n = "startNode"::200
+            return [n]
+    a = [] >> graph
+    b = ["startNode"::200]        
+    ""","Fail first case, go to second."
+
+    nodes + """
+    def graph(g) =
+        match g
+        | [a] -> return []
+        | [a] -> return g
+    a = [na] >> graph
+    b = []        
+    ""","Both cases the same. Ensure first is taken."
+
+    nodes + """
+    def graph(g) =
+        match g
+        | [a] where a == nb -> return []
+        | [a] -> return g
+    a = [na] >> graph
+    b = [na]        
+    ""","Both pattern graphs the same, but first where clause fails. Ensure second is taken."
+
+    nodes + """
+    def graph(g) =
+        match g
+        | [a] where a == na -> return []
+        | [a] -> return g
+    a = [na] >> graph
+    b = []        
+    ""","Both pattern graphs the same, but first where clause passes. Ensure first is taken."
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -245,3 +296,8 @@ let test3 =
 let test4 =
     let name = "Single match become tests"
     testList name (singleMatchBecomeTests |> quickTwinVarTests)
+
+[<Tests>]
+let test5 =
+    let name = "Multiple match cases tests"
+    testList name (multipleMatchCasesTransformTests |> quickTwinVarTests)

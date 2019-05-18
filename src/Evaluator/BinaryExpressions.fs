@@ -47,11 +47,13 @@ let intFloatStr2 ops iiFun ifFun fiFun ffFun ssFun =
 
 let graphMatcher (ops : Meaning * Meaning) rule conv =
     match ops with
-    | Value(Graph lhs), Value(Graph rhs) ->
-        rule lhs rhs 
-        |> conv
-        |> Matched
-    | _ -> NoMatch    
+    | Value(Graph lhs), Value(Graph rhs) -> rule lhs rhs  |> conv |> Matched
+    | _ -> NoMatch
+
+let nodeMatcher (ops : Meaning * Meaning) rule conv =
+    match ops with
+    | Value(Node lhs), Value(Node rhs) -> rule lhs rhs  |> conv |> Matched
+    | _ -> NoMatch
 
 let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     let ifs = intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
@@ -139,8 +141,10 @@ let equalsRules ops =
     let ifFun = fun x y -> (float(x) = y) |> Bool
     let fiFun = fun x y -> x = float(y) |> Bool
     let ifs = intFloatStr ops eq ifFun fiFun eq eq
+    let n = lazy(nodeMatcher ops (=) (Bool >> Value >> Ok))
     let g = lazy(graphMatcher ops Graph.equal (Bool >> Value >> Ok))
     ifs
+    |??> n
     |??> g
     |> Match.underlie ("Equal rules" |> notImplementedYet)
 
