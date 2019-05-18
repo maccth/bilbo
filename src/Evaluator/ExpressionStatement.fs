@@ -81,8 +81,12 @@ and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResu
 
 and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) =
     match cases with
-    | [only] -> evalMatchCase syms spLst hg only
-    | _ -> "Multiple match statements" |> notImplementedYet
+    | case :: rest ->
+        match evalMatchCase syms spLst hg case with
+        | Error e -> e |> Error
+        | Ok (Matched(mean)) -> mean |> Ok
+        | Ok NoMatch -> evalMatchCases syms spLst rest hg
+    | _ -> "No case matched" |> MatchError |> Error
 
 and addNodesToSyms spLst (nLst : Node list) (nMap : Map<NodeId,UnboundNodeId>) (syms : Symbols) =
     let nLst' : (Node*UnboundNodeId) list = nLst |> List.map (fun n -> n, Map.find n.id nMap)
@@ -92,9 +96,7 @@ and addNodesToSyms spLst (nLst : Node list) (nMap : Map<NodeId,UnboundNodeId>) (
         | Ok syms' ->
             match strFromMean ubnid with
             | None -> "Unbound node id is not a string variable" |> ImplementationError |> Error
-            | Some id ->
-                Symbols.set syms' {id=id; spLst=spLst} (n |> Node |> Value)
-           
+            | Some id -> Symbols.set syms' {id=id; spLst=spLst} (n |> Node |> Value)
     List.fold folder (Ok syms) nLst'
 
 and addEdgesToSyms spLst (pg : UnboundGraph) (eLst : Edge list) (eMap : Map<Edge,UnboundEdgeId>) (syms : Symbols) =
@@ -117,9 +119,19 @@ and addEdgesToSyms spLst (pg : UnboundGraph) (eLst : Edge list) (eMap : Map<Edge
                     Symbols.set syms' {id=id'; spLst=spLst} (w)
     List.fold folder (Ok syms) eLst'
 
-and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
+and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Match<Meaning>> =
     match case with
-    | CatchAll (where,bod,term) -> "Catch all cases" |> notImplementedYet
+    | CatchAll (where,bod,term) ->
+        match evalWhere syms spLst where with
+        | Error e -> e |> Error
+        | Ok false -> NoMatch |> Ok
+        | Ok true ->
+            match term with
+            | Become _ -> "Cannot use become in a catch-all match case" |> SyntaxError |> Error
+            | Return ret ->
+                let stHd, rest = Symbols.top syms           
+                evalFuncBody rest spLst stHd bod ret
+                |=> Matched
     | Pattern (pgExpr,where,bod,term) ->
         let pgRes = evalPatternGraph syms spLst pgExpr
         match pgRes with
@@ -127,8 +139,7 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
         | Ok pg ->
             let mappings = Graph.unboundSgiAll hg pg |> Set.toList
             match mappings with
-            // TODO: go onto next match
-            | [] -> "No matches exist in that graph" |> ValueError |> Error
+            | [] -> NoMatch |> Ok
             // TODO: generalise this for all graphs
             | (nMap,eMap) :: rest ->
                 let (sgRes, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
@@ -141,17 +152,20 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) =
                         |-> addEdgesToSyms spLst pg (Graph.edges sg) revEMap
                     match symsWithSgElems with
                     | Error e -> e |> Error
-                    | Ok [] -> "The symbol table list cannot be empty inside pipeline" |> ImplementationError |> Error
+                    | Ok [] -> "The symbol table list cannot be empty inside a pipeline" |> ImplementationError |> Error
                     | Ok (stHd :: rest) ->
                         match evalWhere (stHd :: rest) spLst where with
                         | Error e -> e |> Error
-                        | Ok false ->
-                            // TODO: go onto next match
-                            "Where clause failed" |> ValueError |> Error
+                        | Ok false -> NoMatch |> Ok
                         | Ok true ->                             
                             match term with
-                            | Become bExpr -> evalBecome (stHd :: rest) spLst hg sg bExpr
-                            | Return ret -> evalFuncBody rest spLst stHd bod ret                    
+                            | Become bExpr ->
+                                evalPStageBody rest spLst stHd bod
+                                |-> fun syms' -> evalBecome syms' spLst hg sg bExpr
+                                |=> Matched
+                            | Return ret ->
+                                evalFuncBody rest spLst stHd bod ret
+                                |=> Matched                  
 
 and evalBecome syms spLst hg sg bExpr =
     let bgRes = evalExpr syms spLst bExpr
@@ -261,8 +275,8 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
                     match symsUpdated with
                     | Error e -> e |> Error
                     | Ok syms' ->
-                        let res = evalMatchStatement syms' spLst tMatch
-                        Result.bind (applyArgToPipeline syms spLst pLineRest) res
+                        evalMatchStatement syms' spLst tMatch
+                        |-> applyArgToPipeline syms spLst pLineRest
                 | _ ->
                     ((tName, paramsLeft,preMatchBod,tMatch), tstUpdated)
                     |> Transform
@@ -563,10 +577,10 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | SExpr s -> evalSExpr syms spLst s
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
     | GExpr g -> evalGExpr syms spLst g
-    | _ ->
-        "Other expression types"
-        |> notImplementedYet
-        
+    | PrefixExpr _ -> "Prefix expr" |> notImplementedYet
+    | PostfixExpr _ -> "Postfix expr" |> notImplementedYet
+    | SpecialExpr _ -> "Special expr [+] and [-]" |> notImplementedYet
+
 and consVid syms spLst e : BilboResult<ValueId> =
     match e with
     | Var v -> {spLst=spLst; id=v} |> Ok

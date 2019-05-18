@@ -95,7 +95,8 @@ and UnboundGraph = {
     edgeIdCount : EdgeId      
 }
 
-and SpecialValues = {
-    posPatternGraph : Graph option
-    negPatternGraph : Graph option
-}
+// For  [+] and [-]
+// and SpecialValues = {
+//     posPatternGraph : Graph option
+//     negPatternGraph : Graph option
+// }

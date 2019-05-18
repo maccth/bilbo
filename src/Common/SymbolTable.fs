@@ -86,6 +86,11 @@ module Symbols =
         match syms with
         | hd :: _ -> hd
         | [] -> SymbolTable.empty
+
+    let top (syms : Symbols) =
+        match syms with
+        | hd :: rest -> hd,rest
+        | [] ->  SymbolTable.empty, [SymbolTable.empty]
         
     let empty : Symbols = [] 
     let find (syms : Symbols) (vid : ValueId) : BilboResult<Meaning> =

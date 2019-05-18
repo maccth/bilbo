@@ -2,25 +2,24 @@ module Bilbo.Common.Error
 
 open Bilbo.Common.Ast
 
-let Pass = Ok
-let Fail = Error
-
+type ImplementationError = string
 type SyntaxError = string
 type FieldError = string
 type NameError = string
-type ImplementationError = string
 type ValueError = string
 type TypeError = string
 type OperatorError = string
+type MatchError = string
 
 type BilboError =
+    | ImplementationError of ImplementationError
     | SyntaxError of SyntaxError
     | FieldError of FieldError
     | NameError of NameError
-    | ImplementationError of ImplementationError
     | ValueError of ValueError
     | TypeError of TypeError
     | OperatorError of OperatorError
+    | MatchError of MatchError
 
 type BilboResult<'T> = Result<'T, BilboError>
 
