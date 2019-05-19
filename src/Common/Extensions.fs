@@ -37,4 +37,4 @@ let (|??>) first second = Match.lcompose first second
 
 let (<??|??>) first second = Match.lcompose first second
 
-let (|..>) instead m = Match.underlie instead m
+let (|..>) m instead = Match.underlie instead m

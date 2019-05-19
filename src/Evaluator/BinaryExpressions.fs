@@ -1,6 +1,7 @@
 module Bilbo.Evaluator.BinaryExpressions
 
 open Bilbo.Common.Extensions
+open Bilbo.Common.Type
 open Bilbo.Common.Value
 open Bilbo.Common.Error
 open Bilbo.Common
@@ -71,7 +72,7 @@ let minusRules ops =
 
 let timesRules ops =
     intFloat2 ops (*) (fun x y -> float(x) * y) (fun x y -> x * float(y)) (*)
-    |> Match.underlie ("Times rules" |> notImplementedYet)
+    |..> ("Times rules" |> notImplementedYet)
 
 let zeroCheck ops =
     match ops with
@@ -199,6 +200,7 @@ let nodeConsRules (ops : Meaning * Meaning) =
             | Type _ -> nodeConsError "type definition" partStr
             | Pipeline _ -> nodeConsError "function or transform" partStr
             | Graph _ -> nodeConsError "graph" partStr
+            | Collection _ -> nodeConsError "collection" partStr
         | Space (Object oTyp, symTab) -> obj |> Ok
         | Space _ -> nodeConsError "namespace" partStr
         | ParamList _ -> nodeConsError "parameter list" partStr
@@ -235,3 +237,17 @@ let pipeRules ops =
         "Only functions or transforms can be composed in a pipeline"
         |> TypeError
         |> Error
+
+let collectRules ops =
+    let typeError = ops |> (fun (l,r) -> (l |> typeStr, r |> typeStr) ||> nonGraphCollectionError)
+    let cOk = Collection >> Value >> Ok
+    match ops with
+    | Value lVal, Value rVal ->
+        match lVal, rVal with
+        | Collection l, Collection r -> l @ r |> cOk
+        | Graph l, Collection r -> l :: r |> cOk
+        | Collection l, Graph r -> r :: l |> cOk
+        | Graph l, Graph r -> [l;r] |> cOk
+        | _ -> typeError
+    | _ -> typeError
+        

@@ -6,23 +6,37 @@ open Bilbo.Common.Error
 open Bilbo.Common.Type
 open Bilbo.Graph.Graph
 
+let strFold join lst =
+    let folder join prevPart elem  =
+        match prevPart, elem with
+        | Error e, _ -> e |> Error
+        | _, Error e -> e |> Error
+        | Ok s1, Ok s2 -> s1 + join + s2 |> Ok
+    match lst with
+    | [one] -> one
+    | first :: rest -> List.fold (folder join) first rest
+    | _ -> List.fold (folder join) (Ok "") lst
+
 let rec print (mean : Meaning) : BilboResult<string> =
     match mean with
     | ParamList _ -> mean |> typeStr |> printError 
     | Space (Namespace, _) -> mean |> typeStr |> printError
     | Space (Object tName, st) -> objPrint tName st
-    | Value v ->
-        match v with
-        | String s -> "\"" + s + "\"" |> Ok
-        | Float f -> f |> string |> Ok 
-        | Int i -> i |> string |> Ok
-        | Bool b when b -> "True" |> Ok
-        | Bool b -> "False" |> Ok
-        | Pipeline _ -> mean |> typeStr |> printError 
-        | Node n -> nodePrint n
-        | Graph g -> graphPrint g
-        | Type _ -> "Type definition printing" |> notImplementedYet
+    | Value v -> v |> valuePrint
  
+and valuePrint (v : Value) =
+    match v with
+    | String s -> "\"" + s + "\"" |> Ok
+    | Float f -> f |> string |> Ok 
+    | Int i -> i |> string |> Ok
+    | Bool b when b -> "True" |> Ok
+    | Bool b -> "False" |> Ok
+    | Pipeline _ -> v |> typeStrValue |> printError 
+    | Node n -> nodePrint n
+    | Type _ -> "Type definition printing" |> notImplementedYet
+    | Graph g -> graphPrint g
+    | Collection c -> collectionPrinting c
+
 and nodePrint n =
     let id = print n.id
     match id with
@@ -31,7 +45,7 @@ and nodePrint n =
         let load = print n.load
         match load with
         | Error e -> e |> Error
-        | Ok loadStr -> "("+idStr+")::("+loadStr+")" |> Ok
+        | Ok loadStr -> idStr+"::"+loadStr |> Ok
 
 and objPrint tName (st : SymbolTable) =
     let printParamValPair id mean =
@@ -77,16 +91,6 @@ and graphPrint (g : Graph) =
     // First print print the edges then the nodes that do not appear in any edges (as a single path)
     // So [a,>,b,c] should be printed as [a,>,b] + [c]
     // and [a,>,b,c,d] as [a,>,b] + [c,d]
-    let strFold join lst =
-        let folder join prevPart elem  =
-            match prevPart, elem with
-            | Error e, _ -> e |> Error
-            | _, Error e -> e |> Error
-            | Ok s1, Ok s2 -> s1 + join + s2 |> Ok
-        match lst with
-        | [one] -> one
-        | first :: rest -> List.fold (folder join) first rest
-        | _ -> List.fold (folder join) (Ok "") lst
     let plusFold = strFold " + "
     let commaFold = strFold ", "
     let edges = Graph.edges g |> List.sort
@@ -95,14 +99,14 @@ and graphPrint (g : Graph) =
     let endPoints = edges |> List.collect (fun e -> [e.source; e.target]) |> Set.ofList
     let nodeStrs = (Graph.nodes g |> set) - endPoints |> Set.toList |> List.sort |> List.map nodePrint
     let nodeStr =
-        let addBrac s = "["+s+"]"|> Ok
         match nodeStrs with
-        | [one] -> Result.bind addBrac one
-        | _ ->
-            nodeStrs
-            |> commaFold
-            |-> (fun s -> "["+s+"]"|> Ok)
+        | [] -> "" |> Ok
+        | _ -> nodeStrs |> commaFold |=> fun s -> "["+s+"]"
     match edgeStr, nodeStr with
     | Ok "", _ -> nodeStr
     | _, Ok "" -> edgeStr
     | _ -> plusFold [edgeStr; nodeStr]
+
+and collectionPrinting (c : Collection) =
+    let cStrs = List.map (Graph >> valuePrint) c
+    strFold "\n|&| " cStrs

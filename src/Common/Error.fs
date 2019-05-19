@@ -127,3 +127,9 @@ let typeCastValueError typeFrom typeTo =
     "Cannot convert this value of type " + typeFrom + " to type " + typeTo
     |> ValueError
     |> Error
+
+let nonGraphCollectionError typeL typeR =
+    "Only graphs can be placed in collections. "
+    + "Attempted type " + typeL + " and type " + typeR + "."
+    |> TypeError
+    |> Error

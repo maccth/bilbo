@@ -49,6 +49,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
     | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
+    | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
     | _ ->
         "Other binary operators"
@@ -70,23 +71,58 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
     | Error e -> e |> Error
     | Ok syms'' -> evalExpr syms'' spLst ret
 
+
+and inspectMeaningLst (mLst : Meaning list) : BilboResult<Meaning> =
+    match mLst with
+    | [] -> "There has been a terrible match error. Nothing matched." |> MatchError |> Error
+    | [one] -> one |> Ok
+    | _ ->
+        let graphCheck lst mIn =
+            match lst with
+            | Error e -> e |> Error
+            | Ok lst' ->
+                match mIn with
+                | Value(Graph(g)) -> g :: lst' |> Ok
+                | _ ->
+                    "You cannot possible have something of type "
+                    + (typeStr mIn) + " in a collection. Fool."
+                    |> TypeError |> Error
+        List.fold graphCheck (Ok []) mLst
+        |=> (Collection >> Value) 
+  
 and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResult<Meaning> =
     let gExpr,cases = mat
     let syms' = SymbolTable.empty :: syms
     let gRes = evalExpr syms' spLst gExpr
-    match gRes with
-    | Error e -> e |> Error
-    | Ok (Value(Graph g)) -> evalMatchCases syms' spLst cases g
-    | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
-
-and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) =
-    match cases with
-    | case :: rest ->
-        match evalMatchCase syms spLst hg case with
+    let mLstRes =
+        match gRes with
         | Error e -> e |> Error
-        | Ok (Matched(mean)) -> mean |> Ok
-        | Ok NoMatch -> evalMatchCases syms spLst rest hg
-    | _ -> "No case matched" |> MatchError |> Error
+        | Ok (Value(Graph g)) ->
+            evalMatchCases syms' spLst cases g
+        | Ok (Value(Collection c)) ->
+            let folder mLstIn g =
+                match mLstIn with
+                | Error e -> e |> Error
+                | Ok mLstOut ->
+                    let mLstRes = evalMatchCases syms' spLst cases g
+                    match mLstRes with
+                    | Error e -> e |> Error
+                    | Ok mLst -> mLst @ mLstOut |> Ok
+            List.fold folder (Ok []) c
+        | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
+    mLstRes
+    |-> inspectMeaningLst
+
+and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) : BilboResult<Meaning list> =
+    let folder mLst case = 
+        match mLst with
+        | Error e -> e |> Error
+        | Ok [] ->
+            match evalMatchCase syms spLst hg case with
+            | Error e -> e |> Error
+            | Ok newMLst -> newMLst |> Ok
+        | Ok mLst' -> mLst' |> Ok
+    List.fold folder (Ok []) cases        
 
 and addNodesToSyms spLst (nLst : Node list) (nMap : Map<NodeId,UnboundNodeId>) (syms : Symbols) =
     let nLst' : (Node*UnboundNodeId) list = nLst |> List.map (fun n -> n, Map.find n.id nMap)
@@ -119,19 +155,19 @@ and addEdgesToSyms spLst (pg : UnboundGraph) (eLst : Edge list) (eMap : Map<Edge
                     Symbols.set syms' {id=id'; spLst=spLst} (w)
     List.fold folder (Ok syms) eLst'
 
-and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Match<Meaning>> =
+and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Meaning list> =
     match case with
     | CatchAll (where,bod,term) ->
         match evalWhere syms spLst where with
         | Error e -> e |> Error
-        | Ok false -> NoMatch |> Ok
+        | Ok false -> [] |> Ok
         | Ok true ->
             match term with
             | Become _ -> "Cannot use become in a catch-all match case" |> SyntaxError |> Error
             | Return ret ->
                 let stHd, rest = Symbols.top syms           
                 evalFuncBody rest spLst stHd bod ret
-                |=> Matched
+                |=> fun r -> [r]
     | Pattern (pgExpr,where,bod,term) ->
         let pgRes = evalPatternGraph syms spLst pgExpr
         match pgRes with
@@ -139,50 +175,66 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Match
         | Ok pg ->
             let mappings = Graph.unboundSgiAll hg pg |> Set.toList
             match mappings with
-            | [] -> NoMatch |> Ok
-            // TODO: generalise this for all graphs
-            | (nMap,eMap) :: rest ->
-                let (sgRes, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
-                match sgRes with    
-                | Error e -> e |> Error
-                | Ok sg ->
-                    let symsWithSgElems =
-                        syms
-                        |> addNodesToSyms spLst (Graph.nodes sg) revNMap
-                        |-> addEdgesToSyms spLst pg (Graph.edges sg) revEMap
-                    match symsWithSgElems with
+            | [] -> [] |> Ok
+            | _ ->
+                let folder (cIn : BilboResult<Meaning list>) (nMap,eMap) =
+                    match cIn with
                     | Error e -> e |> Error
-                    | Ok [] -> "The symbol table list cannot be empty inside a pipeline" |> ImplementationError |> Error
-                    | Ok (stHd :: rest) ->
-                        match evalWhere (stHd :: rest) spLst where with
-                        | Error e -> e |> Error
-                        | Ok false -> NoMatch |> Ok
-                        | Ok true ->                             
-                            match term with
-                            | Become bExpr ->
-                                evalPStageBody rest spLst stHd bod
-                                |-> fun syms' -> evalBecome syms' spLst hg sg bExpr
-                                |=> Matched
-                            | Return ret ->
-                                evalFuncBody rest spLst stHd bod ret
-                                |=> Matched                  
+                    | Ok mLst ->
+                        let m = evalMatch syms spLst hg pg where bod term nMap eMap
+                        match m with
+                        | None -> mLst |> Ok
+                        | Some (Error e) -> e |> Error
+                        | Some (Ok mean) -> mean :: mLst |> Ok
+                List.fold folder (Ok []) mappings                    
+                            
+and evalMatch syms spLst hg pg where bod term nMap eMap : BilboResult<Meaning> option =
+    let (sgRes, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
+    match sgRes with    
+    | Error e -> e |> Error |> Some
+    | Ok sg ->
+        let symsWithSgElems =
+            syms
+            |> addNodesToSyms spLst (Graph.nodes sg) revNMap
+            |-> addEdgesToSyms spLst pg (Graph.edges sg) revEMap
+        match symsWithSgElems with
+        | Error e -> e |> Error |> Some
+        | Ok [] -> "The symbol table list cannot be empty inside a pipeline" |> ImplementationError |> Error |> Some
+        | Ok (stHd :: rest) ->
+            match evalWhere (stHd :: rest) spLst where with
+            | Error e -> e |> Error |> Some
+            | Ok false -> None
+            | Ok true ->                             
+                match term with
+                | Become bExpr ->
+                    evalPStageBody rest spLst stHd bod
+                    |-> fun syms' -> evalBecome syms' spLst hg sg bExpr
+                    |> Some
+                | Return ret ->
+                    evalFuncBody rest spLst stHd bod ret
+                    |> Some
 
 and evalBecome syms spLst hg sg bExpr =
     let bgRes = evalExpr syms spLst bExpr
     match bgRes with
     | Error e -> e |> Error
     | Ok (Value(Graph bg)) ->
-        let eR = Graph.edges bg |> Set.ofList
-        let eL = Graph.edges sg 
-        let eHg = Graph.edges hg 
-        let eOut = (eHg /-/ eL) |> Set.ofList |> (+) eR |> Set.toList 
         let nR = Graph.nodes bg |> Set.ofList
         let nL = Graph.nodes sg |> Set.ofList
         let nHg = Graph.nodes hg |> Set.ofList
-        let nOut = nHg - (nL - nR) + nR |> Set.toList
+        let nOut = (nHg - nL) + nR
+        let eR = Graph.edges bg |> Set.ofList
+        let eL = Graph.edges sg 
+        let eHg = Graph.edges hg 
+        let eOut =
+            (eHg /-/ eL)
+            |> Set.ofList
+            |> (+) eR
+            |> Set.toList
+            |> List.filter (fun e -> Set.contains e.source nOut && Set.contains e.target nOut)
         Graph.empty
         |> Graph.addEdges eOut
-        |-> Graph.addNodes nOut
+        |-> Graph.addNodes (nOut |> Set.toList)
         |=> Graph
         |=> Value
     | _ -> "special [+] and [-] graphs" |> notImplementedYet    

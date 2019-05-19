@@ -40,3 +40,4 @@ msbuild.wrn
 
 # Visual Studio 2015
 .vs/
+src/Evaluator/.vscode/launch.json

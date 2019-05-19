@@ -17,6 +17,7 @@ and typeStrValue (v : Value) : string =
     | Int _ ->  "int"
     | Bool _ -> "bool"
     | Pipeline _ -> "pipeline"
+    | Collection _ -> "collection"
     | Node n ->
         let idT = typeStr n.id
         let loadT = typeStr n.load
