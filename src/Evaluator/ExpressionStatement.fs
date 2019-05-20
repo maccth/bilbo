@@ -223,14 +223,12 @@ and evalBecome syms spLst hg sg bExpr =
         let nL = Graph.nodes sg |> Set.ofList
         let nHg = Graph.nodes hg |> Set.ofList
         let nOut = (nHg - nL) + nR
-        let eR = Graph.edges bg |> Set.ofList
+        let eR = Graph.edges bg
         let eL = Graph.edges sg 
         let eHg = Graph.edges hg 
         let eOut =
             (eHg /-/ eL)
-            |> Set.ofList
-            |> (+) eR
-            |> Set.toList
+            |> (@) eR
             |> List.filter (fun e -> Set.contains e.source nOut && Set.contains e.target nOut)
         Graph.empty
         |> Graph.addEdges eOut

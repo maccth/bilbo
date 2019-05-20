@@ -21,13 +21,11 @@ let retNode = """
 let retMidIn = """
     def midIn(g) =
         match g
-        | [x,>,y,<,z] -> return y
+        | [x,w>,y,<,z] -> return y
 """
 
 let retMidOut = """
-    def midOut(g) =
-        match g
-        | [x,<,y,>,z] -> return y
+    def midOut(g) = match g | [x,<w,y,>,z] -> return y
 """
 
 let retWeight = """
@@ -48,6 +46,10 @@ let becSwap = """
 
 let becSwapW = """
     def swapW(g) = match g | [a,x>,b] -> become [a,<x,b]
+"""
+
+let becDelNode = """
+    def delNode(g) = match g | [x] -> become []
 """
 
 let singleMatchSingleParamTransformTests = [
@@ -79,12 +81,12 @@ let singleMatchSingleParamTransformTests = [
     """, "Match on single node, return value from function closure";
 
     nodes + retMidIn + """
-    a = [na,>,nb,<,nc] >> midIn
+    a = [na,10>,nb,<,nc] >> midIn
     b = nb
     """, "Match on 3 node pattern with edges in both directions";
 
     nodes + retMidOut + """
-    a = [na,>,nb] + [nc,<,na] >> midOut
+    a = [na,>,nb] + [nc,<10,na] >> midOut
     b = na
     """, "Graph addition enpiped into match on 3 node pattern with edges in both directions";
 
@@ -107,9 +109,9 @@ let singleMatchSingleParamTransformTests = [
     """, "Return weight found in subgraph.";
 
     nodes + """
-    def biWeight(g) = match g | [a,<x>,b] -> return x
+    def biWeight(g) = match g | [a,<x>,b,>,c] -> return x
     b = 200
-    a = [na,<>,nb,<b>,nc,>,nd] >> biWeight
+    a = [nb,<b>,nc,>,nd] >> biWeight
     """, "Return weight, uses <> in pattern graph.";
 
     nodes + add100 + """
@@ -265,6 +267,29 @@ let multipleMatchCasesTransformTests = [
     ""","Both pattern graphs the same, but first where clause passes. Ensure first is taken."
 ]
 
+let collectionTests = [
+    nodes + becDelNode + """
+    g = [na,nb]
+    a = g >> delNode
+    b = [na] |&| [nb]
+    """, "Deleting a node resulting in a collection of two graphs. Ensure both graphs are returned in a collection."
+
+    nodes + becDelNode + """
+    g = [na,nb]
+    a = g >> delNode |> delNode
+    b = [] |&| []
+    """, "Deleting a node twice. Returns a collection of two empty graphs. Ensure that these are both retruned."
+
+    nodes + becDelNode + """
+    g = [na,>,nb,>,nc]
+    a = g >> delNode
+    b =
+        [nb,>,nc]
+        |&| [na,nc]
+        |&| [na,>,nb]
+    """, "Deleting a node from a graph with multiple nodes. Ensure that edge deletion/preservation on works correctly on collections"
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -276,7 +301,7 @@ let quickTwinVarTests tLst =
 [<Tests>]
 let test =
     let name =
-        "Single param transforms with explict matching."
+        "Single param transforms with explict matching. "
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchSingleParamTransformTests |> quickTwinVarTests)
 
@@ -301,3 +326,10 @@ let test4 =
 let test5 =
     let name = "Multiple match cases tests"
     testList name (multipleMatchCasesTransformTests |> quickTwinVarTests)
+
+[<Tests>]
+let test6 =
+    let name = "Tests involving collections due to multiple subgraph matches"
+    testList name (collectionTests |> quickTwinVarTests)
+
+    

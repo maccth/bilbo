@@ -103,6 +103,7 @@ and graphPrint (g : Graph) =
         | [] -> "" |> Ok
         | _ -> nodeStrs |> commaFold |=> fun s -> "["+s+"]"
     match edgeStr, nodeStr with
+    | Ok "", Ok "" -> "[]" |> Ok
     | Ok "", _ -> nodeStr
     | _, Ok "" -> edgeStr
     | _ -> plusFold [edgeStr; nodeStr]
