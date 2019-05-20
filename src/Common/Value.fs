@@ -103,3 +103,8 @@ and UnboundGraph = {
 // }
 
 and Collection = Graph list
+
+and PatternGraph = {
+    pos : UnboundGraph
+    neg : UnboundGraph option
+}

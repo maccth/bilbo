@@ -290,6 +290,26 @@ let collectionTests = [
     """, "Deleting a node from a graph with multiple nodes. Ensure that edge deletion/preservation on works correctly on collections"
 ]
 
+let patternGraphBinOps = [
+    nodes + """
+    def endPair(g) =
+        match g
+        | [a,>,b] and not [b,>,c] -> return [a,>,b]
+    g = [na,>,nb,>,nc]
+    a = g >> endPair
+    b = [nb,>,nc]
+    """, "Negative application conditions ensure only one subgraph matches"
+
+    nodes + """
+    def endPair(g) =
+        match g
+        | [a,>,b] and not [b,>,c] -> return [a,>,b]
+    g = [na,>,nb,>,nc] + [nd,>,ne,>,nc]
+    a = g >> endPair
+    b = [nb,>,nc] |&| [ne,>,nc]
+    """, "Negative application conditions ensure a collection of only two graphs is returned"
+]
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -298,38 +318,42 @@ let quickTwinVarTests tLst =
     |> List.map (fun (c,d) -> quickTwinVarTest c d)
     |> twinVarTests
 
-[<Tests>]
+[<FTests>]
 let test =
     let name =
         "Single param transforms with explict matching. "
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchSingleParamTransformTests |> quickTwinVarTests)
 
-[<Tests>]
+[<FTests>]
 let test2 =
     let name =
         "Multiple param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchMultipleParamTransformTests |> quickTwinVarTests)
 
-[<Tests>]
+[<FTests>]
 let test3 =
     let name = "Same node appears more than once in pattern graph"
     testList name (singleMatchNodeMatchesMultipleTimes |> quickTwinVarTests)
 
-[<Tests>]
+[<FTests>]
 let test4 =
     let name = "Single match become tests"
     testList name (singleMatchBecomeTests |> quickTwinVarTests)
 
-[<Tests>]
+[<FTests>]
 let test5 =
     let name = "Multiple match cases tests"
     testList name (multipleMatchCasesTransformTests |> quickTwinVarTests)
 
-[<Tests>]
+[<FTests>]
 let test6 =
     let name = "Tests involving collections due to multiple subgraph matches"
     testList name (collectionTests |> quickTwinVarTests)
 
-    
+[<FTests>]
+let test7 =
+    let name = "Tests involving pattern graph binary operations"
+    testList name (patternGraphBinOps |> quickTwinVarTests)
+   

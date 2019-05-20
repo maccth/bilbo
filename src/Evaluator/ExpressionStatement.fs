@@ -169,25 +169,60 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Meani
                 evalFuncBody rest spLst stHd bod ret
                 |=> fun r -> [r]
     | Pattern (pgExpr,where,bod,term) ->
-        let pgRes = evalPatternGraph syms spLst pgExpr
+        let pgRes = evalPatternGraph (*syms spLst*) pgExpr
         match pgRes with
         | Error e -> e |> Error
         | Ok pg ->
-            let mappings = Graph.unboundSgiAll hg pg |> Set.toList
-            match mappings with
+            let posMappings, negMappings =
+                match pg with
+                | {pos=pos; neg=None} ->
+                    let pMaps = Graph.unboundSgiAll hg pos |> Set.toList
+                    pMaps, []
+                | {pos=pos; neg=Some neg} ->
+                    let pMaps = Graph.unboundSgiAll hg pos |> Set.toList
+                    let nMaps = Graph.unboundSgiAll hg neg |> Set.toList
+                    pMaps, nMaps            
+            match posMappings with
             | [] -> [] |> Ok
             | _ ->
                 let folder (cIn : BilboResult<Meaning list>) (nMap,eMap) =
                     match cIn with
                     | Error e -> e |> Error
                     | Ok mLst ->
-                        let m = evalMatch syms spLst hg pg where bod term nMap eMap
-                        match m with
-                        | None -> mLst |> Ok
-                        | Some (Error e) -> e |> Error
-                        | Some (Ok mean) -> mean :: mLst |> Ok
-                List.fold folder (Ok []) mappings                    
-                            
+                        let allNegMapsInconsistent = mapInconsistent nMap negMappings
+                        match (List.isEmpty negMappings || allNegMapsInconsistent) with
+                        | false -> mLst |> Ok
+                        | true ->
+                            let m = evalMatch syms spLst hg (pg.pos) where bod term nMap eMap
+                            match m with
+                            | None -> mLst |> Ok
+                            | Some (Error e) -> e |> Error
+                            | Some (Ok mean) -> mean :: mLst |> Ok
+                List.fold folder (Ok []) posMappings                    
+
+and mapInconsistent nMap (negMappings : (Map<UnboundNodeId,NodeId> * Map<UnboundEdgeId,EdgeId>) list) =
+    // Need to check if the same identifier (in the pattern graph) maps to
+    // the same node/weight in the host graph. If this is the case, then
+    // the negative mapping is consistent, and the match is not valid
+    // Need to check two things, first the forward mappings:
+    //  If two nodes are mapped to by the same identifier, then those two nodes are the same
+    // and then the negative backward mapping:
+    //  If two nodes are not mapped to by the same identifier, then those two nodes are different
+    let negNMaps  = List.map fst negMappings
+    let outerFolder consistentMap negNMap =
+        match consistentMap with
+        | true -> true
+        | false ->
+            let folder consistentMap' (pgNode,hgNode) =
+                let innerFolder conMap'' (negPgNode,negHgNode) =
+                    let bothSame = negPgNode = pgNode && negHgNode = hgNode
+                    let bothDiff = negPgNode <> pgNode && negHgNode <> hgNode
+                    conMap'' && (bothSame || bothDiff)
+                List.fold innerFolder consistentMap' (negNMap |> Map.toList)    
+            List.fold folder true (nMap |> Map.toList)
+    List.fold outerFolder false negNMaps 
+    |> not
+
 and evalMatch syms spLst hg pg where bod term nMap eMap : BilboResult<Meaning> option =
     let (sgRes, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
     match sgRes with    
@@ -251,13 +286,33 @@ and evalWhere syms spLst where =
             | _ -> v |> typeStrValue |> nonBoolInWhereClause
         | Ok mean -> mean |> typeStr |> nonBoolInWhereClause
 
-and evalPatternGraph syms spLst pgExpr : BilboResult<UnboundGraph> =
+and evalPatternGraph (*syms spLst*) pgExpr : BilboResult<PatternGraph> =
     match pgExpr with
-    | PGraph pe -> evalPatternPathExpr pe UnboundGraph.empty
-    | PGraphBinExpr _ -> "Pattern graph binary operations" |> notImplementedYet
-    | PGraphPreExpr _ -> "Pattern graph prefix operations" |> notImplementedYet
+    | PGraph pe ->
+        pe
+        |> evalPatternPathExpr
+        |=> fun pos -> {pos=pos; neg=None}
+    | PGraphBinExpr (peL,op,peR) ->
+        let pgL = evalPatternGraph peL
+        let pgR = evalPatternGraph peR
+        match pgL, pgR with
+        | Error e, _ -> e |> Error
+        | _, Error e -> e |> Error
+        | Ok l, Ok r ->
+            match op with
+            | PGAnd
+            | PGAdd ->  PatternGraph.addGraphs l r |> Ok
+            | PGSub -> PatternGraph.subtractGraphs l r |> Ok
+            | PGOr -> "Pattern graph OR" |> notImplementedYet
+    | PGraphPreExpr (PGNot, pe) ->
+        pe
+        |> evalPatternGraph
+        |=> fun pg ->
+            match pg with
+            | {pos=p; neg=Some neg} -> {pos=neg; neg=Some p}
+            | {pos=p; neg=None} -> {pos=UnboundGraph.empty; neg=Some p}            
 
-and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) (ug : UnboundGraph) : BilboResult<UnboundGraph> =
+and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGraph> =
     let evalExprWithinPg (e : Expr) =
         match e with
         | Var v -> v |> String |> Value |> Ok
