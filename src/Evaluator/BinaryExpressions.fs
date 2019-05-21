@@ -122,7 +122,7 @@ let lteqRules ops =
     |> Match.underlie ("Less than or equal rules" |> notImplementedYet)
 
 let gtRules ops =
-    // Unpacking the result of lteqRules and inverting it would take as many line...
+    // Unpacking the result of lteqRules and inverting it would take as many lines...
     let gt = fun x y -> (x > y) |> Bool
     let ifFun = fun x y -> (float(x) > y) |> Bool
     let fiFun = fun x y -> x > float(y) |> Bool
@@ -160,8 +160,6 @@ let notEqualsRules ops =
 
 let boolean ops binOp =
     let booleanTrue (v : Value) =
-        // TODO: Add graph pattern matching `and` and `or` operartions for pos and neg graph
-        // and non-primative types 
         match v with
         | Int x -> x<>0 |> Matched
         | Float x -> x<>0.0 |> Matched
@@ -250,4 +248,3 @@ let collectRules ops =
         | Graph l, Graph r -> [l;r] |> cOk
         | _ -> typeError
     | _ -> typeError
-        

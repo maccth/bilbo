@@ -12,50 +12,7 @@ open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
 
-let rec evalBinOperands syms spLst lhs rhs =
-    let valL = evalExpr syms spLst lhs
-    match valL with
-    | Error e -> e |> Error
-    | Ok valL' ->
-        let valR = evalExpr syms spLst rhs
-        match valR with
-        | Ok valR' -> (valL', valR') |> Ok
-        | Error e -> e |> Error
-
-and (|..>) (syms,spLst,lhs,rhs) opRule =
-    let ops = evalBinOperands syms spLst lhs rhs
-    match ops with
-    | Ok (l, r) -> opRule (l,r)
-    | Error e -> e |> Error
-
-and evalBinExpr syms spLst lhs op rhs =
-    match op with
-    | Pow -> (syms,spLst,lhs,rhs) |..> powRules
-    | Times -> (syms,spLst,lhs,rhs) |..> timesRules
-    | Divide -> (syms,spLst,lhs,rhs) |..> divideRules
-    | Plus -> (syms,spLst,lhs,rhs) |..> plusRules
-    | Minus -> (syms,spLst,lhs,rhs) |..> minusRules
-    | Percent -> (syms,spLst,lhs,rhs) |..> moduloRules
-    | LessThan -> (syms,spLst,lhs,rhs) |..> ltRules
-    | LessThanEq -> (syms,spLst,lhs,rhs) |..> lteqRules
-    | GreaterThan -> (syms,spLst,lhs,rhs) |..> gtRules
-    | GreaterThanEq -> (syms,spLst,lhs,rhs) |..> gteqRules
-    | Equal -> (syms,spLst,lhs,rhs) |..> equalsRules
-    | NotEqual -> (syms,spLst,lhs,rhs) |..> notEqualsRules
-    | And -> (syms,spLst,lhs,rhs) |..> andRules
-    | Or -> (syms,spLst,lhs,rhs) |..> orRules
-    | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
-    | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
-    | Is -> isRules syms spLst lhs rhs
-    | Has -> hasRules syms spLst lhs rhs
-    | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
-    | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
-    | Enpipe -> enpipeRules syms spLst lhs rhs
-    | _ ->
-        "Other binary operators"
-        |> notImplementedYet
-
-and evalPStageBody (syms : Symbols) spLst st bod =
+let rec evalPStageBody (syms : Symbols) spLst st bod =
     let syms' : Symbols = st :: syms
     let folder syms (es : ExprStatementL) =
         match syms with
@@ -123,7 +80,7 @@ and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) : BilboResul
         | Ok mLst' -> mLst' |> Ok
     List.fold folder (Ok []) cases        
 
-and addNodesToSyms spLst (nLst : Node list) (nMap : Map<NodeId,UnboundNodeId>) (syms : Symbols) =
+and addNodesToSyms spLst (nLst : Node list) (nMap : NodeMap) (syms : Symbols) =
     let nLst' : (Node*UnboundNodeId) list = nLst |> List.map (fun n -> n, Map.find n.id nMap)
     let folder syms (n,ubnid) =
         match syms with
@@ -196,7 +153,7 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Meani
                             | Some (Ok mean) -> mean :: mLst |> Ok
                 List.fold folder (Ok []) posMaps
 
-and mapInconsistent nMap (negMappings : (Map<UnboundNodeId,NodeId> * Map<UnboundEdgeId,EdgeId>) list) =
+and mapInconsistent (nMap : NodeMap) (negMappings : (NodeMap * EdgeMap) list) =
     // Need to check if the same identifier (in the pattern graph) maps to
     // the same node/weight in the host graph. If this is the case, then
     // the negative mapping is consistent, and the match is not valid
@@ -294,7 +251,7 @@ and recomputeMaps hg lMaps rMaps combine =
         |> List.distinct
     mapsWithPg |> Ok
 
-and evalPatternGraph (*syms spLst*) (hg : Graph) pgExpr : BilboResult< (Map<UnboundNodeId,NodeId> * Map<UnboundEdgeId,EdgeId> * UnboundGraph) list> =
+and evalPatternGraph (*syms spLst*) (hg : Graph) pgExpr : BilboResult< (NodeMap * EdgeMap * UnboundGraph) list> =
     match pgExpr with
     | PGraph pe ->
         pe
@@ -589,6 +546,103 @@ and evalObjInstan syms spLst typ attrs : BilboResult<Meaning> =
                 |> Ok
     | _ -> typ |> typeNotDefined
 
+
+and evalEdgeOp syms spLst (lhs : Node) (rhs : Node) (eOp : EdgeOp) =
+    let edge s w t =
+        match w with
+        | None -> [{Edge.source=s; target=t; weight=None}] |> Ok
+        | Some we ->
+            let wRes = evalExpr syms spLst we
+            match wRes with
+            | Error e -> e |> Error
+            | Ok w' -> [{Edge.source=s; target=t; weight=Some w'}] |> Ok
+    match eOp with
+    | Right w -> edge lhs w rhs     
+    | Left w -> edge rhs w lhs
+    | Bidir w ->
+        let r = edge lhs w rhs
+        let l = edge rhs w lhs
+        match r,l with
+        | Error e, _ -> e |> Error
+        | _, Error e -> e |> Error
+        | Ok r', Ok l' -> r' @ l' |> Ok
+
+and evalGExpr syms spLst ge : BilboResult<Meaning> =
+    match ge with
+    | PathExpr pe ->
+        match pe with
+        | PathComp _ -> "Path comprehensions" |> notImplementedYet
+        | Path peLst ->
+            let pathScan (g : BilboResult<Graph>) (pe : PathElem) =
+                match g with
+                | Error e -> e |> Error
+                | Ok g' -> 
+                    match pe with
+                    | PathElem.Edge (lhs,eOp,rhs) ->
+                        let lhsRes = evalExpr syms spLst lhs
+                        let rhsRes = evalExpr syms spLst rhs
+                        match lhsRes,rhsRes with
+                        | Error e, _ -> e |> Error
+                        | _, Error e -> e |> Error
+                        | Ok (Value(Node l)), Ok (Value(Node r)) ->
+                            let eLstRes = evalEdgeOp syms spLst l r eOp
+                            match eLstRes with
+                            | Error e -> e |> Error
+                            | Ok eLst -> Graph.addEdges eLst g'
+                        | Ok l, Ok r -> (l |> typeStr, r |> typeStr) ||> nonNodeInPathEdge
+                    | PathElem.Node e ->
+                        let n = evalExpr syms spLst e
+                        match n with
+                        | Error e -> e |> Error
+                        | Ok (Value(Node n')) -> Graph.addNode n' g'
+                        | Ok n' -> n' |> typeStr |> nonNodeInPath 
+            peLst
+            |> List.fold pathScan (Ok Graph.empty)
+            |> Result.bind (Graph >> Value >> Ok)
+
+and evalBinOperands syms spLst lhs rhs =
+    let valL = evalExpr syms spLst lhs
+    match valL with
+    | Error e -> e |> Error
+    | Ok valL' ->
+        let valR = evalExpr syms spLst rhs
+        match valR with
+        | Ok valR' -> (valL', valR') |> Ok
+        | Error e -> e |> Error
+
+and (|..>) (syms,spLst,lhs,rhs) opRule =
+    let ops = evalBinOperands syms spLst lhs rhs
+    match ops with
+    | Ok (l, r) -> opRule (l,r)
+    | Error e -> e |> Error
+
+and evalBinExpr syms spLst lhs op rhs =
+    match op with
+    | Pow -> (syms,spLst,lhs,rhs) |..> powRules
+    | Times -> (syms,spLst,lhs,rhs) |..> timesRules
+    | Divide -> (syms,spLst,lhs,rhs) |..> divideRules
+    | Plus -> (syms,spLst,lhs,rhs) |..> plusRules
+    | Minus -> (syms,spLst,lhs,rhs) |..> minusRules
+    | Percent -> (syms,spLst,lhs,rhs) |..> moduloRules
+    | LessThan -> (syms,spLst,lhs,rhs) |..> ltRules
+    | LessThanEq -> (syms,spLst,lhs,rhs) |..> lteqRules
+    | GreaterThan -> (syms,spLst,lhs,rhs) |..> gtRules
+    | GreaterThanEq -> (syms,spLst,lhs,rhs) |..> gteqRules
+    | Equal -> (syms,spLst,lhs,rhs) |..> equalsRules
+    | NotEqual -> (syms,spLst,lhs,rhs) |..> notEqualsRules
+    | And -> (syms,spLst,lhs,rhs) |..> andRules
+    | Or -> (syms,spLst,lhs,rhs) |..> orRules
+    | Xor -> (syms,spLst,lhs,rhs) |..> xorRules
+    | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
+    | Is -> isRules syms spLst lhs rhs
+    | Has -> hasRules syms spLst lhs rhs
+    | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
+    | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
+    | Enpipe -> enpipeRules syms spLst lhs rhs
+    | _ ->
+        "Other binary operators"
+        |> notImplementedYet
+
 and evalDot syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
     match lSpace with
@@ -629,61 +683,11 @@ and evalSExpr syms spLst s : BilboResult<Meaning> =
         | Ok lst -> lst |> ParamList |> Ok
         | Error e -> e |> Error
 
-and evalEdgeOp syms spLst (lhs : Node) (rhs : Node) (eOp : EdgeOp) =
-    let w : BilboResult<EdgeWeight> =
-        match eOp with
-        | Left None | Right None | Bidir None -> None |> Ok
-        | Left (Some(we))
-        | Right (Some(we))
-        | Bidir (Some(we)) ->
-            let wRes = evalExpr syms spLst we
-            match wRes with
-            | Error e -> e |> Error
-            | Ok w -> w |> Some |> Ok
-    match w,eOp with
-    | Error e, _ -> e |> Error
-    | Ok w', Left _ -> [{Edge.source=rhs; target=lhs; weight=w'}] |> Ok
-    | Ok w', Right _ -> [{Edge.source=lhs; target=rhs; weight=w'}] |> Ok
-    | Ok w', Bidir _ -> [{Edge.source=lhs; target=rhs; weight=w'}; {source=rhs; target=lhs; weight=w'}] |> Ok
-
-and evalGExpr syms spLst ge : BilboResult<Meaning> =
-    match ge with
-    | PathExpr pe ->
-        match pe with
-        | PathComp _ -> "Path comprehensions" |> notImplementedYet
-        | Path peLst ->
-            let pathScan (g : BilboResult<Graph>) (pe : PathElem) =
-                match g with
-                | Error e -> e |> Error
-                | Ok g' -> 
-                    match pe with
-                    | PathElem.Edge (lhs,eOp,rhs) ->
-                        let lhsRes = evalExpr syms spLst lhs
-                        let rhsRes = evalExpr syms spLst rhs
-                        match lhsRes,rhsRes with
-                        | Error e, _ -> e |> Error
-                        | _, Error e -> e |> Error
-                        | Ok (Value(Node l)), Ok (Value(Node r)) ->
-                            let eLstRes = evalEdgeOp syms spLst l r eOp
-                            match eLstRes with
-                            | Error e -> e |> Error
-                            | Ok eLst -> Graph.addEdges eLst g'
-                        | Ok l, Ok r -> (l |> typeStr, r |> typeStr) ||> nonNodeInPathEdge
-                    | PathElem.Node e ->
-                        let n = evalExpr syms spLst e
-                        match n with
-                        | Error e -> e |> Error
-                        | Ok (Value(Node n')) -> Graph.addNode n' g'
-                        | Ok n' -> n' |> typeStr |> nonNodeInPath 
-            peLst
-            |> List.fold pathScan (Ok Graph.empty)
-            |> Result.bind (Graph >> Value >> Ok)
-
 and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
-    | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | SExpr s -> evalSExpr syms spLst s
+    | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
     | GExpr g -> evalGExpr syms spLst g
     | PrefixExpr _ -> "Prefix expr" |> notImplementedYet

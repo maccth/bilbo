@@ -315,9 +315,9 @@ let patternGraphOrOps = [
     def edge(g) = match g
         | [a,<>,b]
         or [a,>,b] -> return [a,b]
-    g = [na,<>,nb,>,nc,nd,ne,<>,nf]
+    g = [na,<>,nb]
     a = g >> edge
-    b = [na,nb] |&| [nb,nc] |&| [ne,nf]
+    b = [na,nb] |&| [na,nb] |&| [nb,na] |&| [nb,na] 
     """, "Or application conditions in positive graph"
 
     nodes + """
@@ -330,8 +330,6 @@ let patternGraphOrOps = [
     """, "Or application conditions in negative graph"
 ]
 
-
-
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -340,46 +338,46 @@ let quickTwinVarTests tLst =
     |> List.map (fun (c,d) -> quickTwinVarTest c d)
     |> twinVarTests
 
-[<FTests>]
+[<Tests>]
 let test =
     let name =
         "Single param transforms with explict matching. "
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchSingleParamTransformTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test2 =
     let name =
         "Multiple param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
     testList name (singleMatchMultipleParamTransformTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test3 =
     let name = "Same node appears more than once in pattern graph"
     testList name (singleMatchNodeMatchesMultipleTimes |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test4 =
     let name = "Single match become tests"
     testList name (singleMatchBecomeTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test5 =
     let name = "Multiple match cases tests"
     testList name (multipleMatchCasesTransformTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test6 =
     let name = "Tests involving collections due to multiple subgraph matches"
     testList name (collectionTests |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test7 =
     let name = "Tests involving pattern graph binary operations"
     testList name (patternGraphBinOps |> quickTwinVarTests)
 
-[<FTests>]
+[<Tests>]
 let test8 =
     let name = "Tests involving pattern graph binary OR operations"
     testList name (patternGraphOrOps |> quickTwinVarTests)

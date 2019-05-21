@@ -96,6 +96,9 @@ and UnboundGraph = {
     edgeIdCount : EdgeId      
 }
 
+and NodeMap = Map<UnboundNodeId,NodeId>
+and EdgeMap = Map<UnboundEdgeId,EdgeId>
+
 // For  [+] and [-]
 // and SpecialValues = {
 //     posPatternGraph : Graph option
