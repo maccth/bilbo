@@ -407,8 +407,9 @@ let al = Associativity.Left
 let patternGraphOpp = new OperatorPrecedenceParser<PGraphExpr,unit,unit>()
 let pPGExpr = patternGraphOpp.ExpressionParser
 patternGraphOpp.TermParser <- pPatternPath <|> brackets pPGExpr
-patternGraphOpp.AddOperator(PrefixOperator("not", ws, 12, true, (fun x -> (PGNot, x) |> PGraphPreExpr))) 
-patternGraphOpp.AddOperator(InfixOperator("and", ws, 8, al, (fun l r -> (l, PGAnd, r) |> PGraphBinExpr))) 
+// patternGraphOpp.AddOperator(PrefixOperator("not", ws, 12, true, (fun x -> (PGNot, x) |> PGraphPreExpr))) 
+let stopNot = notFollowedBy (ws >>. str "not")
+patternGraphOpp.AddOperator(InfixOperator("and", stopNot >>. ws, 8, al, (fun l r -> (l, PGAnd, r) |> PGraphBinExpr))) 
 patternGraphOpp.AddOperator(InfixOperator("or", ws, 6, al, (fun l r -> (l, PGOr, r) |> PGraphBinExpr))) 
 patternGraphOpp.AddOperator(InfixOperator("+", ws, 11, al, (fun l r -> (l, PGAdd, r) |> PGraphBinExpr))) 
 patternGraphOpp.AddOperator(InfixOperator("-", (notFollowedBy (str ">")) >>. ws, 11, al, (fun l r -> (l, PGSub, r) |> PGraphBinExpr))) 
@@ -416,11 +417,13 @@ patternGraphOpp.AddOperator(InfixOperator("-", (notFollowedBy (str ">")) >>. ws,
 let pMatchCase fname =
     let body = many (pExprStatementL fname) 
     let whereClause = (keyw "where") >>. pExpr
-    let consPattern (pat : PGraphExpr) where _arrow body term =
-        (pat,where,body,term) |> Pattern 
+    let consPattern (pat : PGraphExpr) (neg : PGraphExpr option) where _arrow body term =
+        (pat,neg,where,body,term) |> Pattern 
     let consAll _undersocre where _arrow body term =
-        (where,body,term) |> CatchAll    
-    let pPat = pipe5 (pPGExpr) (opt whereClause) (str "->") body pTerminatingStatement consPattern
+        (where,body,term) |> CatchAll
+    let andNot = str "and" >>. str "not"
+    let negGraph = followedBy andNot >>. andNot >>. pPGExpr   
+    let pPat = pipe6 (pPGExpr) (opt negGraph) (opt whereClause) (str "->") body pTerminatingStatement consPattern
     let pAll = pipe5 (str "_") (opt whereClause) (str "->") body pTerminatingStatement consAll
     let p = pAll <|> pPat
     p <?> "match case"

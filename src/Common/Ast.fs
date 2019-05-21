@@ -140,13 +140,13 @@ and FunctionDef =
 and MatchStatement = Expr * MatchCase list
 
 and MatchCase =
-    | Pattern of PGraphExpr * WhereClause Option * ExprStatementL list * TerminatingStatement
+    | Pattern of PGraphExpr * PGraphExpr option * WhereClause Option * ExprStatementL list * TerminatingStatement
     | CatchAll of WhereClause Option * ExprStatementL list * TerminatingStatement
 
 and PGraphExpr =
     | PGraph of PathExpr
     | PGraphBinExpr of PGraphExpr * PGraphBinOp * PGraphExpr
-    | PGraphPreExpr of PGraphPreOp * PGraphExpr
+    // | PGraphPreExpr of PGraphPreOp * PGraphExpr
 
 and PGraphBinOp = 
     | PGAdd
@@ -154,9 +154,9 @@ and PGraphBinOp =
     | PGAnd
     | PGOr
 
-and PGraphPreOp =
-    | PGNot
-
+// and PGraphPreOp =
+    // | PGNot
+    
 and WhereClause = Expr
 
 and TerminatingStatement =

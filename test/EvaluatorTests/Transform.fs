@@ -310,6 +310,28 @@ let patternGraphBinOps = [
     """, "Negative application conditions ensure a collection of only two graphs is returned"
 ]
 
+let patternGraphOrOps = [
+    nodes + """
+    def edge(g) = match g
+        | [a,<>,b]
+        or [a,>,b] -> return [a,b]
+    g = [na,<>,nb,>,nc,nd,ne,<>,nf]
+    a = g >> edge
+    b = [na,nb] |&| [nb,nc] |&| [ne,nf]
+    """, "Or application conditions in positive graph"
+
+    nodes + """
+    def deadLink(g) =
+        match g
+        | [a,>,b] and not ([b,>,c] or [d,>,b]) -> return [a,>,b]
+    g = [na,>,nb] + [nc,>,na,<,nd] + [nc,>,nd,>,ne]
+    a = g >> deadLink
+    b = [na,>,nb] |&| [nd,>,ne]
+    """, "Or application conditions in negative graph"
+]
+
+
+
 let quickTwinVarTest codeStr des =
     (codeStr, "a", "b", des) 
 
@@ -356,4 +378,10 @@ let test6 =
 let test7 =
     let name = "Tests involving pattern graph binary operations"
     testList name (patternGraphBinOps |> quickTwinVarTests)
+
+[<FTests>]
+let test8 =
+    let name = "Tests involving pattern graph binary OR operations"
+    testList name (patternGraphOrOps |> quickTwinVarTests)
+
    
