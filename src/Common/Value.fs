@@ -19,7 +19,7 @@ and Value =
     | Float of float
     | Int of int
     | Bool of bool
-    | Pipeline  of Pipeline
+    | Pipeline of Pipeline
     | Node of Node
     | Graph of Graph
     | Collection of Collection
@@ -30,14 +30,25 @@ and ValueId = {
     id      : Id
 }
 
-and Pipeline = PStage list
 and ParamList = Meaning list
+
+and Pipeline =
+    | PStage of PStage
+    | Modified of Pipeline * Modifiers
+    | ThenPipe of Pipeline * Pipeline
+    | OrPipe of Pipeline * Pipeline
 
 and PStage =
     | Transform of TransformDef * SymbolTable
     | Function of FunctionDef * SymbolTable
     // | ParamStage of ParamList
 
+and Modifiers = {
+    alap : bool
+    upTo : int option
+    maybe : bool
+    once : bool
+}
 
 // Useful type definitions for readability
 and NodeId = Meaning

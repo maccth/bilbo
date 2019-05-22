@@ -12,6 +12,10 @@ open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
 
+type Returned<'T> =
+    | UnfinishedStage of 'T
+    | StageValue of 'T
+
 let rec evalPStageBody (syms : Symbols) spLst st bod =
     let syms' : Symbols = st :: syms
     let folder syms (es : ExprStatementL) =
@@ -323,65 +327,166 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGrap
             Result.bind (fun ug -> evalPathElem (*syms spLst*) elem ug) ug     
         List.fold folder (Ok UnboundGraph.empty) peLst
 
-and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) =
+and evalTran syms spLst (*pLineRest*) tst preMatchBod tMatch finalParamName gIn =
+    let tst' = SymbolTable.set tst {id=finalParamName; spLst=spLst} gIn
+    match tst' with
+    | Error e -> e |> Error
+    | Ok tstUpdated ->
+        let symsUpdated = evalPStageBody syms spLst tstUpdated preMatchBod
+        match symsUpdated with
+        | Error e -> e |> Error
+        | Ok syms' ->
+            let gExpr,cases = tMatch
+            let syms'' = SymbolTable.empty :: syms'
+            // This is the graph in the `match g | [...] -> `
+            let matchG = evalExpr syms'' spLst gExpr
+            // This is the result of the match statement.
+            // It could be a graph collection
+            let matches = 
+                match matchG with
+                | Error e -> e |> Error
+                | Ok (Value(Graph g)) -> evalMatchCases syms'' spLst cases g
+                | Ok m -> m |> typeStr |> notMatchingWithinGraph
+            matches
+            // TODO:
+            //  Need to do some checking on type.
+            //  In particular, lists of non-graphs etc.
+            //  Something along the lines of inspectMeaningLst
+
+and doAlap syms spLst pLineRest tst preMatchBod tMatch finalParamName (gCollectionIn : BilboResult<Meaning list>) =
+    let gFolder (gOuts : BilboResult<Meaning list>) (g : Meaning) : BilboResult<Meaning list> =
+        match gOuts with
+        | Error e -> e |> Error
+        | Ok gOuts' ->
+            let mutable gOutThisRes = evalTran syms spLst tst preMatchBod tMatch finalParamName g
+            let mutable gOutNextRes = gOutThisRes
+            let keepTryingToMatch gOutsNextRes =
+                match gOutsNextRes with
+                | Error _ -> false
+                | Ok [] -> false
+                | _ -> true
+            while (keepTryingToMatch gOutNextRes) do
+                gOutThisRes <- gOutNextRes
+                gOutNextRes <- doAlap syms spLst pLineRest tst preMatchBod tMatch finalParamName gOutThisRes
+            match gOutThisRes, gOutNextRes with
+            | Error e, _ -> e |> Error
+            | _, Error e -> e |> Error
+            | Ok gs, _ ->
+                // In this case we know the while loop terminated because nothing macthed. Not because of errors 
+                gs @ gOuts' |> Ok
+    Result.bind (List.fold gFolder (Ok [])) gCollectionIn
+
+and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) : BilboResult<Returned<Meaning>> =
     match pLine with
-    | [] -> param |> Ok
-    | Transform(tDef, tst) :: pLineRest ->
-        let tName,tParams,preMatchBod,tMatch = tDef
-        match tParams with
-        | [] -> zeroParamTransformError()
-        | hd :: paramsLeft ->
-            let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
-            match tst' with
-            | Error e -> e |> Error
-            | Ok tstUpdated ->
-                match paramsLeft with
-                | [] ->
-                    let symsUpdated = evalPStageBody syms spLst tstUpdated preMatchBod
-                    match symsUpdated with
-                    | Error e -> e |> Error
-                    | Ok syms' ->
-                        evalMatchStatement syms' spLst tMatch
-                        |-> applyArgToPipeline syms spLst pLineRest
-                | _ ->
-                    ((tName, paramsLeft,preMatchBod,tMatch), tstUpdated)
-                    |> Transform
-                    |> fun p -> p :: pLineRest
-                    |> Pipeline
-                    |> Value
-                    |> Ok         
-    | Function(fDef, fst) :: pLineRest ->
-        let fId, fParams, bod, ret = fDef
-        match fParams with
-        | [] -> zeroParamFunctionError()
-        | hd :: paramsLeft ->
-            let fst' = SymbolTable.set fst {id=hd; spLst=spLst} param
-            match fst' with
-            | Error e -> e |> Error
-            | Ok fstUpdated ->
-                match paramsLeft with
-                | [] ->
-                    let funcResultAsParam = evalFuncBody syms spLst fstUpdated bod ret
-                    match funcResultAsParam with
-                    | Error e -> e |> Error
-                    | Ok param' -> applyArgToPipeline syms spLst pLineRest param'
-                | _ ->
-                    ((fId, paramsLeft, bod, ret), fstUpdated)
-                    |> Function
-                    |> fun p -> p :: pLineRest
-                    |> Pipeline
-                    |> Value
-                    |> Ok
+    | ThenPipe (plFirst,plThen) ->
+        let applied = applyArgToPipeline syms spLst plFirst param
+        match applied with
+        | Error e -> e |> Error
+        | Ok (UnfinishedStage(Value(Pipeline(p)))) -> (p,plThen) |> ThenPipe |> Pipeline |> Value |> UnfinishedStage |> Ok
+        | Ok (StageValue(nextParam)) -> applyArgToPipeline syms spLst plThen nextParam
+        | Ok (UnfinishedStage(_)) -> "This can't happen m8." |> notImplementedYet
+    | PStage p ->
+        match p with
+        | Transform(tDef, tst) ->
+            let tName,tParams,preMatchBod,tMatch = tDef
+            match tParams with
+            | [] -> zeroParamTransformError()
+            | hd :: paramsLeft ->
+                let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
+                match tst' with
+                | Error e -> e |> Error
+                | Ok tstUpdated ->
+                    match paramsLeft with
+                    | [] ->
+                        let symsUpdated = evalPStageBody syms spLst tstUpdated preMatchBod
+                        match symsUpdated with
+                        | Error e -> e |> Error
+                        | Ok syms' ->
+                            evalMatchStatement syms' spLst tMatch
+                            |=> StageValue
+                    | _ ->
+                        ((tName, paramsLeft,preMatchBod,tMatch), tstUpdated)
+                        |> Transform
+                        |> PStage
+                        |> Pipeline
+                        |> Value
+                        |> UnfinishedStage
+                        |> Ok 
+
+            
+            // | [] -> zeroParamTransformError()
+            // | hd :: paramsLeft ->
+            //     // match mods with
+            //     // | Some {alap=true} ->
+            //     //     // TODO: Change this. This is a SERIOUS code sketch to check algorithmic flow.
+            //     //     let mLst = doAlap syms spLst pLineRest tst preMatchBod tMatch hd (Ok [param])
+            //     //     mLst
+            //     //     |-> inspectMeaningLst
+            //     // | _ ->
+            //     let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
+            //     match tst' with
+            //     | Error e -> e |> Error
+            //     | Ok tstUpdated ->
+            //         let symsUpdated = evalPStageBody syms spLst tstUpdated preMatchBod
+            //         match symsUpdated with
+            //         | Error e -> e |> Error
+            //         | Ok syms' ->
+            //             evalMatchStatement syms' spLst tMatch
+            //             |-> applyArgToPipeline syms spLst pLineRest
+            // | hd :: paramsLeft ->
+            //     let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
+            //     match tst' with
+            //     | Error e -> e |> Error
+            //     | Ok tstUpdated ->
+            //         ((tName, paramsLeft, preMatchBod, tMatch), tstUpdated, mods)
+            //         |> Transform
+            //         |> fun p -> p :: pLineRest
+            //         |> Pipeline
+            //         |> Value
+            //         |> Ok
+
+
+        | Function(fDef, fst) ->
+            let fId, fParams, bod, ret = fDef
+            match fParams with
+            | [] -> zeroParamFunctionError()
+            | hd :: paramsLeft ->
+                let fst' = SymbolTable.set fst {id=hd; spLst=spLst} param
+                match fst' with
+                | Error e -> e |> Error
+                | Ok fstUpdated ->
+                    match paramsLeft with
+                    | [] ->
+                        let funcResultAsParam = evalFuncBody syms spLst fstUpdated bod ret
+                        funcResultAsParam
+                        |=> StageValue
+                    | _ ->
+                        ((fId, paramsLeft, bod, ret), fstUpdated)
+                        |> Function
+                        |> PStage
+                        |> Pipeline
+                        |> Value
+                        |> UnfinishedStage
+                        |> Ok
+
+and unpackTerminatedMeaning m =
+    match m with
+    | Error e -> e |> Error
+    | Ok (UnfinishedStage m) -> m |> Ok
+    | Ok (StageValue m) -> m |> Ok
 
 and applyArgsToPipeline syms spLst pLine args =
     match args with
     | [] -> "Control should have passed onto single argument handler." |> ImplementationError |> Error
-    | [arg] -> applyArgToPipeline syms spLst pLine arg
+    | [arg] ->
+        applyArgToPipeline syms spLst pLine arg
+        |> unpackTerminatedMeaning
     | arg :: rest ->
         let evalRes = applyArgToPipeline syms spLst pLine arg
         match evalRes with
         | Error e -> e |> Error
-        | Ok (Value(Pipeline(pLine'))) -> applyArgsToPipeline syms spLst pLine' rest
+        | Ok (UnfinishedStage(Value(Pipeline pLine'))) -> applyArgsToPipeline syms spLst pLine' rest
+        | Ok (StageValue(m)) -> m |> Ok
         | _ ->
             "Too many arguments enpiped into function or transform."
             |> TypeError
@@ -396,7 +501,9 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
     | Ok lMean, Ok rMean ->
         match lMean, rMean with
         | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine pLst
-        | _, Value (Pipeline pLine) -> applyArgToPipeline syms spLst pLine lMean
+        | _, Value (Pipeline pLine) ->
+            applyArgToPipeline syms spLst pLine lMean
+            |> unpackTerminatedMeaning
         | _ -> rMean |> typeStr |> nonPStageOnEnpipeRhs
 
 and varAsString var =
@@ -684,6 +791,12 @@ and evalSExpr syms spLst s : BilboResult<Meaning> =
         | Ok lst -> lst |> ParamList |> Ok
         | Error e -> e |> Error
 
+// and evalPostFixExpr syms spLst e op =
+//     let eRes = evalExpr syms spLst e
+//     match eRes with
+//     | Error e -> e |> Error
+//     | Ok (Value(P) ->
+
 and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
@@ -691,8 +804,8 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
     | GExpr g -> evalGExpr syms spLst g
+    // | PostfixExpr (expr,op) -> 
     | PrefixExpr _ -> "Prefix expr" |> notImplementedYet
-    | PostfixExpr _ -> "Postfix expr" |> notImplementedYet
     | SpecialExpr _ -> "Special expr [+] and [-]" |> notImplementedYet
 
 and consVid syms spLst e : BilboResult<ValueId> =

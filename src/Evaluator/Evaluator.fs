@@ -48,13 +48,13 @@ let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =
                 | Ok fRes -> Symbols.set syms {id=fName; spLst=rnLst} fRes
                 | Error e -> e |> Error
             | _ ->
-                let f = (fDef, fst) |> Function |> fun s -> [s] |> Pipeline |> Value
+                let f = (fDef, fst) |> Function |> PStage |> Pipeline |> Value
                 Symbols.set syms {id=fName; spLst=rnLst} f
         attachLoc loc syms'
     | TransformDefL(loc, tDef) ->
         let tName,_,_,_ = tDef
         let tst = Symbols.head syms
-        let t = (tDef, tst) |> Transform |> fun t -> [t] |> Pipeline |> Value
+        let t = (tDef, tst) |> Transform |> PStage |> Pipeline |> Value
         let syms' = Symbols.set syms {id=tName; spLst=rnLst} t
         attachLoc loc syms'
 

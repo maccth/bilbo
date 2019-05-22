@@ -233,7 +233,7 @@ let collectRules ops =
 let pipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
-    | Value (Pipeline pl), Value (Pipeline pr) -> pl @ pr |> Pipeline |> Value |> Ok
+    | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> ThenPipe |> Pipeline |> Value |> Ok
     // TODO: Decide on this. Working implementation of param list pipeline stages. 
     // TODO: Uncoment corresponding tests
     // | Value (Pipeline pl), ParamList(pLst) -> pl @ [ParamStage pLst] |> Pipeline |> Value |> Ok
@@ -254,6 +254,12 @@ let rec mulAppRules ops =
     | Value (Pipeline pl), Value (Int m) ->
         match m with
         | x when x <= 0 -> m |> Int |> valuePrint |-> nonPositiveMultipleApp  
-        | x -> [1..x] |> List.collect (fun _ -> pl) |> Pipeline |> Value |> Ok
+        | x ->
+            [1..x] 
+            |> List.map (fun _ -> pl)
+            |> List.reduce (fun pline p -> (pline,p) |> ThenPipe)
+            |> Pipeline
+            |> Value
+            |> Ok
     | Value (Pipeline pl), r -> r |> typeStr |> nonIntMultipleAppRhs
-    |l, _ -> l |> typeStr |> nonPipelineMultipleAppLhs    
+    |l, _ -> l |> typeStr |> nonPipelineMultipleAppLhs
