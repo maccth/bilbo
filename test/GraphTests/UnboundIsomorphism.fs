@@ -7,7 +7,7 @@ open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
 open Bilbo.Tests.GraphTests.Helpers
 
-// These are the unbound graph equivalent tests as those given in Isomoprhism.fs.
+// These are the equivalent tests for unbound graph, as those given in Isomoprhism.fs for bound graphs.
 
 // [A, >, B, >, C, D]
 let mainHostG =

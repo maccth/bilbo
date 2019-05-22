@@ -77,3 +77,20 @@ let twinVarTest testData =
 
 let twinVarTests testDataLst =
     testDataLst |> List.map twinVarTest
+
+let abTwinVarTest codeStr des =
+    (codeStr, "a", "b", des) 
+
+let abTwinVarTests tLst =
+    tLst
+    |> List.map (fun (c,d) -> abTwinVarTest c d)
+    |> twinVarTests
+
+let nodes = """
+na = "nodeA"::1001
+nb = "nodeB"::1002
+nc = "nodeC"::1003
+nd = "nodeD"::1004
+ne = "nodeE"::1005
+nf = "nodeF"::1006
+"""
