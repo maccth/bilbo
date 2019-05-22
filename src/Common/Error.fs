@@ -133,3 +133,21 @@ let nonGraphCollectionError typeL typeR =
     + "Attempted type " + typeL + " and type " + typeR + "."
     |> TypeError
     |> Error
+
+let nonIntMultipleAppRhs typR =
+    "The ** operator requires a positive integer on the right-hand side. "
+    + "Instead got type " + typR + "."
+    |> TypeError
+    |> Error
+
+let nonPipelineMultipleAppLhs typL =
+    "The ** operator requires a function, transform or pipeline on the left-hand side. "
+    + "Instead got type " + typL + "."
+    |> TypeError
+    |> Error
+
+let nonPositiveMultipleApp m =
+    "The ** operator requires a positive integer on the right-hand side. "
+    + "Instead got " + m + "."
+    |> ValueError
+    |> Error

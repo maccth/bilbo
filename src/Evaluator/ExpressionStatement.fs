@@ -639,6 +639,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
     | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
+    | MulApp -> (syms,spLst,lhs,rhs) |..> mulAppRules
     | _ ->
         "Other binary operators"
         |> notImplementedYet

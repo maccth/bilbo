@@ -4,8 +4,8 @@ open Bilbo.Common.Extensions
 open Bilbo.Common.Type
 open Bilbo.Common.Value
 open Bilbo.Common.Error
-open Bilbo.Common
 open Bilbo.Graph.Graph
+open Bilbo.Evaluator.Print
 
 let intFloat ops iiFun ifFun fiFun ffFun =
     let lMean,rMean = ops
@@ -203,9 +203,9 @@ let nodeConsRules (ops : Meaning * Meaning) =
         | Space _ -> nodeConsError "namespace" partStr
         | ParamList _ -> nodeConsError "parameter list" partStr
     let getId node =
-        getNodePart (fun (n : Value.Node) -> n.id) node "node id"
+        getNodePart (fun (n : Node) -> n.id) node "node id"
     let getLoad node =
-        getNodePart (fun (n : Value.Node) -> n.load) node "node load"
+        getNodePart (fun (n : Node) -> n.load) node "node load"
     match ops with
     | l,r ->
         match getId l, getLoad r with
@@ -216,6 +216,19 @@ let nodeConsRules (ops : Meaning * Meaning) =
             |> Ok
         | Error e, _ -> e |> Error
         | Ok _, Error e -> e |> Error
+
+let collectRules ops =
+    let typeError = ops |> (fun (l,r) -> (l |> typeStr, r |> typeStr) ||> nonGraphCollectionError)
+    let cOk = Collection >> Value >> Ok
+    match ops with
+    | Value lVal, Value rVal ->
+        match lVal, rVal with
+        | Collection l, Collection r -> l @ r |> cOk
+        | Graph l, Collection r -> l :: r |> cOk
+        | Collection l, Graph r -> r :: l |> cOk
+        | Graph l, Graph r -> [l;r] |> cOk
+        | _ -> typeError
+    | _ -> typeError
 
 let pipeRules ops =
     let lMean, rMean = ops
@@ -236,15 +249,11 @@ let pipeRules ops =
         |> TypeError
         |> Error
 
-let collectRules ops =
-    let typeError = ops |> (fun (l,r) -> (l |> typeStr, r |> typeStr) ||> nonGraphCollectionError)
-    let cOk = Collection >> Value >> Ok
+let rec mulAppRules ops =
     match ops with
-    | Value lVal, Value rVal ->
-        match lVal, rVal with
-        | Collection l, Collection r -> l @ r |> cOk
-        | Graph l, Collection r -> l :: r |> cOk
-        | Collection l, Graph r -> r :: l |> cOk
-        | Graph l, Graph r -> [l;r] |> cOk
-        | _ -> typeError
-    | _ -> typeError
+    | Value (Pipeline pl), Value (Int m) ->
+        match m with
+        | x when x <= 0 -> m |> Int |> valuePrint |-> nonPositiveMultipleApp  
+        | x -> [1..x] |> List.collect (fun _ -> pl) |> Pipeline |> Value |> Ok
+    | Value (Pipeline pl), r -> r |> typeStr |> nonIntMultipleAppRhs
+    |l, _ -> l |> typeStr |> nonPipelineMultipleAppLhs    
