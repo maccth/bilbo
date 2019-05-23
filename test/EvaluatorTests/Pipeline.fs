@@ -3,7 +3,6 @@ module Bilbo.Tests.EvaluatorTests.Pipeline
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 
-
 let multipleApplicationFunctions = [
     """
     def addOne(x) = return x+1
@@ -80,8 +79,6 @@ let multipleApplicationFunctions = [
     a = (34,9,38,0,4) >> sum5
     b = 34+9+38+0+4
     """, "Multiple param function, mulaplied five times, partially"
-
-
 ]
 
 let multipleApplicationTransforms = [
@@ -103,9 +100,50 @@ let multipleApplicationTransforms = [
     a = [na,100>,nb,0>,nc] >> incWeight ** 2
     b = [na,102>,nb,0>,nc]
         |&| [na,101>,nb,1>,nc]
-        |&| [na,101>,nb,1>,nc]
         |&| [na,100>,nb,2>,nc]
     """, "Single param transform mulaplied twice but with multiple possible matches"
+]
+
+let alapTransforms = [
+    nodes + """
+    def join(g) = match g | [a,b] and not [a,>,b] -> become [a,>,b]
+    a = [na,nb] >> join!
+    b = [na,<>,nb]
+    ""","Single param transform ALAP application, applied twice, with single graph output"
+    
+    nodes + """
+    def break(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,>,nb,>,nc,>,nd] >> break!
+    b = [na,nb,nc,nd]
+    ""","Single param transform ALAP application, applied thrice, with single graph output"
+
+    nodes + """
+    def break(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,<>,nb] |&| [nc,<>,nd] >> break!
+    b = [na,nb] |&| [nc,nd]
+    ""","Single param transform ALAP application, applied to collection, with collection output"
+
+    nodes + """
+    def join(g) = match g | [a,b] and not [a,x>,b]-> become [a,0>,b]
+    def incWeight(g) =
+        match g 
+        | [a,x>,b] where x==0 ->
+            y = x+1
+            become [a,y>,b]
+    a = [na,nb] >> (join |> incWeight)!
+    b = [na,<1>,nb]
+    ""","Two single param transforms in a pipeline applied ALAP"
+
+    nodes + """
+    def join(g) = match g | [a,b] and not [a,x>,b]-> become [a,0>,b]
+    def incWeight(g) =
+        match g 
+        | [a,x>,b] where x==0 ->
+            y = x+1
+            become [a,y>,b]
+    a = [na,nb] >> join! |> incWeight!
+    b = [na,<1>,nb]
+    ""","Two single param transforms in a pipeline each applied ALAP"
 ]
 
 [<Tests>]
@@ -114,8 +152,17 @@ let test =
     let name = "Mulaplied functions"
     testList name (multipleApplicationFunctions |> abTwinVarTests)
 
+[<Tests>]
 let test2 =
     // These tests contain multiple applications of transforms
     let name = "Mulaplied transforms"
     testList name (multipleApplicationTransforms |> abTwinVarTests)
+
+[<Tests>]
+let test3 =
+    // These tests contain ALAP applications of transforms
+    let name = "ALAP application of transforms"
+    testList name (alapTransforms |> abTwinVarTests)
+
+    
     

@@ -51,7 +51,7 @@ let graphEquals (gotG : Graph) (expG : Graph) =
 
 let collectionEquals (gotC : Collection) (expC : Collection) =
     let prepareG g = g |> Graph.nodes |> List.sort, g |> Graph.edges |> List.sort
-    let prepareC c = c |> List.sort |> List.map prepareG
+    let prepareC c = c |> Set.toList |> List.map prepareG |> List.sort
     Expect.equal (prepareC gotC) (prepareC expC) "Collection equality"
 
 let runTwinVarTest codeStr var1 var2 =

@@ -85,7 +85,7 @@ and PreOp =
 
 and PostOp =
     // Transform
-    | ALAPApp
+    | AlapApp
     | MaybeApp
 
 and SpecialExpr =

@@ -219,14 +219,15 @@ let nodeConsRules (ops : Meaning * Meaning) =
 
 let collectRules ops =
     let typeError = ops |> (fun (l,r) -> (l |> typeStr, r |> typeStr) ||> nonGraphCollectionError)
-    let cOk = Collection >> Value >> Ok
+    let cOk = Value.Collection >> Value >> Ok
     match ops with
     | Value lVal, Value rVal ->
         match lVal, rVal with
-        | Collection l, Collection r -> l @ r |> cOk
-        | Graph l, Collection r -> l :: r |> cOk
-        | Collection l, Graph r -> r :: l |> cOk
-        | Graph l, Graph r -> [l;r] |> cOk
+        // TODO: Faster implementation of these by making the set use custom comparison
+        | Collection l, Collection r -> l + r |> Set.toList |> Collection.ofList |> cOk
+        | Graph l, Collection r -> Set.add l r |> Set.toList |> Collection.ofList |> cOk
+        | Collection l, Graph r -> Set.add r l |> Set.toList |> Collection.ofList |> cOk
+        | Graph l, Graph r -> [l;r] |> Collection.ofList |> cOk
         | _ -> typeError
     | _ -> typeError
 

@@ -255,7 +255,7 @@ exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 14, tr
 exprOpp.AddOperator(PrefixOperator("not", ws, 10, true, fun x -> (Not,x) |> PrefixExpr))
 
 exprOpp.AddOperator(PrefixOperator("$", ws, 14 , true, fun x -> (Dollar,x) |> PrefixExpr))
-exprOpp.AddOperator(PostfixOperator("!", ws, 13, true, fun x -> (x, ALAPApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("!", ws, 13, true, fun x -> (x, AlapApp) |> PostfixExpr ))
 exprOpp.AddOperator(PostfixOperator("?", ws, 13, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 let binExprOps = List.append binExprOps1 binExprOps2

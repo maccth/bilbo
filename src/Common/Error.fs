@@ -27,6 +27,8 @@ type ProgramError = Loc option * BilboError
 
 type ProgramResult<'T> = Result<'T,ProgramError>
 
+let implementationError (m : string) = m |> ImplementationError |> Error
+
 let parseError file msg err state : BilboResult<Program> =
     let str = "In file: " + file + "\n" + msg
     str |> SyntaxError |> Error
@@ -50,8 +52,7 @@ let bindTypeError thing cannotBeBoundTo =
 
 let bindImpError thing cannotBeBoundTo =
     "A" + thing + "should not be bound to" + cannotBeBoundTo
-    |> ImplementationError
-    |> Error
+    |> implementationError
 
 let paramListTypeError thing = bindTypeError "parameter list" thing
 
@@ -59,18 +60,15 @@ let paramListImpError thing = bindImpError  "parameter list" thing
 
 let zeroParamFunctionError() =
     "Functions with no paramaters should be evaluated at definition time and cannot be enpiped to."
-    |> ImplementationError
-    |> Error
+    |> implementationError
 
 let zeroParamTransformError() =
     "Transforms with no paramaters are not valid and this should be caught at parse time."
-    |> ImplementationError
-    |> Error
+    |> implementationError
 
 let notImplementedYet thing =
     thing + " has not been implemented yet"
-    |> ImplementationError
-    |> Error
+    |> implementationError
 
 let printError thing=
     "Cannot print a " + thing
@@ -151,3 +149,14 @@ let nonPositiveMultipleApp m =
     + "Instead got " + m + "."
     |> ValueError
     |> Error
+
+let alapMaybeAppNonPLine typ =
+    "The ! and ? pipeline modifiers must be applied to a transform or pipeline. "
+    + "Instead got " + typ + "."
+    |> TypeError
+    |> Error
+
+let functionAlapError() =
+    "Functions cannot be applied as-long-as-possible (ALAP)"
+    |> TypeError
+    |> Error   

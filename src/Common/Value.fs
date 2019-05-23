@@ -34,7 +34,7 @@ and ParamList = Meaning list
 
 and Pipeline =
     | PStage of PStage
-    | Modified of Pipeline * Modifiers
+    | Modified of Pipeline * Modifier
     | ThenPipe of Pipeline * Pipeline
     | OrPipe of Pipeline * Pipeline
 
@@ -43,12 +43,15 @@ and PStage =
     | Function of FunctionDef * SymbolTable
     // | ParamStage of ParamList
 
-and Modifiers = {
-    alap : bool
-    upTo : int option
-    maybe : bool
-    once : bool
-}
+and Modifier =
+    | Alap of Param
+    | Maybe
+    | Once
+    | UpTo of int
+
+and PipelineOutput<'T> =
+    | Unfinished of 'T
+    | Output of 'T
 
 // Useful type definitions for readability
 and NodeId = Meaning
@@ -116,7 +119,7 @@ and EdgeMap = Map<UnboundEdgeId,EdgeId>
 //     negPatternGraph : Graph option
 // }
 
-and Collection = Graph list
+and Collection = Set<Graph>
 
 // and PatternGraph = {
 //     pos : UnboundGraph

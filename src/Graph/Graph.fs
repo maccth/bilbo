@@ -244,25 +244,14 @@ module UnboundGraph =
             |-> Graph.addNodes mappedNodes
         (sg, revNMap, revEMap)
 
-// module PatternGraph =
-//     let empty = {pos=UnboundGraph.empty; neg=None}
+module Collection =
+    let ofList (gLst : Graph list) : Collection =
+        let eq g = (g |> Graph.nodes |> Set.ofList),(g |> Graph.edges |> Set.ofList)
+        gLst
+        |> List.distinctBy eq
+        |> Set.ofList
 
-//     let addToPos pg posIn =
-//         {pg with pos = UnboundGraph.addGraphs pg.pos posIn}
-
-//     let addToNeg pg negIn =
-//         match pg with
-//         | {neg=Some n'; pos=_} -> {pg with neg = UnboundGraph.addGraphs n' negIn |> Some}
-//         | {neg=None; pos=_} -> {pg with neg = negIn |> Some} 
-
-//     let addGraphs pg1 pg2 =
-//         let pg' = addToPos pg1 pg2.pos
-//         match pg2.neg with
-//         | Some neg -> addToNeg pg' neg        
-//         | None -> pg'
-
-//     let subtractGraphs pg1 pg2 =
-//         let pg' = {pg1 with pos = UnboundGraph.subtractGraphs pg1.pos pg2.pos}
-//         match pg1.neg, pg2.neg with
-//         | Some neg1, Some neg2 -> {pg' with neg = UnboundGraph.subtractGraphs neg1 neg2 |> Some}
-//         | _, _ -> pg'
+    let toMeaning (c : Collection) =
+        match Set.count c with
+        | 1 -> c |> Set.toList |> List.head |> Graph |> Value
+        | _ -> c |> Value.Collection |> Value

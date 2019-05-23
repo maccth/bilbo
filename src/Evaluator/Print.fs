@@ -109,5 +109,5 @@ and graphPrint (g : Graph) =
     | _ -> plusFold [edgeStr; nodeStr]
 
 and collectionPrinting (c : Collection) =
-    let cStrs = List.map (Graph >> valuePrint) c
+    let cStrs = c |> Set.toList |> List.map (Graph >> valuePrint) 
     strFold "\n|&| " cStrs
