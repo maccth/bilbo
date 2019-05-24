@@ -52,6 +52,30 @@ let multipleMatchCasesTransformTests = [
     a = [na] >> graph
     b = []        
     ""","Both pattern graphs the same, but first where clause passes. Ensure first is taken."
+
+    """
+    def change(g) = match g | [x,>,y] ->
+        x = x::20
+        become [x,>,y]
+    na = "a"::0
+    nb = "b"::1
+    nc = "c"::2
+    g = [na,>,nb] + [na,>,nc]
+    a = g >> change
+    b = ["a"::20,>,nb] + ["a"::20,>,nc]
+    """, "Changing a node in the graph. Ensure that edge deletion/preservation on works correctly when nodes are changed"
+
+    """
+    def change(g) = match g | [x,>,y] ->
+        x = x::20
+        become [x,30>,y]
+    na = "a"::0
+    nb = "b"::1
+    nc = "c"::2
+    g = [na,>,nb] + [na,20>,nc]
+    a = g >> change
+    b = ["a"::20, 30>, nb] + ["a"::20, 20>, nc]
+    """, "Changing a node in the graph. Ensure that edge deletion/preservation on works correctly when nodes and edges are changed"
 ]
 
 let collectionTests = [
@@ -66,8 +90,8 @@ let collectionTests = [
     def delNode(g) = match g | [x] -> become []
     g = [na,nb]
     a = g >> delNode |> delNode
-    b = [] |&| []
-    """, "Deleting a node twice. Returns a collection of two empty graphs. Ensure that these are both retruned."
+    b = []
+    """, "Deleting a node twice. Returns a collection of two empty graphs. Ensure that these are collapsed to one graph."
 
     nodes + """
     def delNode(g) = match g | [x] -> become []
@@ -77,7 +101,7 @@ let collectionTests = [
         [nb,>,nc]
         |&| [na,nc]
         |&| [na,>,nb]
-    """, "Deleting a node from a graph with multiple nodes. Ensure that edge deletion/preservation on works correctly on collections"
+    """, "Deleting a node from a graph with multiple nodes. Ensure that edge deletion/preservation works correctly on collections"
 ]
 
 let patternGraphBinOps = [
@@ -107,7 +131,7 @@ let patternGraphOrOps = [
         or [a,>,b] -> return [a,b]
     g = [na,<>,nb]
     a = g >> edge
-    b = [na,nb] |&| [na,nb] |&| [nb,na] |&| [nb,na] 
+    b = [na,nb]
     """, "Or application conditions in positive graph"
 
     nodes + """

@@ -1,4 +1,4 @@
-module Bilbo.Evaluator.BinaryExpressions
+module Bilbo.Evaluator.BinaryExpression
 
 open Bilbo.Common.Extensions
 open Bilbo.Common.Type
@@ -61,7 +61,7 @@ let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     let g = lazy(graphMatcher ops Graph.addGraphs (Result.bind (Graph >> Value >> Ok)))
     ifs
     |??> g
-    |..> ("Plus rules" |> notImplementedYet)
+    |..> ("Cannot use operator + between types " + (ops |> fst |> typeStr) + " and " +  (ops |> snd |> typeStr) + "." |> TypeError |> Error)
 
 let minusRules ops =
     let ifl = intFloat2 ops (-) (fun x y -> float(x) - y) (fun x y -> x - float(y)) (-)
@@ -144,9 +144,11 @@ let equalsRules ops =
     let ifs = intFloatStr ops eq ifFun fiFun eq eq
     let n = lazy(nodeMatcher ops (=) (Bool >> Value >> Ok))
     let g = lazy(graphMatcher ops Graph.equal (Bool >> Value >> Ok))
+    let nope = false |> Bool |> Value |> Ok |> Matched
     ifs
     |??> n
     |??> g
+    |?> nope
     |..> ("Equal rules" |> notImplementedYet)
 
 let notEqualsRules ops =

@@ -89,28 +89,39 @@ let csv2 p =
 
 // Parser
 // ======
-let keywords = 
-    [
-        "type";
-        "def";
-        "return"; "become";
-        "is"; "and"; "not";
-        "match";
-        "where";
-        "True"; "False";
-        "print";
-        "delete";
-        "import";
-        "is";
-        "has";
-        "int"; "float"; "str"; "bool";
-    ]
+let keywords = [
+    "type";
+    "def";
+    "return"; "become";
+    "is"; "and"; "not";
+    "match";
+    "where";
+    "True"; "False";
+    "print";
+    "delete";
+    "import";
+    "is";
+    "has";
+]
 
-let pnKeyword  =
-    let kws = List.map stre keywords
+let typeWords = [
+    "int"; "float"; "str"; "bool";
+]
+
+let pnStrLst lst =
+    let nonWords = List.map stre lst
     let nextChar = (fun c -> isLetter c || isDigit c || c='_' || c=''')
-    let keywordOnly = choice kws .>>. nextCharSatisfiesNot nextChar
-    notFollowedByL keywordOnly "keyword"
+    let keywordOnly = choice nonWords .>>. nextCharSatisfiesNot nextChar
+    notFollowedBy keywordOnly
+
+let pnAnyKeyword  =
+    pnStrLst (keywords @ typeWords)
+    <?> "keywords"
+
+let pnKeyword =
+    pnStrLst keywords
+    <?> "keywords"
+
 
 let idBase : Parser<string, unit> =
     let firstChar c = isLetter c
@@ -369,7 +380,7 @@ do pExprTermRef := chance exprs
    
 let pAssignmentExpr =
     let ctor var _ expr  =  (var, expr) |> AssignmentExpr
-    let p = pipe3 pExpr (str "=") pExpr ctor
+    let p = pipe3 (pnAnyKeyword >>. pExpr) (str "=") pExpr ctor
     p <?> "assignment expression"
 
 let pPrintExpr =

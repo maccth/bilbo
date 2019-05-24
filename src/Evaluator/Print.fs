@@ -58,13 +58,13 @@ and objPrint tName (st : SymbolTable) =
         | Error e -> e |> Error
         | Ok str' ->
             let pairStr = printParamValPair id mean
-            Result.bind (fun s -> ", " + s |> Ok) pairStr
+            Result.bind (fun s -> str' + ", " + s |> Ok) pairStr
     match attrs with
     | [] -> tName + "()" |> Ok
     | [(id,mean)] -> printParamValPair id mean |> Result.bind (fun s -> tName+"("+s+")" |> Ok)
     | (id,mean) :: rest ->
         let param1 = printParamValPair id mean
-        let paramRest = List.fold folder (Ok "") attrs
+        let paramRest = List.fold folder (Ok "") rest
         match param1, paramRest with
         | Ok s, Ok s2 -> tName + "(" + s + s2 + ")" |> Ok
         | Error e, _ -> e |> Error

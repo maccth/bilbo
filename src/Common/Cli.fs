@@ -25,8 +25,12 @@ let cli (cliArgs : string []) (replName : string) fileHandler repl startState =
     | true ->
         let file = args.GetResult BilboFile
         let result = file |> fileHandler
-        if debugInfo then
-            printfn "%A" result
+        match result with
+        | Error e ->
+            printfn "%A" e
+        | Ok res ->                    
+            if debugInfo then
+                printfn "%A" res
     | _ ->
         printfn "%s" replName
         let mutable codeIn = ""
