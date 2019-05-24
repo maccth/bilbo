@@ -7,7 +7,8 @@ open Bilbo.Common.Type
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
 open Bilbo.Evaluator.PrimativeTypes
-open Bilbo.Evaluator.BinaryExpressions
+open Bilbo.Evaluator.BinaryExpression
+open Bilbo.Evaluator.PrefixExpression
 open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
@@ -208,16 +209,39 @@ and evalBecome syms spLst hg sg bExpr =
     match bgRes with
     | Error e -> e |> Error
     | Ok (Value(Graph bg)) ->
-        let nR = Graph.nodes bg |> Set.ofList
-        let nL = Graph.nodes sg |> Set.ofList
-        let nHg = Graph.nodes hg |> Set.ofList
-        let nOut = (nHg - nL) + nR
+        let ids nodes =  nodes |> Set.map (fun (n : Node) -> n.id)
+        let nR = bg |> Graph.nodes |> Set.ofList
+        let nL = sg |> Graph.nodes |> Set.ofList
+        let nHg = hg |> Graph.nodes |> Set.ofList
+
+        let nRIds = nR |> ids
+        let nLIds = nL |> ids
+        let nHgIds = nHg |> ids
+        let nPresIds = (nHgIds - nLIds)
+
+        let nIdsOut = nPresIds + nRIds
+        let nPres = nHg |> Set.filter (fun n -> Set.contains n.id nPresIds)
+        let nOut = nPres + nR
+
         let eR = Graph.edges bg
         let eL = Graph.edges sg 
         let eHg = Graph.edges hg 
+
+        let changeEdgeNodes (e : Edge) =
+            let source' = 
+                match Set.contains e.source.id nRIds with
+                | true -> Graph.node e.source.id bg
+                | false -> e.source
+            let target' = 
+                match Set.contains e.target.id nRIds with
+                | true -> Graph.node e.target.id bg
+                | false -> e.target  
+            {Edge.source=source'; weight=e.weight; target=target'}                      
+
         let eOut =
             (eHg /-/ eL)
             |> (@) eR
+            |> List.map changeEdgeNodes
             |> List.filter (fun e -> Set.contains e.source nOut && Set.contains e.target nOut)
         Graph.empty
         |> Graph.addEdges eOut
@@ -692,6 +716,12 @@ and (|..>) (syms,spLst,lhs,rhs) opRule =
     | Ok (l, r) -> opRule (l,r)
     | Error e -> e |> Error
 
+and (|.>) (syms,spLst,expr) opRule =
+    let meanRes = evalExpr syms spLst expr
+    match meanRes with
+    | Error e -> e |> Error
+    | Ok mean -> mean |> opRule 
+
 and evalBinExpr syms spLst lhs op rhs =
     match op with
     | Pow -> (syms,spLst,lhs,rhs) |..> powRules
@@ -719,6 +749,13 @@ and evalBinExpr syms spLst lhs op rhs =
     | _ ->
         "Other binary operators"
         |> notImplementedYet
+
+and evalPrefixExpr syms spLst e op =
+    match op with
+    | Not -> (syms,spLst,e) |.> notRules
+    | Amp -> (syms,spLst,e) |.> ampRules
+    | DblAmp -> (syms,spLst,e) |.> dblAmpRules
+    | Dollar _ -> "Once application" |> notImplementedYet
 
 and evalDot syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
@@ -772,7 +809,7 @@ and getNextParam pLine =
     | Modified (pl,_) -> getNextParam pl
     | OrPipe (pl1,pl2) -> "Or pipes" |> notImplementedYet     
 
-and evalPostFixExpr syms spLst e op =
+and evalPostfixExpr syms spLst e op =
     let modifiedPLine = Modified >> Pipeline >> Value >> Ok
     let eRes = evalExpr syms spLst e
     match eRes with
@@ -792,8 +829,8 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
     | GExpr g -> evalGExpr syms spLst g
-    | PostfixExpr (e',op) -> evalPostFixExpr syms spLst e' op
-    | PrefixExpr _ -> "Prefix expr" |> notImplementedYet
+    | PostfixExpr (e',op) -> evalPostfixExpr syms spLst e' op
+    | PrefixExpr (op, e') -> evalPrefixExpr syms spLst e' op
     | SpecialExpr _ -> "Special expr [+] and [-]" |> notImplementedYet
 
 and consVid syms spLst e : BilboResult<ValueId> =

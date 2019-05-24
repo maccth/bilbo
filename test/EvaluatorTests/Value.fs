@@ -1,7 +1,6 @@
-module Bilbo.Tests.EvaluatorTests.Expression
+module Bilbo.Tests.EvaluatorTests.Value
 
 open Bilbo.Common.Value
-open Bilbo.Common.SymbolTable
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 
@@ -165,7 +164,23 @@ let primTypesLogicalOperators = [
     "-0.1 and True", true |> Bool |> Value, "Float true negative"
     "\"\" and True", false |> Bool |> Value, "String false"
     "\"hi\" and True", true |> Bool |> Value, "String true"
-    "\"False\" and True", true |> Bool |> Value, "String true with false quoted" 
+    "\"False\" and True", true |> Bool |> Value, "String true with false quoted"
+
+    "not True", false |> Bool |> Value, "Noting true"
+    "not False", true |> Bool |> Value, "Noting false"
+    "not 0", true |> Bool |> Value, "Noting int 0"
+    "not 1", false |> Bool |> Value, "Noting small positive int"
+    "not -1", false |> Bool |> Value, "Noting small negative int"
+    "not 20", false |> Bool |> Value, "Noting positive int"
+    "not -20", false |> Bool |> Value, "Noting negative int"
+    "not 0.0", true |> Bool |> Value, "Noting float 0"
+    "not 0.1", false |> Bool |> Value, "Noting small positive float"
+    "not -0.1", false |> Bool |> Value, "Noting small negative float"
+    "not 20", false |> Bool |> Value, "Noting positive float"
+    "not -20", false |> Bool |> Value, "Noting negative float"
+    "not \"\"", true |> Bool |> Value, "Noting empty string"
+    "not \"False\"", false |> Bool |> Value, "Noting false string"
+    "not \"True\"", false |> Bool |> Value, "Noting true string"
 ]
 
 let quickSingleVarAssignTest strMean mean des =
