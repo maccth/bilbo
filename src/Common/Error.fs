@@ -138,6 +138,12 @@ let nonIntMultipleAppRhs typR =
     |> TypeError
     |> Error
 
+let nonPipelineDollarApp typ =
+    "The $ operator requires a transform or pipeline on the right-hand side. "
+    + "Instead got type " + typ + "."
+    |> TypeError
+    |> Error
+
 let nonPipelineMultipleAppLhs typL =
     "The ** operator requires a function, transform or pipeline on the left-hand side. "
     + "Instead got type " + typL + "."

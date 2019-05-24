@@ -48,20 +48,20 @@ and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
         |=> Collection.ofList
         |=> Collection.toMeaning
   
-and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResult<Meaning list> =
+and evalMatchStatement (syms : Symbols) spLst modif (mat : MatchStatement) : BilboResult<Meaning list> =
     let matchGExpr,cases = mat
     let syms' = SymbolTable.empty :: syms
     let matchG = evalExpr syms' spLst matchGExpr
     let matchOut =
         match matchG with
         | Error e -> e |> Error
-        | Ok (Value(Graph g)) -> evalMatchCases syms' spLst cases g
+        | Ok (Value(Graph g)) -> evalMatchCases syms' spLst modif cases g
         | Ok (Value(Collection c)) ->
             let folder mLstIn g =
                 match mLstIn with
                 | Error e -> e |> Error
                 | Ok mLstOut ->
-                    let mLstRes = evalMatchCases syms' spLst cases g
+                    let mLstRes = evalMatchCases syms' spLst modif cases g
                     match mLstRes with
                     | Error e -> e |> Error
                     | Ok mLst -> mLst @ mLstOut |> Ok
@@ -71,12 +71,12 @@ and evalMatchStatement (syms : Symbols) spLst (mat : MatchStatement) : BilboResu
     // matchOut
     // |-> inspectMeaningLst
 
-and evalMatchCases syms spLst (cases : MatchCase list) (hg : Graph) : BilboResult<Meaning list> =
+and evalMatchCases syms spLst modif (cases : MatchCase list) (hg : Graph) : BilboResult<Meaning list> =
     let folder mLst case = 
         match mLst with
         | Error e -> e |> Error
         | Ok [] ->
-            match evalMatchCase syms spLst hg case with
+            match evalMatchCase syms spLst modif hg case with
             | Error e -> e |> Error
             | Ok newMLst -> newMLst |> Ok
         | Ok mLst' -> mLst' |> Ok
@@ -113,7 +113,7 @@ and addEdgesToSyms spLst (pg : UnboundGraph) (eLst : Edge list) (eMap : Map<Edge
                     Symbols.set syms' {id=id'; spLst=spLst} (w)
     List.fold folder (Ok syms) eLst'
 
-and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Meaning list> =
+and evalMatchCase syms spLst (modif : Modifier Option) (hg : Graph) (case : MatchCase) : BilboResult<Meaning list> =
     match case with
     | CatchAll (where,bod,term) ->
         match evalWhere syms spLst where with
@@ -140,20 +140,42 @@ and evalMatchCase syms spLst (hg : Graph) (case : MatchCase) : BilboResult<Meani
             match posMaps with
             | [] -> [] |> Ok
             | _ ->
-                let folder (cIn : BilboResult<Meaning list>) (nMap,eMap,pg) =
-                    match cIn with
-                    | Error e -> e |> Error
-                    | Ok mLst ->
+                match modif with
+                | Some Once ->
+                    let matchPredicate (nMap,eMap,pg) =
                         let allNegMapsInconsistent = mapInconsistent nMap negMaps'
                         match (List.isEmpty negMaps || allNegMapsInconsistent) with
-                        | false -> mLst |> Ok
+                        | false -> false
                         | true ->
                             let m = evalMatch syms spLst hg (pg) where bod term nMap eMap
                             match m with
-                            | None -> mLst |> Ok
-                            | Some (Error e) -> e |> Error
-                            | Some (Ok mean) -> mean :: mLst |> Ok
-                List.fold folder (Ok []) posMaps
+                            | None -> false
+                            | _ -> true      
+                    let firstMaps = List.tryFind matchPredicate posMaps
+                    match firstMaps with
+                    | None -> Ok []
+                    | Some (nMap,eMap,pg) ->
+                        let mOpt = evalMatch syms spLst hg pg where bod term nMap eMap
+                        match mOpt with
+                        | None -> [] |> Ok
+                        | Some (Ok res) -> [res] |> Ok
+                        | Some (Error e) -> e |> Error
+                | _ ->
+                    let folder (cIn : BilboResult<Meaning list>) (nMap,eMap,pg) =
+                        match cIn with
+                        | Error e -> e |> Error
+                        | Ok mLst ->
+                            let allNegMapsInconsistent = mapInconsistent nMap negMaps'
+                            match (List.isEmpty negMaps || allNegMapsInconsistent) with
+                            | false -> mLst |> Ok
+                            | true ->
+                                let m = evalMatch syms spLst hg (pg) where bod term nMap eMap
+                                match m with
+                                | None -> mLst |> Ok
+                                | Some (Error e) -> e |> Error
+                                | Some (Ok mean) -> mean :: mLst |> Ok
+                    List.fold folder (Ok []) posMaps
+
 
 and mapInconsistent (nMap : NodeMap) (negMappings : (NodeMap * EdgeMap) list) =
     // Need to check if the same identifier (in the pattern graph) maps to
@@ -348,23 +370,23 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGrap
             Result.bind (fun ug -> evalPathElem (*syms spLst*) elem ug) ug     
         List.fold folder (Ok UnboundGraph.empty) peLst
 
-and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) : BilboResult<PipelineOutput<Meaning>> =
+and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (param : Meaning) : BilboResult<PipelineOutput<Meaning>> =
     match pLine with
     | OrPipe _ ->  "Or pipelines" |> notImplementedYet
     | ThenPipe (plFirst,plThen) ->
-        let applied = applyArgToPipeline syms spLst plFirst param
+        let applied = applyArgToPipeline syms spLst plFirst modif param
         match applied with
         | Error e -> e |> Error
         | Ok (Unfinished(Value(Pipeline(p)))) -> (p,plThen) |> ThenPipe |> Pipeline |> Value |> Unfinished |> Ok
-        | Ok (Output(nextParam)) -> applyArgToPipeline syms spLst plThen nextParam
+        | Ok (Output(nextParam)) -> applyArgToPipeline syms spLst plThen modif nextParam
         | Ok (Unfinished(_)) -> "Only pipelines can have an unfinished output." |> implementationError
-    | Modified (modPLine, modif) ->
-        match modif with
+    | Modified (modPLine, modif') ->
+        match modif' with
         | Maybe -> "The maybe ? modifier" |> notImplementedYet
-        | Once -> "The once $ modifier" |> notImplementedYet
+        | Once ->  applyArgToPipeline syms spLst modPLine (Some Once) param
         | UpTo _ -> "The up-to *!* modifier" |> notImplementedYet
         | Alap _alapParam ->
-            let mutable output = applyArgToPipeline syms spLst modPLine param
+            let mutable output = applyArgToPipeline syms spLst modPLine modif param
             let mutable outputPrev = param |> Output |> Ok
             let keepApplying output =
                 match output with
@@ -376,7 +398,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) : BilboRe
                 outputPrev <- output
                 output <- 
                     match outputPrev with
-                    | Ok (Output(mean)) -> applyArgToPipeline syms spLst modPLine mean
+                    | Ok (Output(mean)) -> applyArgToPipeline syms spLst modPLine modif mean
                     | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError
             match output with
             | Ok (Unfinished unfinPl) -> unfinPl |> Unfinished |> Ok
@@ -400,7 +422,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (param : Meaning) : BilboRe
                         match symsUpdated with
                         | Error e -> e |> Error
                         | Ok syms' ->
-                            evalMatchStatement syms' spLst tMatch
+                            evalMatchStatement syms' spLst modif tMatch
                             |-> inspectTranOutput
                             |=> Output
                     | _ ->
@@ -440,15 +462,15 @@ and unpackPLineOutput m : BilboResult<Meaning> =
     | Ok (Unfinished m) -> m |> Ok
     | Ok (Output m) -> m |> Ok
 
-and applyArgsToPipeline syms spLst pLine args : BilboResult<Meaning> =
+and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
     match pLine with
-    | Modified (pl', modif) ->
-        match modif with
+    | Modified (pl', modif') ->
+        match modif' with
         | Maybe -> "The maybe ? modifier" |> notImplementedYet
-        | Once -> "The once $ modifier" |> notImplementedYet
+        | Once -> applyArgsToPipeline syms spLst pLine (Some Once) args
         | UpTo _ -> "The up-to *!* modifier" |> notImplementedYet
         | Alap _alapParam ->
-            let mutable output = applyArgsToPipeline syms spLst pl' args
+            let mutable output = applyArgsToPipeline syms spLst pl' modif args
             let mutable outputPrev = List.head args |> Ok
             let keepApplying output =
                 match output with
@@ -463,7 +485,7 @@ and applyArgsToPipeline syms spLst pLine args : BilboResult<Meaning> =
                         match args with
                         | [] -> [input]
                         | first :: rest ->(input::rest)
-                    applyArgsToPipeline syms spLst pl' args'
+                    applyArgsToPipeline syms spLst pl' modif args'
                 | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError                
             match output with
             | Error (MatchError _) -> outputPrev
@@ -473,13 +495,13 @@ and applyArgsToPipeline syms spLst pLine args : BilboResult<Meaning> =
         match args with
         | [] -> "Control should have passed onto single argument handler." |> implementationError
         | [arg] ->
-            applyArgToPipeline syms spLst pLine arg
+            applyArgToPipeline syms spLst pLine modif arg
             |> unpackPLineOutput
         | arg :: rest ->
-            let evalRes = applyArgToPipeline syms spLst pLine arg
+            let evalRes = applyArgToPipeline syms spLst pLine modif arg
             match evalRes with
             | Error e -> e |> Error
-            | Ok (Unfinished(Value(Pipeline pLine'))) -> applyArgsToPipeline syms spLst pLine' rest
+            | Ok (Unfinished(Value(Pipeline pLine'))) -> applyArgsToPipeline syms spLst pLine' modif rest
             | Ok (Output(m)) -> m |> Ok
             | _ ->
                 "Too many arguments enpiped into function or transform."
@@ -494,9 +516,9 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
     | _, Error e -> e |> Error
     | Ok lMean, Ok rMean ->
         match lMean, rMean with
-        | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine pLst
+        | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine None pLst
         | _, Value (Pipeline pLine) ->
-            applyArgToPipeline syms spLst pLine lMean
+            applyArgToPipeline syms spLst pLine None lMean
             |> unpackPLineOutput
         | _ -> rMean |> typeStr |> nonPStageOnEnpipeRhs
 
@@ -755,8 +777,8 @@ and evalPrefixExpr syms spLst e op =
     | Not -> (syms,spLst,e) |.> notRules
     | Amp -> (syms,spLst,e) |.> ampRules
     | DblAmp -> (syms,spLst,e) |.> dblAmpRules
-    | Dollar _ -> "Once application" |> notImplementedYet
-
+    | Dollar -> (syms,spLst,e) |.> dollarRules
+    
 and evalDot syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
     match lSpace with

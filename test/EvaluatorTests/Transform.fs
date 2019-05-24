@@ -105,6 +105,16 @@ let collectionTests = [
 ]
 
 let patternGraphBinOps = [
+
+    nodes + """
+    def middle(g) =
+        match g
+        | [a,>,b] and [b,>,c] -> return [b]
+    g = [na,>,nb,>,nc]
+    a = g >> middle
+    b = [nb]
+    """, "And condition used not in a negative application condition"
+
     nodes + """
     def endPair(g) =
         match g

@@ -146,6 +146,16 @@ let alapTransforms = [
     ""","Two single param transforms in a pipeline each applied ALAP"
 ]
 
+let dollarTransforms = [
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,>,nb,>,nc] >> $remEdge
+    b = [na,nb,>,nc]
+    c = [na,>,nb,nc]
+    """,["b"; "c"],
+    "A transform with two potential matches dollar-applied. Ensure answer is only of the two potential answers."
+]
+
 [<Tests>]
 let test =
     // These tests contain multiple applications of functions
@@ -164,5 +174,7 @@ let test3 =
     let name = "ALAP application of transforms"
     testList name (alapTransforms |> abTwinVarTests)
 
-    
-    
+[<Tests>]
+let test4 =
+    let name = "Dollar application of transforms"
+    testList name (dollarTransforms |> aOneOfTests)

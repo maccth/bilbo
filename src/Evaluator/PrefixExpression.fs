@@ -30,3 +30,8 @@ let dblAmpRules m : BilboResult<Meaning>=
     | Value(Node n) -> n.load |> Ok
     | _ -> m |> typeStr |> nonNodeDblAmpExpr
 
+
+let dollarRules m =
+    match m with
+    | Value (Pipeline(pl)) -> (pl,Once) |> Modified |> Pipeline |> Value |> Ok
+    | _ -> m |> typeStr |> nonPipelineDollarApp
