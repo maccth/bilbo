@@ -153,7 +153,44 @@ let dollarTransforms = [
     b = [na,nb,>,nc]
     c = [na,>,nb,nc]
     """,["b"; "c"],
-    "A transform with two potential matches dollar-applied. Ensure answer is only of the two potential answers."
+    "A transform with two potential matches dollar applied. Ensure answer is only of the two potential answers."
+
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,>,nb] |&| [nc,>,nd] >> $remEdge
+    b = [na,nb] |&| [nc,nd]
+    """,["b"],
+    "Collection enpiped to dollar applied transform. Ensure size of output collecition is same as input collection"
+
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,>,nb,>,nd] |&| [ne,>,nf,>,na] >> $remEdge
+    b = [na,nb,>,nd] |&| [ne,nf,>,na]
+    c = [na,nb,>,nd] |&| [ne,>,nf,na]
+    d = [na,>,nb,nd] |&| [ne,>,nf,na]  
+    e = [na,>,nb,nd] |&| [ne,nf,>,na]
+    """,["b";"c";"d";"e"],
+    "Collection enpiped to dollar applied transform. Each graph in collection has multiple matches. "
+    + "Ensure transform only picks one match in each graph in collection"
+]
+
+let mixingModifiers = [
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,>,nb,>,nc,>,nd] >> $remEdge ** 2
+    b = [na,>,nb,nc,nd]
+    c = [na,nb,>,nc,nd]
+    d = [na,nb,nc,>,nd]
+    """,["b";"c";"d"],
+    "Mulaplied dollar applied transform. Ensure answer is only one of 3 potential answers. "
+    + "Also ensure $ has higher precedence than **."
+
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] -> become [a,b]
+    a = [na,>,nb,>,nc,>,nd] >> $remEdge!
+    b = [na,nb,nc,nd]
+    """, ["b"],
+    "ALAP and dollar applied transform. Ensure output is a single graph and $ has higher precedence than !."
 ]
 
 [<Tests>]
@@ -176,5 +213,13 @@ let test3 =
 
 [<Tests>]
 let test4 =
+    // These tests contain dollar applications of transforms
     let name = "Dollar application of transforms"
     testList name (dollarTransforms |> aOneOfTests)
+
+[<Tests>]
+let test5 =
+    // These tests contain transforms applied with multiple modifiers
+    let name = "Dollar application of transforms"
+    testList name (mixingModifiers |> aOneOfTests)
+    
