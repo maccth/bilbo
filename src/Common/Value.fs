@@ -23,7 +23,6 @@ and Value =
     | Node of Node
     | Graph of Graph
     | Collection of Collection
-    // TODO: Pipelines with <|>
 
 and ValueId = {
     spLst   : SpaceId list

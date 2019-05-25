@@ -252,6 +252,15 @@ let pipeRules ops =
         |> TypeError
         |> Error
 
+let orPipeRules ops =
+    let lMean, rMean = ops
+    match lMean, rMean with
+    | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> OrPipe |> Pipeline |> Value |> Ok
+    | _ ->
+        "Only functions or transforms can be composed in a pipeline"
+        |> TypeError
+        |> Error
+
 let mulAppRules ops =
     match ops with
     | Value (Pipeline pl), Value (Int m) ->

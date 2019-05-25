@@ -88,7 +88,6 @@ let multipleApplicationTransforms = [
     b = [na,101>,nb]
     """, "Single param transform mulaplied once"
 
-
     nodes + """
     def incWeight(g) = match g | [a,x>,b] -> become [a,x+1>,b]
     a = [na,100>,nb] >> incWeight ** 5
@@ -318,6 +317,7 @@ let test5 =
     let name = "Maybe application of transforms"
     testList name (maybeTransforms |> abTwinVarTests)
 
+// // Problematic
 [<Tests>]
 let test6 =
     // These tests contain transforms applied with multiple modifiers

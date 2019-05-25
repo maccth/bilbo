@@ -369,7 +369,12 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGrap
 
 and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (arg : Meaning) : BilboResult<PipelineOutput<Meaning>> =
     match pLine with
-    | OrPipe _ ->  "Or pipelines" |> notImplementedYet
+    | OrPipe (plTry, plOtherwise) ->
+        let tryRes = applyArgToPipeline syms spLst plTry modif arg
+        match tryRes with
+        | Ok res -> res |> Ok
+        | Error (MatchError _) -> applyArgToPipeline syms spLst plOtherwise modif arg
+        | Error e -> e |> Error   
     | ThenPipe (plFirst,plThen) ->
         let applied = applyArgToPipeline syms spLst plFirst modif arg
         match applied with
@@ -469,7 +474,7 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
     match pLine with
     | Modified (pl', modif') ->
         match modif' with
-        | Once -> applyArgsToPipeline syms spLst pLine (Some Once) args
+        | Once -> applyArgsToPipeline syms spLst pl' (Some Once) args
         | Maybe ->
             let output = applyArgsToPipeline syms spLst pl' modif args
             match output with
@@ -497,7 +502,13 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
             match output with
             | Error (MatchError _) -> outputPrev
             | Error _ -> output
-            | _ -> outputPrev                     
+            | _ -> outputPrev
+    | OrPipe (plTry, plOtherwise) ->
+        let tryRes = applyArgsToPipeline syms spLst plTry modif args 
+        match tryRes with
+        | Ok res -> res |> Ok
+        | Error (MatchError _) -> applyArgsToPipeline syms spLst plOtherwise modif args
+        | Error e -> e |> Error              
     | _ ->
         match args with
         | [] -> "Control should have passed onto single argument handler." |> implementationError
@@ -528,8 +539,13 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
         match lMean, rMean with
         | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine None pLst
         | _, Value (Pipeline pLine) ->
-            applyArgToPipeline syms spLst pLine None lMean
-            |> unpackPLineOutput
+            // Experimental. To reduce code repeat between
+            //  - applyArgsToPipeline, and
+            //  - applyArgToPipeline
+            applyArgsToPipeline syms spLst pLine None [lMean]
+
+            // applyArgToPipeline syms spLst pLine None lMean
+            // |> unpackPLineOutput
         | _ -> rMean |> typeStr |> nonPStageOnEnpipeRhs
 
 and varAsString var =
@@ -774,9 +790,10 @@ and evalBinExpr syms spLst lhs op rhs =
     | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
-    | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
     | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
+    | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
+    | BinOp.OrPipe -> (syms,spLst,lhs,rhs) |..> orPipeRules
     | MulApp -> (syms,spLst,lhs,rhs) |..> mulAppRules
     | _ ->
         "Other binary operators"
