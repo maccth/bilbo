@@ -367,23 +367,30 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGrap
             Result.bind (fun ug -> evalPathElem (*syms spLst*) elem ug) ug     
         List.fold folder (Ok UnboundGraph.empty) peLst
 
-and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (param : Meaning) : BilboResult<PipelineOutput<Meaning>> =
+and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (arg : Meaning) : BilboResult<PipelineOutput<Meaning>> =
     match pLine with
     | OrPipe _ ->  "Or pipelines" |> notImplementedYet
     | ThenPipe (plFirst,plThen) ->
-        let applied = applyArgToPipeline syms spLst plFirst modif param
+        let applied = applyArgToPipeline syms spLst plFirst modif arg
         match applied with
         | Error e -> e |> Error
         | Ok (Unfinished(Value(Pipeline(p)))) -> (p,plThen) |> ThenPipe |> Pipeline |> Value |> Unfinished |> Ok
-        | Ok (Output(nextParam)) -> applyArgToPipeline syms spLst plThen modif nextParam
-        | Ok (Unfinished(_)) -> "Only pipelines can have an unfinished output." |> implementationError
+        | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
+        | Ok (Output(nextArg)) -> applyArgToPipeline syms spLst plThen modif nextArg
     | Modified (modPLine, modif') ->
         match modif' with
-        | Maybe -> "The maybe ? modifier" |> notImplementedYet
-        | Once ->  applyArgToPipeline syms spLst modPLine (Some Once) param
+        | Maybe ->
+            let applied = applyArgToPipeline syms spLst modPLine modif arg
+            match applied with
+            | Error (MatchError _) -> arg |> Output |> Ok
+            | Error e -> e |> Error
+            | Ok (Output m) -> m |> Output |> Ok
+            | Ok (Unfinished(Value(Pipeline(p)))) -> (p,Maybe) |> Modified |> Pipeline |> Value |> Unfinished |> Ok
+            | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
+        | Once -> applyArgToPipeline syms spLst modPLine (Some Once) arg
         | Alap _alapParam ->
-            let mutable output = applyArgToPipeline syms spLst modPLine modif param
-            let mutable outputPrev = param |> Output |> Ok
+            let mutable output = applyArgToPipeline syms spLst modPLine modif arg
+            let mutable outputPrev = arg |> Output |> Ok
             let keepApplying output =
                 match output with
                 | Ok (Output _) -> true 
@@ -408,7 +415,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             match tParams with
             | [] -> zeroParamTransformError()
             | hd :: paramsLeft ->
-                let tst' = SymbolTable.set tst {id=hd; spLst=spLst} param
+                let tst' = SymbolTable.set tst {id=hd; spLst=spLst} arg
                 match tst' with
                 | Error e -> e |> Error
                 | Ok tstUpdated ->
@@ -434,7 +441,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             match fParams with
             | [] -> zeroParamFunctionError()
             | hd :: paramsLeft ->
-                let fst' = SymbolTable.set fst {id=hd; spLst=spLst} param
+                let fst' = SymbolTable.set fst {id=hd; spLst=spLst} arg
                 match fst' with
                 | Error e -> e |> Error
                 | Ok fstUpdated ->
@@ -462,8 +469,13 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
     match pLine with
     | Modified (pl', modif') ->
         match modif' with
-        | Maybe -> "The maybe ? modifier" |> notImplementedYet
         | Once -> applyArgsToPipeline syms spLst pLine (Some Once) args
+        | Maybe ->
+            let output = applyArgsToPipeline syms spLst pl' modif args
+            match output with
+            | Ok out -> out |> Ok
+            | Error (MatchError _) -> List.head args |> Ok
+            | Error e -> e |> Error
         | Alap _alapParam ->
             let mutable output = applyArgsToPipeline syms spLst pl' modif args
             let mutable outputPrev = List.head args |> Ok
@@ -474,14 +486,14 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
             while keepApplying output do
                 outputPrev <- output
                 output <-
-                match outputPrev with
-                | Ok input ->
-                    let args' =
-                        match args with
-                        | [] -> [input]
-                        | first :: rest ->(input::rest)
-                    applyArgsToPipeline syms spLst pl' modif args'
-                | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError                
+                    match outputPrev with
+                    | Ok input ->
+                        let args' =
+                            match args with
+                            | [] -> [input]
+                            | first :: rest ->(input::rest)
+                        applyArgsToPipeline syms spLst pl' modif args'
+                    | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError                
             match output with
             | Error (MatchError _) -> outputPrev
             | Error _ -> output
@@ -493,11 +505,14 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
             applyArgToPipeline syms spLst pLine modif arg
             |> unpackPLineOutput
         | arg :: rest ->
-            let evalRes = applyArgToPipeline syms spLst pLine modif arg
-            match evalRes with
+            let oneArgApplied = applyArgToPipeline syms spLst pLine modif arg
+            match oneArgApplied with
             | Error e -> e |> Error
             | Ok (Unfinished(Value(Pipeline pLine'))) -> applyArgsToPipeline syms spLst pLine' modif rest
-            | Ok (Output(m)) -> m |> Ok
+            | Ok (Output(m)) ->
+                match rest with
+                | [] -> m |> Ok
+                | _ -> rest |> List.length |> string |> tooManyArguments
             | _ ->
                 "Too many arguments enpiped into function or transform."
                 |> TypeError

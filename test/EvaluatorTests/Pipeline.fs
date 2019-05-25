@@ -174,6 +174,101 @@ let dollarTransforms = [
     + "Ensure transform only picks one match in each graph in collection"
 ]
 
+let maybeTransforms = [
+    nodes + """
+    def edge(g) = match g | [a,>,b] -> become [a,>,b]
+    a = [na,nb,nc] >> edge?
+    b = [na,nb,nc]
+    ""","Enpiping graph into a maybe applied transform that will not match. Ensure original graph is returned."
+
+    nodes + """
+    def doubleEdge(g) = match g | [a,>,b] -> become [a,<>,b]
+    a = [na,>,nb,nc] >> doubleEdge?
+    b = [na,<>,nb,nc]
+    ""","Enpiping graph into a maybe applied transform that will match. "
+    + "Ensure normal application means correct graph is returned."
+
+    nodes + """
+    def weightEdge(g,x,y) =
+        w = x+y
+        match g
+        | [a,>,b] -> become [a,w>,b]
+    a = ([na,nb,20>,nc],200,300) >> weightEdge?
+    b = [na,nb,20>,nc]
+    ""","Enpiping graph into a 3-argument transform that will not match. Ensure only the first param is returned."
+
+    nodes + """
+    def weightEdge(g,x,y) =
+        w = x+y
+        match g
+        | [a,>,b] -> become [a,w>,b]
+    a = ([na,nb,>,nc],200,300) >> weightEdge?
+    b = [na,nb,500>,nc]
+    ""","Enpiping graph into a 3-argument transform that will match. "
+    + "Ensure normal application means correct graph is returned."
+
+    nodes + """
+    def addEdge(g) = match g | [x,y] where &x == "theNode" -> become [x,>,y]
+    def doubleEdge(g) = match g | [x,>,y] -> become [x,<>,y]
+    node = "theNode"::10
+    g = [node,na]
+    a = g >> addEdge? |> doubleEdge?
+    b = [node,<>,na]
+    """, "Pipeline of two maybe applied transforms, both match. "
+    + "Ensure normal application is used."
+
+    nodes + """
+    def removeEdgePair(g) = match g | [x,>,y,>,z] -> become [x,y,z]
+    def doubleEdge(g) = match g | [x,>,y] and not [x,<,y] -> become [x,<>,y]
+    g = [na,<>,nb]
+    a = g >> removeEdgePair? |> doubleEdge?
+    b = [na,<>,nb]
+    """, "Pipeline of two maybe applied transforms, neither match. Ensure input of first is retruned."
+
+    nodes + """
+    def removeDoubleEdge(g) = match g | [x,<>,y] -> become [x,y]
+    def doubleEdge(g) = match g | [x,>,y] and not [x,<,y] -> become [x,<>,y]
+    g = [na,>,nb]
+    a = g >> removeDoubleEdge? |> doubleEdge?
+    b = [na,<>,nb]
+    """, "Pipeline of two maybe applied transforms, first doesn't match, second does."
+    + "Ensure input of first is applied to second."
+
+
+    nodes + """
+    def removeEdge(g) = match g | [x,>,y] -> become [x,y]
+    def doubleEdge(g) = match g | [x,>,y] and not [x,<,y] -> become [x,<>,y]
+    g = [na,>,nb]
+    a = g >> removeEdge? |> doubleEdge?
+    b = [na,nb]
+    """, "Pipeline of two maybe applied transforms, second doesn't match. Ensure output of first is retruned."
+
+    nodes + """
+    def removeEdge(g) = match g | [x,<>,y,>,z] -> become [x,>,y]
+    def doubleEdge(g) = match g | [x,>,y] -> become [x,<>,y]
+    g = [na,<>,nb,>,nc]
+    a = g >> removeEdge? |> doubleEdge?
+    b = [na,<>,nb]
+    """, "Pipeline of two maybe applied transforms, both match. Ensure normal application is used"
+
+    nodes + """
+    def removeEdge(g) = match g | [x,>,y] -> become [x,y]
+    def doubleEdge(g) = match g | [x,>,y] and not [x,<,y] -> become [x,<>,y]
+    g = [na,>,nb]
+    a = g >> (removeEdge |> doubleEdge)?
+    b = [na,>,nb]
+    """, "Pipeline of two transforms all maybe applied, second doesn't match. Ensure input of first is retruned."
+    
+    nodes + """
+    def removeEdge(g,p1,p2) = match g | [x,>,y] -> become [x,y]
+    def doubleEdge(g,p1,p2) = match g | [x,>,y] -> become [x,<>,y]
+    g = [na,>,nb]
+    a = (g,10,20,30,40) >> (removeEdge |> doubleEdge)?
+    b = [na,>,nb]
+    """, "Pipeline of two transforms all maybe applied, second doesn't match, first is 3-argument. "
+    + "Ensure first argument of input is retruned."
+]
+
 let mixingModifiers = [
     nodes + """
     def remEdge(g) = match g | [a,>,b] -> become [a,b]
@@ -219,6 +314,12 @@ let test4 =
 
 [<Tests>]
 let test5 =
+    // These tests contain maybe applications of transforms
+    let name = "Maybe application of transforms"
+    testList name (maybeTransforms |> abTwinVarTests)
+
+[<Tests>]
+let test6 =
     // These tests contain transforms applied with multiple modifiers
     let name = "Dollar application of transforms"
     testList name (mixingModifiers |> aOneOfTests)

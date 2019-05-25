@@ -58,6 +58,11 @@ let paramListTypeError thing = bindTypeError "parameter list" thing
 
 let paramListImpError thing = bindImpError  "parameter list" thing
 
+let tooManyArguments count =
+    count + " extra arguments enpiped into function, transform or pipeline."
+    |> ValueError
+    |> Error
+
 let zeroParamFunctionError() =
     "Functions with no paramaters should be evaluated at definition time and cannot be enpiped to."
     |> implementationError
@@ -149,6 +154,11 @@ let nonPipelineMultipleAppLhs typL =
     + "Instead got type " + typL + "."
     |> TypeError
     |> Error
+
+let nonPipelineUnfinished typ =
+    "Only pipelines can be an unfinished output. "
+    + "This was an unfinished of type " + typ
+    |> implementationError
 
 let nonPositiveAppMultiplier m =
     "The ** operator requires a positive integer on the right-hand side. "
