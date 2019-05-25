@@ -1,4 +1,4 @@
-module Bilbo.Evaluator.PrimativeTypes
+module Bilbo.Evaluator.PrimativeType
 
 open Bilbo.Common.Ast
 open Bilbo.Common.Value

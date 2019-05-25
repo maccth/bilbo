@@ -150,7 +150,7 @@ let nonPipelineMultipleAppLhs typL =
     |> TypeError
     |> Error
 
-let nonPositiveMultipleApp m =
+let nonPositiveAppMultiplier m =
     "The ** operator requires a positive integer on the right-hand side. "
     + "Instead got " + m + "."
     |> ValueError

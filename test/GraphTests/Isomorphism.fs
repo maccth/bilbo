@@ -2,7 +2,6 @@ module Bilbo.Tests.GraphTests.Isomorphism
 
 open Expecto
 open Bilbo.Common.Extensions
-open Bilbo.Common.Value
 open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
 open Bilbo.Tests.GraphTests.Helpers

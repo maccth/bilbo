@@ -4,8 +4,8 @@ open Bilbo.Common.Extensions
 open Bilbo.Common.Type
 open Bilbo.Common.Value
 open Bilbo.Common.Error
-open Bilbo.Graph.Graph
 open Bilbo.Evaluator.Print
+open Bilbo.Graph.Graph
 
 let intFloat ops iiFun ifFun fiFun ffFun =
     let lMean,rMean = ops
@@ -252,11 +252,11 @@ let pipeRules ops =
         |> TypeError
         |> Error
 
-let rec mulAppRules ops =
+let mulAppRules ops =
     match ops with
     | Value (Pipeline pl), Value (Int m) ->
         match m with
-        | x when x <= 0 -> m |> Int |> valuePrint |-> nonPositiveMultipleApp  
+        | x when x <= 0 -> m |> Int |> valuePrint |-> nonPositiveAppMultiplier  
         | x ->
             [1..x] 
             |> List.map (fun _ -> pl)

@@ -1,14 +1,10 @@
 module Bilbo.Evaluator.PrefixExpression
 
-open Bilbo.Common.Extensions
 open Bilbo.Common.Type
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.Error
-open Bilbo.Graph.Graph
-open Bilbo.Evaluator.Print
-open Bilbo.Evaluator.PrimativeTypes
-open Bilbo.Common
+open Bilbo.Evaluator.PrimativeType
 
 let notRules m : BilboResult<Meaning> =
     match m with

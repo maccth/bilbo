@@ -6,7 +6,7 @@ open Bilbo.Common.Value
 open Bilbo.Common.Type
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Error
-open Bilbo.Evaluator.PrimativeTypes
+open Bilbo.Evaluator.PrimativeType
 open Bilbo.Evaluator.BinaryExpression
 open Bilbo.Evaluator.PrefixExpression
 open Bilbo.Evaluator.Print
@@ -68,8 +68,6 @@ and evalMatchStatement (syms : Symbols) spLst modif (mat : MatchStatement) : Bil
             List.fold folder (Ok []) (Set.toList c)
         | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
     matchOut 
-    // matchOut
-    // |-> inspectMeaningLst
 
 and evalMatchCases syms spLst modif (cases : MatchCase list) (hg : Graph) : BilboResult<Meaning list> =
     let folder mLst case = 
@@ -175,7 +173,6 @@ and evalMatchCase syms spLst (modif : Modifier Option) (hg : Graph) (case : Matc
                                 | Some (Error e) -> e |> Error
                                 | Some (Ok mean) -> mean :: mLst |> Ok
                     List.fold folder (Ok []) posMaps
-
 
 and mapInconsistent (nMap : NodeMap) (negMappings : (NodeMap * EdgeMap) list) =
     // Need to check if the same identifier (in the pattern graph) maps to
@@ -384,7 +381,6 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
         match modif' with
         | Maybe -> "The maybe ? modifier" |> notImplementedYet
         | Once ->  applyArgToPipeline syms spLst modPLine (Some Once) param
-        | UpTo _ -> "The up-to *!* modifier" |> notImplementedYet
         | Alap _alapParam ->
             let mutable output = applyArgToPipeline syms spLst modPLine modif param
             let mutable outputPrev = param |> Output |> Ok
@@ -468,7 +464,6 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
         match modif' with
         | Maybe -> "The maybe ? modifier" |> notImplementedYet
         | Once -> applyArgsToPipeline syms spLst pLine (Some Once) args
-        | UpTo _ -> "The up-to *!* modifier" |> notImplementedYet
         | Alap _alapParam ->
             let mutable output = applyArgsToPipeline syms spLst pl' modif args
             let mutable outputPrev = List.head args |> Ok

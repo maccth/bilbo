@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="PrimativeTypes.fs" />
+    <Compile Include="PrimativeType.fs" />
     <Compile Include="Print.fs" />
     <Compile Include="BinaryExpression.fs" />
     <Compile Include="PrefixExpression.fs" />

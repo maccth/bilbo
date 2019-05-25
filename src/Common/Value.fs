@@ -47,7 +47,6 @@ and Modifier =
     | Alap of Param
     | Maybe
     | Once
-    | UpTo of int
 
 and PipelineOutput<'T> =
     | Unfinished of 'T

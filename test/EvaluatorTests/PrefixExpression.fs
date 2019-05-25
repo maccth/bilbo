@@ -1,7 +1,5 @@
 module Bilbo.Tests.EvaluatorTests.PrefixExpression
 
-open Bilbo.Common.Value
-open Bilbo.Common.SymbolTable
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 

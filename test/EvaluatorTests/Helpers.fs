@@ -3,10 +3,10 @@ module Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 open Bilbo.Common.Value
 open Bilbo.Common.Error
+open Bilbo.Common.SymbolTable
 open Bilbo.Parser.Parser
 open Bilbo.Evaluator.Evaluator
 open Bilbo.Graph.Graph
-open Bilbo.Common.SymbolTable
 
 let oneVarSyms id mean : Symbols =
     let st = [id, mean] |> Map.ofList

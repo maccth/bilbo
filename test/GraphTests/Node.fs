@@ -1,12 +1,9 @@
 module Bilbo.Tests.GraphTests.Node
 
 open Expecto
-open Bilbo.Common.Ast
 open Bilbo.Common.Value
-open Bilbo.Common.Error
 open Bilbo.Common.SymbolTable
 open Bilbo.Graph.Graph
-open Bilbo.Common
 
 let stringIntNodeAddTests = [
     [("London",100); ("London",100)],
