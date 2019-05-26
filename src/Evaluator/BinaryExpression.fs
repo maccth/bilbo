@@ -255,7 +255,7 @@ let pipeRules ops =
 let orPipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
-    | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> OrPipe |> Pipeline |> Value |> Ok
+    | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr,[]) |> OrPipe |> Pipeline |> Value |> Ok
     | _ ->
         "Only functions or transforms can be composed in a pipeline"
         |> TypeError

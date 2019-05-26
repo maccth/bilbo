@@ -1,4 +1,4 @@
-module Bilbo.Tests.EvaluatorTests.Pipeline
+module Bilbo.Tests.EvaluatorTests.Modifier
 
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
@@ -317,7 +317,6 @@ let test5 =
     let name = "Maybe application of transforms"
     testList name (maybeTransforms |> abTwinVarTests)
 
-// // Problematic
 [<Tests>]
 let test6 =
     // These tests contain transforms applied with multiple modifiers

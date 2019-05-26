@@ -15,7 +15,8 @@
     <Compile Include="Function.fs" />
     <Compile Include="SingleMatchTransform.fs" />
     <Compile Include="Transform.fs" />
-    <Compile Include="Pipeline.fs" />
+    <Compile Include="Modifier.fs" />
+    <Compile Include="Pipe.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
