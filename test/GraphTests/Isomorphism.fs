@@ -10,8 +10,8 @@ open Bilbo.Tests.GraphTests.Helpers
 let mainHostG =
     Graph.empty
     |> Graph.addEdge (A .>. B)
-    |-> Graph.addEdge (B .>. C)
-    |--> Graph.addNode D 
+    |> Graph.addEdge (B .>. C)
+    |> Graph.addNode D 
 
 [<Tests>]
 let test =
@@ -19,7 +19,7 @@ let test =
     let testG =
         Graph.empty
         |> Graph.addEdge (b .>. a)
-        |--> Graph.addNode d
+        |> Graph.addNode d
 
     let mappings = [
         [("b","A"); ("a","B"); ("d","C";)]
@@ -38,7 +38,7 @@ let test2 =
     let testG =
         Graph.empty
         |> Graph.addEdge (b .>. a)
-        |--> Graph.addEdge (a .>. d)
+        |> Graph.addEdge (a .>. d)
     let gotMapping = Graph.nodeSgiFirst mainHostG testG
     let mapping = [("b","A"); ("a","B"); ("d","C")]
     let expMapping = mapping |> consNMapping |> fun m -> Set.ofList [m]
@@ -51,7 +51,7 @@ let test3 =
     let testG =
         Graph.empty
         |> Graph.addEdge ((b ..>. a) b1)
-        |--> Graph.addEdge ((a ..>. d) b1)
+        |> Graph.addEdge ((a ..>. d) b1)
     let gotMapping = Graph.nodeSgiFirst mainHostG testG
     let mapping = [("b","A"); ("a","B"); ("d","C")]
     let expMapping = mapping |> consNMapping |> fun m -> Set.ofList [m]
@@ -64,13 +64,13 @@ let test4 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge ((A ..>. B) (bInt 20))
-        |-> Graph.addEdge ((B ..>. C) (bInt 20))
-        |--> Graph.addNode D 
+        |> Graph.addEdge ((B ..>. C) (bInt 20))
+        |> Graph.addNode D 
     // [b, 1>, a, 1>, d]
     let testG =
         Graph.empty
         |> Graph.addEdge ((b ..>. a) b1)
-        |--> Graph.addEdge ((a ..>. d) b1)
+        |> Graph.addEdge ((a ..>. d) b1)
     let gotMapping = Graph.sgiFirst weightedHostG testG    
     let nMap = [("b","A"); ("a","B"); ("d","C")]
     let expNMap = nMap |> consNMapping
@@ -85,13 +85,13 @@ let test5 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge ((A ..>. B) (bInt 2))
-        |-> Graph.addEdge ((B ..>. C) (bInt 7))
-        |--> Graph.addNode D 
+        |> Graph.addEdge ((B ..>. C) (bInt 7))
+        |> Graph.addNode D 
     // [b, 5>, a, 1>, d]
     let testG =
         Graph.empty
         |> Graph.addEdge ((b ..>. a) (bInt 5))
-        |--> Graph.addEdge ((a ..>. d) b1)
+        |> Graph.addEdge ((a ..>. d) b1)
     let gotMapping = Graph.sgiFirst weightedHostG testG    
     let nMap = [("b","A"); ("a","B"); ("d","C")]
     let expNMap = nMap |> consNMapping
@@ -106,15 +106,15 @@ let test6 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge (A .>. B) 
-        |-> Graph.addEdge (B .>. C) 
-        |-> Graph.addEdge ((B ..>. C) (bInt 7))
-        |--> Graph.addNode D 
+        |> Graph.addEdge (B .>. C) 
+        |> Graph.addEdge ((B ..>. C) (bInt 7))
+        |> Graph.addNode D 
     // [a,>,b] + [b,>,d] + [b,100>,d]
     let testG =
         Graph.empty
         |> Graph.addEdge (b .>. d)
-        |-> Graph.addEdge ((b ..>. d) (bInt 100))
-        |--> Graph.addEdge (a .>. b)
+        |> Graph.addEdge ((b ..>. d) (bInt 100))
+        |> Graph.addEdge (a .>. b)
     let expNMap = [("a","A"); ("b","B"); ("d","C")] |> consNMapping
     let expEMap = [(0,1); (1,2); (2,0)] |> consEMapping
     let expMap = [expNMap, expEMap] |> Set.ofList
@@ -128,14 +128,14 @@ let test7 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge (A .>. B) 
-        |-> Graph.addEdge (B .>. C) 
-        |-> Graph.addEdge ((B ..>. C) (bInt 7))
-        |--> Graph.addNode D 
+        |> Graph.addEdge (B .>. C) 
+        |> Graph.addEdge ((B ..>. C) (bInt 7))
+        |> Graph.addNode D 
     // [a,>,b] + [c]
     let testG =
         Graph.empty
         |> Graph.addEdge (a .>. b)
-        |--> Graph.addNode c
+        |> Graph.addNode c
     let expMaps =
         [
             ["a","A"; "b","B"; "c","C"], [0,0]
@@ -156,13 +156,13 @@ let test8 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge (A .>. B) 
-        |-> Graph.addEdge (A .>. B) 
-        |--> Graph.addEdge (B .>. C) 
+        |> Graph.addEdge (A .>. B) 
+        |> Graph.addEdge (B .>. C) 
     // [a,>,b,>,c]
     let testG =
         Graph.empty
         |> Graph.addEdge (a .>. b)
-        |--> Graph.addEdge (b .>. c)
+        |> Graph.addEdge (b .>. c)
     let expMaps =
         [
             ["a","A"; "b","B"; "c","C"], [0,0; 1,2]

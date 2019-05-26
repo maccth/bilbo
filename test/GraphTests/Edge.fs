@@ -45,7 +45,4 @@ let gGot = Graph.addEdges (eLst |> consStringIntELst) g
 
 [<Tests>]
 let test =
-    testCase "Adding edges to graph test" <| fun _ ->
-        match gGot with
-        | Ok gGot' -> Expect.equal gGot' gExp ""
-        | Error e -> failwithf "Test errored. %A" e
+    testCase "Adding edges to graph test" <| fun _ -> Expect.equal gGot gExp ""

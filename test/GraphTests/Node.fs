@@ -36,20 +36,18 @@ let consIntObject typ paramLst =
 
 type StringObjectNodeTest = {
     nLst    : (string * string * (string * int) list) list
-    expNLst : (string * string * (string * Meaning) list) list
+    expNLst : (string * string * (string * int) list) list
     des     : string
 }
 
 let stringObjectNodeAddTests = [
     {
         nLst =
-            [("London", "city",     [("population",10); ("capital", 20)]);
-            ("London", "location",  [("language",100); ("country", 200)])];
+            [("London", "city", [("population",10); ("capital", 20)]);
+            ("London", "location", [("language",100); ("country", 200)])];
 
         expNLst =
-            ["London", "Object", [
-                "city",     consIntObject "city"        [("population",10); ("capital", 20)];
-                "location", consIntObject "location"    [("language",100); ("country", 200)]]];
+            ["London", "location", [("language",100); ("country", 200)]];
 
         des = "two nodes, same identifiers, object loads";
     };
@@ -67,13 +65,8 @@ let stringObjectNodeAddTests = [
 
         expNLst =
             [
-                "London", "Object", [
-                    "city",     consIntObject "city"        [("population",10); ("capital", 20)];
-                    "location", consIntObject "location"    [("language",100); ("country", 200)]];
-
-                "Birmingham", "Object", [
-                    "city",     consIntObject "city"        [("population",30); ("capital", 40)];
-                    "place",    consIntObject "place"       [("coastal",300); ("flag", 400)]]
+                ("London", "location", [("language", 100); ("country", 200)]);
+                ("Birmingham", "place", [("coastal", 300); ("flag", 400)]);
             ];
 
         des = "4 nodes, two distinct identifiers, all object-loaded";
@@ -95,7 +88,7 @@ let consStringObjNodeLst lst =
         let nLst' = List.map (fun (id,typ,prms) -> {id=id|>String|>Value; load=consIntObject typ prms}) data.nLst
         let expNLst' =
             data.expNLst 
-            |> List.map (fun (id,typ,prms) -> (id|>String|>Value, consObject typ prms))
+            |> List.map (fun (id,typ,prms) -> (id|>String|>Value, consIntObject typ prms))
             |> Map.ofList
         (nLst',expNLst', data.des)
     List.map consStringObjNode lst
@@ -103,10 +96,7 @@ let consStringObjNodeLst lst =
 let consAddNodeTest nLst expNLst des =
     let gGot = Graph.addNodes nLst Graph.empty
     let gExp = {Graph.empty with nodes = expNLst}
-    testCase des <| fun _ ->
-        match gGot with
-        | Ok gGot' -> Expect.equal gGot' gExp ""
-        | Error e -> failwithf "Test errored. %A" e
+    testCase des <| fun _ -> Expect.equal gGot gExp ""
 
 let consAddNodeTests tLst =
     List.map (fun (nLst,expNLst,des) -> consAddNodeTest nLst expNLst des) tLst

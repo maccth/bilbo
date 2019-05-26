@@ -11,7 +11,7 @@ let test1 =
     let g =
         Graph.empty
         |> Graph.addNode A
-        |--> Graph.addEdge (A .>. B)
+        |> Graph.addEdge (A .>. B)
     let expG =
         Graph.empty
         |> Graph.addNodes [A;B]
@@ -24,11 +24,10 @@ let test2 =
     let g =
         Graph.empty
         |> Graph.addEdge (A .>. B)
-        |-> Graph.addEdge (A .>. D)
-        |--> Graph.addNodes [C;D;E]
+        |> Graph.addEdge (A .>. D)
+        |> Graph.addNodes [C;D;E]
     let expG =
         Graph.empty
         |> Graph.addNodes [A;B;D]
     let gotG = Graph.subtractGraphs g g
-    testCase "Bilbo graph subtraction II" <| fun _ ->
-        Expect.equal gotG expG ""
+    testCase "Bilbo graph subtraction II" <| fun _ -> Expect.equal gotG expG ""
