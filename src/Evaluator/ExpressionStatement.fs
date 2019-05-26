@@ -198,30 +198,27 @@ and mapInconsistent (nMap : NodeMap) (negMappings : (NodeMap * EdgeMap) list) =
     |> not
 
 and evalMatch syms spLst hg pg where bod term nMap eMap : BilboResult<Meaning> option =
-    let (sgRes, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
-    match sgRes with    
+    let (sg, revNMap, revEMap) = UnboundGraph.bind hg pg nMap eMap
+    let symsWithSgElems =
+        syms
+        |> addNodesToSyms spLst (Graph.nodes sg) revNMap
+        |-> addEdgesToSyms spLst pg (Graph.edges sg) revEMap
+    match symsWithSgElems with
     | Error e -> e |> Error |> Some
-    | Ok sg ->
-        let symsWithSgElems =
-            syms
-            |> addNodesToSyms spLst (Graph.nodes sg) revNMap
-            |-> addEdgesToSyms spLst pg (Graph.edges sg) revEMap
-        match symsWithSgElems with
+    | Ok [] -> "The symbol table list cannot be empty inside a pipeline" |> implementationError |> Some
+    | Ok (stHd :: rest) ->
+        match evalWhere (stHd :: rest) spLst where with
         | Error e -> e |> Error |> Some
-        | Ok [] -> "The symbol table list cannot be empty inside a pipeline" |> implementationError |> Some
-        | Ok (stHd :: rest) ->
-            match evalWhere (stHd :: rest) spLst where with
-            | Error e -> e |> Error |> Some
-            | Ok false -> None
-            | Ok true ->                             
-                match term with
-                | Become bExpr ->
-                    evalPStageBody rest spLst stHd bod
-                    |-> fun syms' -> evalBecome syms' spLst hg sg bExpr
-                    |> Some
-                | Return ret ->
-                    evalFuncBody rest spLst stHd bod ret
-                    |> Some
+        | Ok false -> None
+        | Ok true ->                             
+            match term with
+            | Become bExpr ->
+                evalPStageBody rest spLst stHd bod
+                |-> fun syms' -> evalBecome syms' spLst hg sg bExpr
+                |> Some
+            | Return ret ->
+                evalFuncBody rest spLst stHd bod ret
+                |> Some
 
 and evalBecome syms spLst hg sg bExpr =
     let bgRes = evalExpr syms spLst bExpr
@@ -264,9 +261,10 @@ and evalBecome syms spLst hg sg bExpr =
             |> List.filter (fun e -> Set.contains e.source nOut && Set.contains e.target nOut)
         Graph.empty
         |> Graph.addEdges eOut
-        |-> Graph.addNodes (nOut |> Set.toList)
-        |=> Graph
-        |=> Value
+        |> Graph.addNodes (nOut |> Set.toList)
+        |> Graph
+        |> Value
+        |> Ok
     | _ -> "special [+] and [-] graphs" |> notImplementedYet    
 
 and evalWhere syms spLst where =
@@ -748,13 +746,13 @@ and evalGExpr syms spLst ge : BilboResult<Meaning> =
                             let eLstRes = evalEdgeOp syms spLst l r eOp
                             match eLstRes with
                             | Error e -> e |> Error
-                            | Ok eLst -> Graph.addEdges eLst g'
+                            | Ok eLst -> Graph.addEdges eLst g' |> Ok
                         | Ok l, Ok r -> (l |> typeStr, r |> typeStr) ||> nonNodeInPathEdge
                     | PathElem.Node e ->
                         let n = evalExpr syms spLst e
                         match n with
                         | Error e -> e |> Error
-                        | Ok (Value(Node n')) -> Graph.addNode n' g'
+                        | Ok (Value(Node n')) -> Graph.addNode n' g' |> Ok
                         | Ok n' -> n' |> typeStr |> nonNodeInPath 
             peLst
             |> List.fold pathScan (Ok Graph.empty)

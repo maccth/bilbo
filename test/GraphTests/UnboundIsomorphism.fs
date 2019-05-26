@@ -13,8 +13,8 @@ open Bilbo.Tests.GraphTests.Helpers
 let mainHostG =
     Graph.empty
     |> Graph.addEdge (A .>. B)
-    |-> Graph.addEdge (B .>. C)
-    |--> Graph.addNode D 
+    |> Graph.addEdge (B .>. C)
+    |> Graph.addNode D 
 
 [<Tests>]
 let test =
@@ -67,8 +67,8 @@ let test4 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge ((A ..>. B) (bInt 20))
-        |-> Graph.addEdge ((B ..>. C) (bInt 20))
-        |--> Graph.addNode D 
+        |> Graph.addEdge ((B ..>. C) (bInt 20))
+        |> Graph.addNode D 
     // [b, 1>, a, 1>, d]
     let testG =
         UnboundGraph.empty
@@ -88,8 +88,8 @@ let test5 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge ((A ..>. B) (bInt 2))
-        |-> Graph.addEdge ((B ..>. C) (bInt 7))
-        |--> Graph.addNode D 
+        |> Graph.addEdge ((B ..>. C) (bInt 7))
+        |> Graph.addNode D 
     // [b, 5>, a, 1>, d]
     let testG =
         UnboundGraph.empty
@@ -109,9 +109,9 @@ let test6 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge (A .>. B) 
-        |-> Graph.addEdge (B .>. C) 
-        |-> Graph.addEdge ((B ..>. C) (bInt 7))
-        |--> Graph.addNode D 
+        |> Graph.addEdge (B .>. C) 
+        |> Graph.addEdge ((B ..>. C) (bInt 7))
+        |> Graph.addNode D 
     // [a,>,b] + [b,>,d] + [b,100>,d]
     let testG =
         UnboundGraph.empty
@@ -131,9 +131,9 @@ let test7 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge (A .>. B) 
-        |-> Graph.addEdge (B .>. C) 
-        |-> Graph.addEdge ((B ..>. C) (bInt 7))
-        |--> Graph.addNode D 
+        |> Graph.addEdge (B .>. C) 
+        |> Graph.addEdge ((B ..>. C) (bInt 7))
+        |> Graph.addNode D 
     // [a,>,b] + [c]
     let testG =
         UnboundGraph.empty
@@ -159,8 +159,8 @@ let test8 =
     let weightedHostG =
         Graph.empty
         |> Graph.addEdge (A .>. B) 
-        |-> Graph.addEdge (A .>. B) 
-        |--> Graph.addEdge (B .>. C) 
+        |> Graph.addEdge (A .>. B) 
+        |> Graph.addEdge (B .>. C) 
     // [a,>,b,>,c]
     let testG =
         UnboundGraph.empty

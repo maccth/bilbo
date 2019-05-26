@@ -188,3 +188,9 @@ let nonNodeDblAmpExpr typ =
     + "Attempted to apply it to a type " + typ + "."
     |> TypeError
     |> Error
+
+let binOpTypeError opSymbol typL typR =
+    "The " + opSymbol + " cannot be used with the types "
+    + typL + " and " + typR + "."
+    |> TypeError
+    |> Error

@@ -51,24 +51,66 @@ let graphMatcher (ops : Meaning * Meaning) rule conv =
     | Value(Graph lhs), Value(Graph rhs) -> rule lhs rhs  |> conv |> Matched
     | _ -> NoMatch
 
+let graphCollectionMatcher (ops : Meaning * Meaning) gRule =
+    match ops with
+    // Both implementations are here because the order matters.
+    // If there are node id clashes we overide the load with that of the latest ('right most') added node.
+    | Value(Graph g), Value(Collection c) ->
+        c
+        |> Set.map (gRule g)
+        |> Collection.toMeaning
+        |> Ok
+        |> Matched
+    | Value(Collection c), Value (Graph g) ->
+        c
+        |> Set.map (fun gIn -> gRule gIn g)
+        |> Collection.toMeaning
+        |> Ok
+        |> Matched
+    | _ -> NoMatch         
+
+let collectionMatcher (ops : Meaning * Meaning) gRule =
+    match ops with
+    | Value(Collection c1), Value(Collection c2) ->
+        let c1' = Set.toList c1
+        let c2' = Set.toList c2
+        List.allPairs c1' c2'
+        |> List.map (fun (g1,g2) -> gRule g1 g2)
+        |> Collection.ofList
+        |> Collection.toMeaning
+        |> Ok
+        |> Matched
+    | _ -> NoMatch     
+
 let nodeMatcher (ops : Meaning * Meaning) rule conv =
     match ops with
     | Value(Node lhs), Value(Node rhs) -> rule lhs rhs  |> conv |> Matched
     | _ -> NoMatch
 
+let binOpMeanError opSymbol ops =
+    binOpTypeError opSymbol (ops |> fst |> typeStr) (ops |> snd |> typeStr)
+
 let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     let ifs = intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
-    let g = lazy(graphMatcher ops Graph.addGraphs (Result.bind (Graph >> Value >> Ok)))
+    let g = lazy(graphMatcher ops Graph.addGraphs (Graph >> Value >> Ok))
+    let gc = lazy(graphCollectionMatcher ops Graph.addGraphs)
+    let c = lazy(collectionMatcher ops Graph.addGraphs)
     ifs
     |??> g
-    |..> ("Cannot use operator + between types " + (ops |> fst |> typeStr) + " and " +  (ops |> snd |> typeStr) + "." |> TypeError |> Error)
-
+    |??> gc
+    |??> c
+    |..> binOpMeanError "+" ops
+    
 let minusRules ops =
     let ifl = intFloat2 ops (-) (fun x y -> float(x) - y) (fun x y -> x - float(y)) (-)
-    let g = lazy(graphMatcher ops Graph.subtractGraphs (Result.bind (Graph >> Value >> Ok)))
+    let g = lazy(graphMatcher ops Graph.subtractGraphs (Graph >> Value >> Ok))
+    let gc = lazy(graphCollectionMatcher ops Graph.subtractGraphs)
+    let c = lazy(collectionMatcher ops Graph.subtractGraphs)
     ifl
     |??> g
-    |..> ("Minus rules" |> notImplementedYet)
+    |??> gc
+    |??> c
+    |..> binOpMeanError "-" ops
 
 let timesRules ops =
     intFloat2 ops (*) (fun x y -> float(x) * y) (fun x y -> x * float(y)) (*)
