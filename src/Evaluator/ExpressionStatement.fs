@@ -376,6 +376,25 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
         | Ok (Unfinished(Value(Pipeline(p)))) -> (p,plThen) |> ThenPipe |> Pipeline |> Value |> Unfinished |> Ok
         | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
         | Ok (Output(nextArg)) -> applyArgToPipeline syms spLst plThen modif nextArg
+    | AndPipe (pl1, pl2) ->
+        let applied1 = applyArgToPipeline syms spLst pl1 modif arg
+        match applied1 with
+        | Error e -> e |> Error
+        | Ok res1 ->
+            let applied2 = applyArgToPipeline syms spLst pl2 modif arg
+            match res1, applied2 with
+            | _, Error e -> e |> Error
+            | Output (Value(Collection c1)), Ok (Output(Value(Collection c2))) ->
+                Collection.join c1 c2
+                |> Value.Collection |> Value |> Output |> Ok
+            | Output _, Ok (Output(m))
+            | Output (m), Ok (Output _) ->
+                "Got a non-graph in a collection. Type " + (m |> typeStr) + "."
+                |> TypeError |> Error
+            | Unfinished (Value(Pipeline(pl1'))), Ok (Unfinished(Value(Pipeline(pl2')))) ->
+                (pl1',pl2') |> AndPipe |> Pipeline |> Value |> Unfinished |> Ok
+            | Unfinished (m1), _ -> m1 |> typeStr |> nonPipelineUnfinished
+            | _, Ok (Unfinished(m2)) -> m2 |> typeStr |> nonPipelineUnfinished
     | OrPipe (plTry, plOtherwise, argsSoFar) ->
         let tryRes = applyArgToPipeline syms spLst plTry modif arg
         match tryRes with
@@ -405,7 +424,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
                 | None -> (p, arg |> Some |> Maybe) |> Modified |> Pipeline |> Value |> Unfinished |> Ok
             | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
         | Once -> applyArgToPipeline syms spLst modPLine (Some Once) arg
-        | Alap _alapParam ->
+        | Alap ->
             let mutable output = applyArgToPipeline syms spLst modPLine modif arg
             let mutable outputPrev = arg |> Output |> Ok
             let keepApplying output =
@@ -783,14 +802,13 @@ and evalBinExpr syms spLst lhs op rhs =
     | NodeCons -> (syms,spLst,lhs,rhs) |..> nodeConsRules
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
+    | Dot -> dotRules syms spLst lhs rhs
     | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
-    | Enpipe -> enpipeRules syms spLst lhs rhs
-    | Pipe -> (syms,spLst,lhs,rhs) |..> pipeRules
-    | BinOp.OrPipe -> (syms,spLst,lhs,rhs) |..> orPipeRules
     | MulApp -> (syms,spLst,lhs,rhs) |..> mulAppRules
-    | _ ->
-        "Other binary operators"
-        |> notImplementedYet
+    | Enpipe -> enpipeRules syms spLst lhs rhs
+    | BinOp.ThenPipe -> (syms,spLst,lhs,rhs) |..> thenPipeRules
+    | BinOp.OrPipe -> (syms,spLst,lhs,rhs) |..> orPipeRules
+    | BinOp.AndPipe -> (syms,spLst,lhs,rhs) |..> andPipeRules
 
 and evalPrefixExpr syms spLst e op =
     match op with
@@ -799,7 +817,7 @@ and evalPrefixExpr syms spLst e op =
     | DblAmp -> (syms,spLst,e) |.> dblAmpRules
     | Dollar -> (syms,spLst,e) |.> dollarRules
     
-and evalDot syms spLst lhs rhs =
+and dotRules syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
     match lSpace with
     | Error e -> e |> Error
@@ -839,17 +857,6 @@ and evalSExpr syms spLst s : BilboResult<Meaning> =
         | Ok lst -> lst |> ParamList |> Ok
         | Error e -> e |> Error
 
-and getNextParam pLine =
-    match pLine with
-    | PStage (Transform(tDef,_)) ->
-        let tName, tParams, _, _ = tDef
-        match tParams with
-        | [] -> zeroParamTransformError()
-        | next :: _ -> next |> Ok
-    | PStage _ -> functionAlapError()
-    | ThenPipe (pl1,pl2) -> getNextParam pl1
-    | Modified (pl,_) -> getNextParam pl
-    | OrPipe (pl1,pl2,_) -> "Or pipes" |> notImplementedYet     
 
 and evalPostfixExpr syms spLst e op =
     let modifiedPLine = Modified >> Pipeline >> Value >> Ok
@@ -858,9 +865,7 @@ and evalPostfixExpr syms spLst e op =
     | Error e -> e |> Error
     | Ok (Value(Pipeline p)) ->
         match op with
-        | AlapApp ->
-            let alapParam = getNextParam p
-            Result.bind (fun param -> (p, Alap param) |> modifiedPLine) alapParam
+        | AlapApp -> (p, Alap) |> modifiedPLine
         | MaybeApp -> (p, Maybe None) |> modifiedPLine
     | Ok m -> m |> typeStr |> alapMaybeAppNonPLine        
 
@@ -868,7 +873,7 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     match e with
     | Var v -> Symbols.find syms {spLst=spLst; id=v}
     | SExpr s -> evalSExpr syms spLst s
-    | BinExpr (lhs, Dot, rhs) -> evalDot syms spLst lhs rhs
+    | BinExpr (lhs, Dot, rhs) -> dotRules syms spLst lhs rhs
     | BinExpr (lhs,op,rhs) -> evalBinExpr syms spLst lhs op rhs
     | GExpr g -> evalGExpr syms spLst g
     | PostfixExpr (e',op) -> evalPostfixExpr syms spLst e' op

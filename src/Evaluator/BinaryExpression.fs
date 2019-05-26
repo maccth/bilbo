@@ -233,7 +233,7 @@ let collectRules ops =
         | _ -> typeError
     | _ -> typeError
 
-let pipeRules ops =
+let thenPipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
     | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> ThenPipe |> Pipeline |> Value |> Ok
@@ -241,7 +241,7 @@ let pipeRules ops =
     // TODO: Uncoment corresponding tests
     // | Value (Pipeline pl), ParamList(pLst) -> pl @ [ParamStage pLst] |> Pipeline |> Value |> Ok
     // | Value (Pipeline pl), _ ->
-    //     let paramStage = [rMean] |> ParamStage |> fun p -> [p]
+    //     let paramStage = [rMean] |> ParamStage |> fprint (g,20,30) >> t3un p -> [p]
     //     pl @ paramStage |> Pipeline |> Value |> Ok
     // |  ParamList(pLst), Value (Pipeline pr) -> [ParamStage pLst] @ pr |> Pipeline |> Value |> Ok
     // | _, Value (Pipeline pr) ->
@@ -256,6 +256,15 @@ let orPipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
     | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr,[]) |> OrPipe |> Pipeline |> Value |> Ok
+    | _ ->
+        "Only functions or transforms can be composed in a pipeline"
+        |> TypeError
+        |> Error
+
+let andPipeRules ops =
+    let lMean, rMean = ops
+    match lMean, rMean with
+    | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> AndPipe |> Pipeline |> Value |> Ok
     | _ ->
         "Only functions or transforms can be composed in a pipeline"
         |> TypeError

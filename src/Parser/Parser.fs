@@ -213,61 +213,62 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 15, al, NodeCons;
-        ".", 14, al, Dot
+        "::", 16, al, NodeCons;
+        ".", 15, al, Dot
 
-        "^", 13, ar, Pow;
+        "^", 14, ar, Pow;
 
-        "**", 12, al, MulApp;
-        "*!*",12, al, UpToApp;
+        "**", 13, al, MulApp;
         // Times is defined below
-        "/", 12, al, Divide;
-        "%", 12, al, Percent;
+        "/", 13, al, Divide;
+        "%", 13, al, Percent;
 
-        "+", 12, al, Plus;
+        "+", 13, al, Plus;
         // Minus is defined below
 
-        "<", 10, al, LessThan;
-        "<=", 10, al, LessThanEq;
+        "<", 11, al, LessThan;
+        "<=", 11, al, LessThanEq;
         // Greater than is defined below
-        ">=", 10, al, GreaterThanEq;
-        "==", 10, al, Equal;
-        "is", 10, al, Is;
-        "has", 10, al, Has;
-        "!=", 10, al, NotEqual;
+        ">=", 11, al, GreaterThanEq;
+        "==", 11, al, Equal;
+        "is", 11, al, Is;
+        "has", 11, al, Has;
+        "!=", 11, al, NotEqual;
 
         // "not" has precedence 10, but is prefix (unary)
-        "and", 8, al, And;
-        "xor", 7, al, Xor;
-        "or", 6, al, Or;
+        "and", 9, al, And;
+        "xor", 8, al, Xor;
+        "or", 7, al, Or;
 
+        "<&>", 6, al, AndPipe;        
         "<|>", 5, al, OrPipe;
-        "|>", 4, al, Pipe;
+        "|>", 4, al, ThenPipe;
         "|&|", 3, al, Collect; 
         ">>", 2, al, Enpipe;
     ] |> List.map (fun (op, prec, assoc, astOp) -> (op, prec, None, assoc, astOp))
 
 let binExprOps2 =
+    let nfLst = List.map (str) >> List.reduce (<|>)
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 12, (str "*") <|> (str "!") , al, Times;
+        "*", 13, ["*"; "!"], al, Times;
         // Stops conflicts with `->`
-        "-", 11, str ">", al, Minus;
+        "-", 12, [">"], al, Minus;
         // Stops conflicts with
         //   `x>,y` in path expressions
         //   `[a>:b,>,c]` in path comprehensions
         //   `a >> y` for function application
-        ">", 10, (str ",") <|> (str ":") <|> (str ">"), al, GreaterThan;
-    ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, Some nf, assoc, astOp))
+        ">", 11, [","; ":"; ">"], al, GreaterThan;
+    ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, nf |> nfLst |> Some, assoc, astOp))
 
-exprOpp.AddOperator(PrefixOperator("&&", ws, 14, true, fun x -> (DblAmp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 14, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("not", ws, 10, true, fun x -> (Not,x) |> PrefixExpr))
+exprOpp.AddOperator(PrefixOperator("&&", ws, 15, true, fun x -> (DblAmp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 15, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("not", ws, 11, true, fun x -> (Not,x) |> PrefixExpr))
 
-exprOpp.AddOperator(PrefixOperator("$", ws, 14 , true, fun x -> (Dollar,x) |> PrefixExpr))
-exprOpp.AddOperator(PostfixOperator("!", ws, 13, true, fun x -> (x, AlapApp) |> PostfixExpr ))
-exprOpp.AddOperator(PostfixOperator("?", ws, 13, true, fun x -> (x, MaybeApp) |> PostfixExpr))
+exprOpp.AddOperator(PrefixOperator("$", ws, 15, true, fun x -> (Dollar,x) |> PrefixExpr))
+exprOpp.AddOperator(PostfixOperator("!", ws, 14, true, fun x -> (x, AlapApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 14, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 let binExprOps = List.append binExprOps1 binExprOps2
 

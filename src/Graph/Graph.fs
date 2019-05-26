@@ -251,6 +251,9 @@ module Collection =
         |> List.distinctBy eq
         |> Set.ofList
 
+    let join (c1 : Collection ) (c2 : Collection) : Collection =
+        c1 + c2 |> Set.toList |> ofList
+
     let toMeaning (c : Collection) =
         match Set.count c with
         | 1 -> c |> Set.toList |> List.head |> Graph |> Value

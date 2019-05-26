@@ -76,8 +76,53 @@ let orPipe = [
     ""","Partial application of two arg transforms with or pipe. First fails. Ensure second is passed both args"
 ]
 
+let andPipe = [
+    nodes + """
+    def addEdge(g) = match g | [a,b] -> become [a,>,b]
+    def addSelfEdge(g) = match g | [a] -> become [a,>,a]
+    g = [na,nb]
+    a = g >> addEdge <&> addSelfEdge
+    b =
+        [na,>,nb]
+        |&| [na,<,nb]
+        |&| [na,>,na,nb]
+        |&| [na,nb,>,nb]
+    ""","Single arg transforms connected using an and pipe"
+
+    nodes + """
+    def addEdge(g,w) = match g | [a,b] -> become [a,w>,b]
+    def addSelfEdge(g,w) = match g | [a] -> become [a,w>,a] 
+    a = ([na,nb],20) >> addEdge <&> addSelfEdge
+    b =
+        [na,20>,nb]
+        |&| [na,<20,nb]
+        |&| [na,20>,na,nb]
+        |&| [na,nb,20>,nb]
+    ""","Multiple arg transforms connected using an and pipe"
+
+    nodes + """
+    def addEdge(g,w) = match g | [a,b] -> become [a,w>,b]
+    def addSelfEdge(g,w) = match g | [a] -> become [a,w>,a]
+    g = [na,nb]
+    p = g >> addEdge <&> addSelfEdge
+    a = "hello" >> p
+    b =
+        [na,"hello">,nb]
+        |&| [na,<"hello",nb]
+        |&| [na,"hello">,na,nb]
+        |&| [na,nb,"hello">,nb]
+    ""","Multiple arg transforms connected using an and pipe and applied partially"
+]
+
 [<Tests>]
 let test =
     // These tests contain pipelines constructed using or pipes
     let name = "Pipelines with or pipes"
     testList name (orPipe |> abTwinVarTests)
+
+[<Tests>]
+let test2 =
+    // These tests contain pipelines constructed using and pipes
+    let name = "Pipelines with and pipes"
+    testList name (andPipe |> abTwinVarTests)
+    

@@ -63,28 +63,22 @@ and ObjExpr =
 and BinOp =
     | NodeCons
     | Dot
-    // Simple
     | Pow | Times | Divide | Plus | Minus | Percent
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual
     | And | Or | Xor
     | Is | Has
-    // Composition
-    | Pipe | OrPipe
+    | ThenPipe | OrPipe | AndPipe
     | Enpipe
-    // Transform
-    | MulApp | UpToApp
-    // Collections
+    | MulApp
     | Collect
 
 and PreOp =
-    // Simple
-    | Not | Amp | DblAmp
-    // Transform
+    | Not
+    | Amp | DblAmp
     | Dollar
 
 and PostOp =
-    // Transform
     | AlapApp
     | MaybeApp
 

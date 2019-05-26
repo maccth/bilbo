@@ -35,7 +35,8 @@ and Pipeline =
     | PStage of PStage
     | Modified of Pipeline * Modifier
     | ThenPipe of Pipeline * Pipeline
-    | OrPipe of Pipeline * Pipeline * Meaning list 
+    | OrPipe of Pipeline * Pipeline * Meaning list
+    | AndPipe of Pipeline * Pipeline
 
 and PStage =
     | Transform of TransformDef * SymbolTable
@@ -43,7 +44,7 @@ and PStage =
     // | ParamStage of ParamList
 
 and Modifier =
-    | Alap of Param
+    | Alap
     | Maybe of Meaning option
     | Once
 
