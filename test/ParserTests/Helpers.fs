@@ -76,7 +76,7 @@ let consAssignAst var rhs =
     |> AssignmentExpr
     |> fun e -> (emptyLoc, e)
     |> ExprStatementL
-    |> fun s -> ([Top],s) |> ProgramUnit
+    |> fun s -> ([],s) |> ProgramUnit
 
 let runAssignTest codeStr var rhs =
     let expAst = [consAssignAst var rhs]

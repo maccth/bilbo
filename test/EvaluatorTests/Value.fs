@@ -210,4 +210,3 @@ let tests3 =
 let tests4 =
     let name = "primative type single var arithemtic operations"
     testList name (primTypesLogicalOperators |> quickSingleVarAssignTests |> singleVarTests)
-    

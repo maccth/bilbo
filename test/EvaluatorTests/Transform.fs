@@ -7,8 +7,8 @@ let multipleMatchCasesTransformTests = [
     nodes + """
     def graph(g) =
         match g
-        | [a] -> return g
-        | [] ->
+        | [a] => return g
+        | [] =>
             n = "startNode"::200
             return [n]
     a = [na] >> graph
@@ -18,8 +18,8 @@ let multipleMatchCasesTransformTests = [
     nodes + """
     def graph(g) =
         match g
-        | [a] -> return g
-        | [] ->
+        | [a] => return g
+        | [] =>
             n = "startNode"::200
             return [n]
     a = [] >> graph
@@ -29,8 +29,8 @@ let multipleMatchCasesTransformTests = [
     nodes + """
     def graph(g) =
         match g
-        | [a] -> return []
-        | [a] -> return g
+        | [a] => return []
+        | [a] => return g
     a = [na] >> graph
     b = []        
     ""","Both cases the same. Ensure first is taken."
@@ -38,8 +38,8 @@ let multipleMatchCasesTransformTests = [
     nodes + """
     def graph(g) =
         match g
-        | [a] where a == nb -> return []
-        | [a] -> return g
+        | [a] where a == nb => return []
+        | [a] => return g
     a = [na] >> graph
     b = [na]        
     ""","Both pattern graphs the same, but first where clause fails. Ensure second is taken."
@@ -47,14 +47,14 @@ let multipleMatchCasesTransformTests = [
     nodes + """
     def graph(g) =
         match g
-        | [a] where a == na -> return []
-        | [a] -> return g
+        | [a] where a == na => return []
+        | [a] => return g
     a = [na] >> graph
     b = []        
     ""","Both pattern graphs the same, but first where clause passes. Ensure first is taken."
 
     """
-    def change(g) = match g | [x,>,y] ->
+    def change(g) = match g | [x,>,y] =>
         x = x::20
         become [x,>,y]
     na = "a"::0
@@ -66,7 +66,7 @@ let multipleMatchCasesTransformTests = [
     """, "Changing a node in the graph. Ensure that edge deletion/preservation on works correctly when nodes are changed"
 
     """
-    def change(g) = match g | [x,>,y] ->
+    def change(g) = match g | [x,>,y] =>
         x = x::20
         become [x,30>,y]
     na = "a"::0
@@ -80,21 +80,21 @@ let multipleMatchCasesTransformTests = [
 
 let collectionTests = [
     nodes + """
-    def delNode(g) = match g | [x] -> become []
+    def delNode(g) = match g | [x] => become []
     g = [na,nb]
     a = g >> delNode
     b = [na] |&| [nb]
     """, "Deleting a node resulting in a collection of two graphs. Ensure both graphs are returned in a collection."
 
     nodes + """
-    def delNode(g) = match g | [x] -> become []
+    def delNode(g) = match g | [x] => become []
     g = [na,nb]
     a = g >> delNode |> delNode
     b = []
     """, "Deleting a node twice. Returns a collection of two empty graphs. Ensure that these are collapsed to one graph."
 
     nodes + """
-    def delNode(g) = match g | [x] -> become []
+    def delNode(g) = match g | [x] => become []
     g = [na,>,nb,>,nc]
     a = g >> delNode
     b =
@@ -109,7 +109,7 @@ let patternGraphBinOps = [
     nodes + """
     def middle(g) =
         match g
-        | [a,>,b] and [b,>,c] -> return [b]
+        | [a,>,b] and [b,>,c] => return [b]
     g = [na,>,nb,>,nc]
     a = g >> middle
     b = [nb]
@@ -118,7 +118,7 @@ let patternGraphBinOps = [
     nodes + """
     def endPair(g) =
         match g
-        | [a,>,b] and not [b,>,c] -> return [a,>,b]
+        | [a,>,b] and not [b,>,c] => return [a,>,b]
     g = [na,>,nb,>,nc]
     a = g >> endPair
     b = [nb,>,nc]
@@ -127,7 +127,7 @@ let patternGraphBinOps = [
     nodes + """
     def endPair(g) =
         match g
-        | [a,>,b] and not [b,>,c] -> return [a,>,b]
+        | [a,>,b] and not [b,>,c] => return [a,>,b]
     g = [na,>,nb,>,nc] + [nd,>,ne,>,nc]
     a = g >> endPair
     b = [nb,>,nc] |&| [ne,>,nc]
@@ -138,7 +138,7 @@ let patternGraphOrOps = [
     nodes + """
     def edge(g) = match g
         | [a,<>,b]
-        or [a,>,b] -> return [a,b]
+        or [a,>,b] => return [a,b]
     g = [na,<>,nb]
     a = g >> edge
     b = [na,nb]
@@ -147,7 +147,7 @@ let patternGraphOrOps = [
     nodes + """
     def deadLink(g) =
         match g
-        | [a,>,b] and not ([b,>,c] or [d,>,b]) -> return [a,>,b]
+        | [a,>,b] and not ([b,>,c] or [d,>,b]) => return [a,>,b]
     g = [na,>,nb] + [nc,>,na,<,nd] + [nc,>,nd,>,ne]
     a = g >> deadLink
     b = [na,>,nb] |&| [nd,>,ne]

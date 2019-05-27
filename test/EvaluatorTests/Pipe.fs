@@ -5,38 +5,38 @@ open Expecto
 
 let orPipe = [
     nodes + """
-    def addNode(g) = match g | [a] -> become [a, "newNode"::200]
-    def removeNode(g) = match g | [a] -> become []
+    def addNode(g) = match g | [a] => become [a, "newNode"::200]
+    def removeNode(g) = match g | [a] => become []
     a = [na,nb] >> addNode <|> removeNode
     b = [na,nb,"newNode"::200]
     ""","Or pipe of two transform, both match. Ensure result of first is retruned."
 
     nodes + """
-    def addNode(g) = match g | [a] -> become [a, "newNode"::200]
-    def removeEdge(g) = match g | [a,>,b] -> become [a,b]
+    def addNode(g) = match g | [a] => become [a, "newNode"::200]
+    def removeEdge(g) = match g | [a,>,b] => become [a,b]
     a = [na,nb] >> addNode <|> removeEdge
     b = [na,nb,"newNode"::200]
     ""","Or pipe of two transforms, only first matches. Ensure result of first is returned."
 
     nodes + """
-    def addNode(g) = match g | [a] -> become [a, "newNode"::200]
-    def removeEdge(g) = match g | [a,>,b] -> become [a,b]
+    def addNode(g) = match g | [a] => become [a, "newNode"::200]
+    def removeEdge(g) = match g | [a,>,b] => become [a,b]
     a = [na,nb] >> removeEdge <|> addNode
     b = [na,nb,"newNode"::200]
     ""","Or pipe of two transforms, only second matches. Ensure result of second is returned."
 
     nodes + """
-    def addNode(g) = match g | [a] -> become [a, "newNode"::200]
-    def removeEdge(g) = match g | [a,>,b] -> become [a,b]
-    def removeDoubleEdge(g) = match g | [a,<>,b] -> become [a,b]
+    def addNode(g) = match g | [a] => become [a, "newNode"::200]
+    def removeEdge(g) = match g | [a,>,b] => become [a,b]
+    def removeDoubleEdge(g) = match g | [a,<>,b] => become [a,b]
     a = [na,nb] >> removeDoubleEdge <|> removeEdge <|> addNode
     b = [na,nb,"newNode"::200]
     ""","Or pipe of three transforms, only third matches. Ensure result of third is returned."
 
     nodes + """
-    def addNode(g) = match g | [a] -> become [a, "newNode"::200]
-    def removeEdge(g) = match g | [a,>,b] -> become [a,b]
-    def addEdge(g) = match g | [a,b] -> become [a,<>,b]
+    def addNode(g) = match g | [a] => become [a, "newNode"::200]
+    def removeEdge(g) = match g | [a,>,b] => become [a,b]
+    def addEdge(g) = match g | [a,b] => become [a,<>,b]
     p = (addNode |> removeEdge) <|> addEdge
     a = [nc,nd] >> p
     b = [nc,<>,nd]
@@ -44,15 +44,15 @@ let orPipe = [
     + "Ensure original graph is piped to RHS of or pipe."
 
     nodes + """
-    def addWeight(g,w) = match g | [a,>,b] -> become [a,w>,b]
-    def incWeight(g,w) = match g | [a,x>,b] -> become [a,x+w>,b]
+    def addWeight(g,w) = match g | [a,>,b] => become [a,w>,b]
+    def incWeight(g,w) = match g | [a,x>,b] => become [a,x+w>,b]
     a = ([nb,10>,ne],17.5) >> incWeight <|> addWeight
     b = [nb,27.5>,ne]
     ""","Two arg transforms either side of or pipe. First matches. Ensure first is passed both args"
 
     nodes + """
-    def addWeight(g,w) = match g | [a,>,b] -> become [a,w>,b]
-    def incWeight(g,w) = match g | [a,x>,b] -> become [a,x+w>,b]
+    def addWeight(g,w) = match g | [a,>,b] => become [a,w>,b]
+    def incWeight(g,w) = match g | [a,x>,b] => become [a,x+w>,b]
     p = incWeight <|> addWeight
     p1 = [nb,10>,ne] >> p
     a = 17.5 >> p1
@@ -60,15 +60,15 @@ let orPipe = [
     ""","Partial application of two arg transforms either side of or pipe. First matches. Ensure first is passed both args"
 
     nodes + """
-    def addWeight(g,w) = match g | [a,>,b] -> become [a,w>,b]
-    def incWeight(g,w) = match g | [a,x>,b] -> become [a,x+w>,b]
+    def addWeight(g,w) = match g | [a,>,b] => become [a,w>,b]
+    def incWeight(g,w) = match g | [a,x>,b] => become [a,x+w>,b]
     a = ([nb,>,ne],17.5) >> incWeight <|> addWeight
     b = [nb,17.5>,ne]
     ""","Two arg transforms either side of or pipe. First fails. Ensure second is passed both args"
 
     nodes + """
-    def addWeight(g,w) = match g | [a,>,b] -> become [a,w>,b]
-    def incWeight(g,w) = match g | [a,x>,b] -> become [a,x+w>,b]
+    def addWeight(g,w) = match g | [a,>,b] => become [a,w>,b]
+    def incWeight(g,w) = match g | [a,x>,b] => become [a,x+w>,b]
     p = incWeight <|> addWeight
     p1 = [nb,>,ne] >> p
     a = 17.5 >> p1
@@ -78,8 +78,8 @@ let orPipe = [
 
 let andPipe = [
     nodes + """
-    def addEdge(g) = match g | [a,b] -> become [a,>,b]
-    def addSelfEdge(g) = match g | [a] -> become [a,>,a]
+    def addEdge(g) = match g | [a,b] => become [a,>,b]
+    def addSelfEdge(g) = match g | [a] => become [a,>,a]
     g = [na,nb]
     a = g >> addEdge <&> addSelfEdge
     b =
@@ -90,8 +90,8 @@ let andPipe = [
     ""","Single arg transforms connected using an and pipe"
 
     nodes + """
-    def addEdge(g,w) = match g | [a,b] -> become [a,w>,b]
-    def addSelfEdge(g,w) = match g | [a] -> become [a,w>,a] 
+    def addEdge(g,w) = match g | [a,b] => become [a,w>,b]
+    def addSelfEdge(g,w) = match g | [a] => become [a,w>,a] 
     a = ([na,nb],20) >> addEdge <&> addSelfEdge
     b =
         [na,20>,nb]
@@ -101,8 +101,8 @@ let andPipe = [
     ""","Multiple arg transforms connected using an and pipe"
 
     nodes + """
-    def addEdge(g,w) = match g | [a,b] -> become [a,w>,b]
-    def addSelfEdge(g,w) = match g | [a] -> become [a,w>,a]
+    def addEdge(g,w) = match g | [a,b] => become [a,w>,b]
+    def addSelfEdge(g,w) = match g | [a] => become [a,w>,a]
     g = [na,nb]
     p = g >> addEdge <&> addSelfEdge
     a = "hello" >> p

@@ -18,7 +18,9 @@ let fieldAssignTests = [
     a.population = 30
     b = City(False,30)
     """, "Field assignment twice within same object"
+]
 
+let nodeLoadAssignTests = [
     """
     type City = capital,population
     a = "London"::City(True,100)
@@ -40,7 +42,9 @@ let fieldAssignTests = [
     #a.loc.y = 800
     b = "London"::City(True,Location(200,800))
     """, "Reassignment of node load field where field is itself an object"
+]
 
+let nodeIdAssignTests = [
     """
     type City = capital,population
     a = "London"::City(True,100)
@@ -67,7 +71,39 @@ let fieldAssignTests = [
     """, "Reassignment of node id field where field is itself an object"
 ]
 
+let nodeLoadFieldAssignTests = [
+    """
+    type City = capital,population
+    a = "London"::City(True,100)
+    a->population = 70
+    b = "London"::City(True,70)
+    """, "Reassignment of node load"
+
+    """
+    type City = capital,loc
+    type Location = x,y
+    a = "London"::City(True,Location(200,500))
+    a->loc.y = 800
+    b = "London"::City(True,Location(200,800))
+    """, "Reassignment of node load field where field is itself an object"
+]
+
 [<Tests>]
 let test =
-    let name = "Field access"
+    let name = "Field assignment on LHS"
     testList name (fieldAssignTests |> abTwinVarTests)
+
+[<Tests>]
+let test2 =
+    let name = "Node load assignment on LHS"
+    testList name (nodeLoadAssignTests |> abTwinVarTests)
+    
+[<Tests>]
+let test3 =
+    let name = "Node id assignment on LHS"
+    testList name (nodeIdAssignTests |> abTwinVarTests)
+
+[<Tests>]
+let test4 =
+    let name = "Node load field assignment (using ->) on LHS"
+    testList name (nodeLoadFieldAssignTests |> abTwinVarTests)

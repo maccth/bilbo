@@ -76,24 +76,6 @@ module SymbolTable =
                     match stUpdated with
                     | Ok stU' -> Map.add n ((spType,stU') |> Space) st |> Ok
                     | Error e -> e |> Error
-
-                // | Some (Value(Value.Node node)) ->
-                //     match node.load with
-                //     | Space(loadTyp, existingLoad) ->
-                //         let updatedLoad = setSpace existingLoad {vid with spLst=rest} 
-                //         match updatedLoad with
-                //         | Ok load' ->
-                //             let node' = 
-                //                 {node with load=Space(loadTyp, load')}
-                //                 |> Value.Node
-                //                 |> Value
-                //             Map.add n node' st |> Ok
-                //         | Error e -> e |> Error
-                //     | _ ->
-                //         "Field access forwarding requires the node load to be of object type"
-                //         |> TypeError
-                //         |> Error
-                                    
                 | _ ->
                      "Name " + "\"" + n + "\"" + " is not is not defined"
                     |> NameError

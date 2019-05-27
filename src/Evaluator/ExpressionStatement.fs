@@ -801,6 +801,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
     | Dot -> dotRules syms spLst lhs rhs
+    | Arrow -> arrowRules syms spLst lhs rhs
     | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
     | MulApp -> (syms,spLst,lhs,rhs) |..> mulAppRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
@@ -820,21 +821,29 @@ and dotRules syms spLst lhs rhs =
     match lSpace with
     | Error e -> e |> Error
     | Ok (Space(spType, syms')) -> 
-        evalExpr [syms'] [] rhs
-    // TODO: Move load forwarding to match statement evaluation
-    // | Ok (Value (Node n)) ->
-    //     match n.load with
-    //     | Space (spType, syms') ->
-    //         evalExpr [syms'] [] rhs
-    //     | _ ->
-    //         "The load of this node is not an object type."
-    //         |> TypeError
-    //         |> Error        
+        evalExpr [syms'] [] rhs     
     | _ ->
         "Clearly this isn't an object or a namespace..."
         |> TypeError
         |> Error
 
+and arrowRules syms spLst lhs rhs =
+    let lSpace = evalExpr syms spLst lhs
+    match lSpace with
+    | Error e -> e |> Error
+    | Ok (Value(Node n)) -> 
+        match n.load with
+        | Space (typ,loadSt) ->
+            evalExpr [loadSt] [] rhs
+        | _ ->
+            "Clearly that nodes load is not isn't an object..."
+            |> TypeError
+            |> Error
+    | _ ->
+        "Clearly that isn't a node. Can only use -> with nodes."
+        |> TypeError
+        |> Error                  
+            
 and evalSExpr syms spLst s : BilboResult<Meaning> =
     match s with
     | Literal l -> evalLiteral l
@@ -896,25 +905,36 @@ and consVid syms spLst e : BilboResult<ValueId> =
     match e with
     | Var v -> {spLst=spLst; id=v} |> Ok
     | BinExpr (l, Dot, r) ->
-        let lVid = consVid syms spLst l
-        match lVid with
+        let lVidRes = consVid syms spLst l
+        match lVidRes with
         | Error e -> e |> Error
-        | Ok lVid' ->
-            let rVid = consVid syms spLst r
-            match rVid with
+        | Ok lVid ->
+            let rVidRes = consVid syms spLst r
+            match rVidRes with
             | Error e -> e |> Error
-            | Ok rVid' ->
-                match List.rev lVid'.spLst with
+            | Ok rVid ->
+                match List.rev lVid.spLst with
                 | NodePart (ns,None) :: lRest ->
-                    let spLstNew = NodePart (ns, Some lVid'.id) :: lRest |> List.rev
-                    {rVid' with spLst=spLstNew} |> Ok
+                    let spLstNew = NodePart (ns, Some lVid.id) :: lRest |> List.rev
+                    {rVid with spLst=spLstNew} |> Ok
                 | _ ->
-                    {rVid' with spLst=lVid'.spLst @ [Name lVid'.id]} |> Ok
+                    {rVid with spLst=lVid.spLst @ [Name lVid.id]} |> Ok            
     | PrefixExpr (Hash, e') -> consNodePartVid syms spLst e' LoadSpace
-    | PrefixExpr (Amp, e') -> consNodePartVid syms spLst e' IdSpace        
-    | _ ->
-        "vId construction"
-        |> notImplementedYet
+    | PrefixExpr (Amp, e') -> consNodePartVid syms spLst e' IdSpace
+    | BinExpr (el, Arrow, er) ->
+        let lVidRes = consVid syms spLst el
+        match lVidRes with
+        | Error e -> e |> Error
+        | Ok lVid ->
+            let rVidRes = consVid syms spLst er
+            match rVidRes with
+            | Error e -> e |> Error
+            | Ok rVid ->
+                let np = (LoadSpace, Some lVid.id) |> NodePart
+                let spLstNew = lVid.spLst @ np :: rVid.spLst
+                {rVid with spLst=spLstNew}
+                |> Ok
+    | _ -> "vId construction" |> notImplementedYet
 
 and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
     match e with

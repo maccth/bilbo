@@ -66,7 +66,7 @@ and ObjExpr =
 
 and BinOp =
     | NodeCons
-    | Dot
+    | Dot | Arrow
     | Pow | Times | Divide | Plus | Minus | Percent
     | LessThan | LessThanEq | GreaterThan | GreaterThanEq
     | Equal | NotEqual

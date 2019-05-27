@@ -214,6 +214,7 @@ let binExprOps1 =
     let ar = Associativity.Right
     [
         "::", 17, al, NodeCons;
+        "->",16,al, Arrow
         ".", 15, al, Dot
 
         "^", 14, ar, Pow;
@@ -435,8 +436,8 @@ let pMatchCase fname =
         (where,body,term) |> CatchAll
     let andNot = str "and" >>. str "not"
     let negGraph = followedBy andNot >>. andNot >>. pPGExpr   
-    let pPat = pipe6 (pPGExpr) (opt negGraph) (opt whereClause) (str "->") body pTerminatingStatement consPattern
-    let pAll = pipe5 (str "_") (opt whereClause) (str "->") body pTerminatingStatement consAll
+    let pPat = pipe6 (pPGExpr) (opt negGraph) (opt whereClause) (str "=>") body pTerminatingStatement consPattern
+    let pAll = pipe5 (str "_") (opt whereClause) (str "=>") body pTerminatingStatement consAll
     let p = pAll <|> pPat
     p <?> "match case"
 
