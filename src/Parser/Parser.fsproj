@@ -7,6 +7,7 @@
     <PackageReference Update="FSharp.Core" Version="4.6.1" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Position.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>

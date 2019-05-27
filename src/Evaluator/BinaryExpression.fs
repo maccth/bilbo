@@ -87,8 +87,11 @@ let nodeMatcher (ops : Meaning * Meaning) rule conv =
     | Value(Node lhs), Value(Node rhs) -> rule lhs rhs  |> conv |> Matched
     | _ -> NoMatch
 
+let opTypes ops = (ops |> fst |> typeStr), (ops |> snd |> typeStr)
+
 let binOpMeanError opSymbol ops =
-    binOpTypeError opSymbol (ops |> fst |> typeStr) (ops |> snd |> typeStr)
+    let typL, typR = ops |> opTypes
+    binOpTypeError opSymbol typL typR
 
 let plusRules (ops : Meaning * Meaning) : BilboResult<Meaning> =
     let ifs = intFloatStr2 ops (+) (fun x y -> float(x) + y) (fun x y -> x + float(y)) (+) (+)
@@ -112,34 +115,32 @@ let minusRules ops =
     |??> c
     |..> binOpMeanError "-" ops
 
-let timesRules ops =
+let timesRules ops : BilboResult<Meaning> =
     intFloat2 ops (*) (fun x y -> float(x) * y) (fun x y -> x * float(y)) (*)
-    |..> ("Times rules" |> notImplementedYet)
+    |..> binOpMeanError "*" ops
 
-let zeroCheck ops =
+let zeroCheck ops : Match<BilboResult<'T>> =
     match ops with
     | Value lhs, Value rhs ->
         match lhs, rhs with
-        | (_, Int y) when y=0 ->
-            "Cannot divide or modulo by zero" |> ValueError |> Error |> Matched
-        | (_, Float y) when y=0.0 ->
-            "Cannot divide or modulo by zero" |> ValueError |> Error |> Matched
+        | (_, Int y) when y=0 -> divideModByZero() |> Matched
+        | (_, Float y) when y=0.0 -> divideModByZero() |> Matched
         | _ -> NoMatch
     | _ -> NoMatch  
 
-let divideRules ops =
+let divideRules ops : BilboResult<Meaning> =
     let z = zeroCheck ops
     let eval = lazy(intFloat2 ops (/) (fun x y -> float(x) / y) (fun x y -> x / float(y)) (/))
     z
     |??> eval
-    |> Match.underlie ("Divide rules" |> notImplementedYet)
+    |..> binOpMeanError "/" ops
     
 let moduloRules ops =
     let z = zeroCheck ops
     let eval = lazy(intFloat2 ops (%) (fun x y -> float(x) % y) (fun x y -> x % float(y)) (%))
     z
     |??> eval
-    |> Match.underlie ("Modulo rules" |> notImplementedYet)
+    |..> binOpMeanError "%" ops
 
 let powRules ops =
     let iiFun = fun x y -> float(x) ** float(y) |> Float
@@ -147,21 +148,21 @@ let powRules ops =
     let fiFun = fun x y -> x ** float(y) |> Float    
     let ffFun = fun x y -> x ** y |> Float    
     intFloat ops iiFun ifFun fiFun ffFun
-    |> Match.underlie ("Pow rules" |> notImplementedYet)
+    |..> binOpMeanError "^" ops
 
 let ltRules ops =
     let lt = fun x y -> (x < y) |> Bool
     let ifFun = fun x y -> (float(x) < y) |> Bool
     let fiFun = fun x y -> x < float(y) |> Bool
     intFloatStr ops lt ifFun fiFun lt lt
-    |> Match.underlie ("Less than rules" |> notImplementedYet)
+    |..> binOpMeanError "<" ops
 
 let lteqRules ops =
     let lteq = fun x y -> (x <= y) |> Bool
     let ifFun = fun x y -> (float(x) <= y) |> Bool
     let fiFun = fun x y -> x <= float(y) |> Bool
     intFloatStr ops lteq ifFun fiFun lteq lteq
-    |> Match.underlie ("Less than or equal rules" |> notImplementedYet)
+    |..> binOpMeanError "<=" ops
 
 let gtRules ops =
     // Unpacking the result of lteqRules and inverting it would take as many lines...
@@ -169,14 +170,14 @@ let gtRules ops =
     let ifFun = fun x y -> (float(x) > y) |> Bool
     let fiFun = fun x y -> x > float(y) |> Bool
     intFloatStr ops gt ifFun fiFun gt gt
-    |> Match.underlie ("Greater than rules" |> notImplementedYet)
+    |..> binOpMeanError ">" ops
 
 let gteqRules ops =
     let gteq = fun x y -> (x >= y) |> Bool
     let ifFun = fun x y -> (float(x) >= y) |> Bool
     let fiFun = fun x y -> x >= float(y) |> Bool
     intFloatStr ops gteq ifFun fiFun gteq gteq
-    |> Match.underlie ("Greater than or equal rules" |> notImplementedYet)
+    |..> binOpMeanError ">=" ops
 
 let equalsRules ops =
     // TODO: Add equality for non-primative (structural types) types
@@ -191,16 +192,14 @@ let equalsRules ops =
     |??> n
     |??> g
     |?> nope
-    |..> ("Equal rules" |> notImplementedYet)
+    |..> binOpMeanError "== (or !=)" ops
 
 let notEqualsRules ops =
     equalsRules ops
     |> function
     | Ok (Value(Bool(b))) -> b |> not |> Bool |> Value |> Ok
-    | Ok (_) -> "Not equal rules" |> notImplementedYet
-    | Error (ImplementationError _) ->  "Not equal rules" |> notImplementedYet
+    | Ok (_) -> binOpMeanError "!=" ops
     | Error e -> e |> Error
-
 
 let boolean ops binOp =
     let booleanTrue (v : Value) =
@@ -221,16 +220,16 @@ let boolean ops binOp =
 
 let andRules (ops : Meaning * Meaning) =
     boolean ops (fun x y -> (x && y) |> Bool |> Value |> Ok)
-    |> Match.underlie ("And rules" |> notImplementedYet)
+    |..> binOpMeanError "and" ops
 
 let orRules (ops : Meaning * Meaning) =
     boolean ops (fun x y -> (x || y) |> Bool |> Value |> Ok)
-    |> Match.underlie ("Or rules" |> notImplementedYet)
+    |..> binOpMeanError "or" ops
 
 let xorRules (ops : Meaning * Meaning) =
     let xor x y = (x && (not y)) || ((not x) && y)
     boolean ops (fun x y -> (xor x y) |> Bool |> Value |> Ok)
-    |> Match.underlie ("Xor rules" |> notImplementedYet)
+    |..> binOpMeanError "xor" ops
 
 let nodeConsRules (ops : Meaning * Meaning) =
     let getNodePart nodeFn obj partStr =
@@ -275,7 +274,7 @@ let collectRules ops =
         | _ -> typeError
     | _ -> typeError
 
-let thenPipeRules ops =
+let thenPipeRules ops : BilboResult<Meaning> =
     let lMean, rMean = ops
     match lMean, rMean with
     | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> ThenPipe |> Pipeline |> Value |> Ok
@@ -289,28 +288,20 @@ let thenPipeRules ops =
     // | _, Value (Pipeline pr) ->
     //     let paramStage = [lMean] |> ParamStage |> fun p -> [p]
     //     paramStage @ pr |> Pipeline |> Value |> Ok
-    | _ ->
-        "Only functions or transforms can be composed in a pipeline"
-        |> TypeError
-        |> Error
+    | _ -> ops |> opTypes ||> nonFuncTranInThenPipe
 
 let orPipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
     | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr,[]) |> OrPipe |> Pipeline |> Value |> Ok
-    | _ ->
-        "Only functions or transforms can be composed in a pipeline"
-        |> TypeError
-        |> Error
+    | _ -> ops |> opTypes ||> nonTranInPipe "<|>"
+
 
 let andPipeRules ops =
     let lMean, rMean = ops
     match lMean, rMean with
     | Value (Pipeline pl), Value (Pipeline pr) -> (pl,pr) |> AndPipe |> Pipeline |> Value |> Ok
-    | _ ->
-        "Only functions or transforms can be composed in a pipeline"
-        |> TypeError
-        |> Error
+    | _ -> ops |> opTypes ||> nonTranInPipe "<&>"
 
 let mulAppRules ops =
     match ops with

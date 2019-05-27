@@ -10,6 +10,7 @@ type ValueError = string
 type TypeError = string
 type OperatorError = string
 type MatchError = string
+type ImportError = string
 
 type BilboError =
     | ImplementationError of ImplementationError
@@ -20,35 +21,68 @@ type BilboError =
     | TypeError of TypeError
     | OperatorError of OperatorError
     | MatchError of MatchError
+    | ImportError of ImportError
 
-type BilboResult<'T> = Result<'T, BilboError>
+type ProgramError = {
+    error   : BilboError
+    loc     : Loc option
+    extra   : (string * Loc option) list
+}
 
-type ProgramError = Loc option * BilboError
+type BilboResult<'T> = Result<'T, ProgramError>
 
-type ProgramResult<'T> = Result<'T,ProgramError>
+module BilboError =
+    let ofError be =
+        {error=be; loc=None; extra=[]}
+        |> Error
 
-let implementationError (m : string) = m |> ImplementationError |> Error
+    let ofErrorLoc be loc =
+        {error=be; loc=Some loc; extra=[]}
+        |> Error
+     
+    let addExtra str pe =
+        {pe with extra = (str,None) :: pe.extra}
+        |> Error
+    
+    let addExtraLoc str loc pe =
+        {pe with extra = (str, Some loc) :: pe.extra}
+        |> Error
+        
+let (|NoMatches|_|) (res : BilboResult<'T>) =
+    match res with
+    | Error e ->
+        match e.error with
+        | MatchError me -> me |> Some
+        | _ -> None
+    | _ -> None
+
+let implementationError (m : string) =
+    m
+    |> ImplementationError
+    |> BilboError.ofError
 
 let parseError file msg err state : BilboResult<Program> =
     let str = "In file: " + file + "\n" + msg
-    str |> SyntaxError |> Error
+    str
+    |> SyntaxError
+    |> BilboError.ofError
 
 let objInstanArgNumError typName (expNum : int) (givenNum : int) =
     "Object instantiation of type \"" + typName + "\""
     |> fun s -> s + " requires " + string(expNum)
     |> fun s -> s + " arguments, but given " + string(givenNum)
     |> fun s -> s + " arguments."
-    |> TypeError |> Error
+    |> TypeError |> BilboError.ofError
 
 let nodeConsError vType nodePart =
     "A " + vType + " cannot be used as a " + nodePart
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let bindTypeError thing cannotBeBoundTo =
     "Cannot bind a " + thing + " to " + cannotBeBoundTo
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let bindImpError thing cannotBeBoundTo =
     "A" + thing + "should not be bound to" + cannotBeBoundTo
@@ -61,7 +95,7 @@ let paramListImpError thing = bindImpError  "parameter list" thing
 let tooManyArguments count =
     count + " extra arguments enpiped into function, transform or pipeline."
     |> ValueError
-    |> Error
+    |> BilboError.ofError
 
 let zeroParamFunctionError() =
     "Functions with no paramaters should be evaluated at definition time and cannot be enpiped to."
@@ -78,17 +112,17 @@ let notImplementedYet thing =
 let printError thing=
     "Cannot print a " + thing
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let typeNotDefined typ =
     "Type " + "\"" + typ + "\" is not defined."
     |> NameError
-    |> Error
+    |> BilboError.ofError
 
 let notMatchingWithinGraph typ =
     "Can only match within graphs but attempted to match within " + typ + " type."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonNodeInPathEdge typL typR =
     let mes =
@@ -98,7 +132,7 @@ let nonNodeInPathEdge typL typR =
         + typR + " on the right."
     mes
     |> TypeError
-    |> Error    
+    |> BilboError.ofError    
 
 let nonNodeInPath typ =
     let mes =
@@ -107,53 +141,65 @@ let nonNodeInPath typ =
         + typ + "."
     mes
     |> TypeError
-    |> Error 
+    |> BilboError.ofError 
+
+let nonFuncTranInThenPipe typL typR =
+    "Only functions or transforms can be composed in a pipeline with |>. "
+    + "Attempted to compose a " + typL + " and a " + typR + "."
+    |> TypeError
+    |> BilboError.ofError
+
+let nonTranInPipe pipeOp typL typR =
+    "Only transforms can be composed in a pipeline with " + pipeOp + ". "
+    + "Attempted to compose a " + typL + " and a " + typR + "."
+    |> TypeError
+    |> BilboError.ofError
 
 let nonPStageOnEnpipeRhs typR =
     "The enpipe operator requires a function, transform or pipeline on the "
     + "right-hand side but instead had " + typR +  "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonBoolInWhereClause typ =
     "The value of a where clause must evaluate to a bool however it "
     + "evaluated to a " + typ + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let typeCastError typeFrom typeTo =
     "Cannot convert type " + typeFrom + " to type " + typeTo
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let typeCastValueError typeFrom typeTo =
     "Cannot convert this value of type " + typeFrom + " to type " + typeTo
     |> ValueError
-    |> Error
+    |> BilboError.ofError
 
 let nonGraphCollectionError typeL typeR =
     "Only graphs can be placed in collections. "
     + "Attempted type " + typeL + " and type " + typeR + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonIntMultipleAppRhs typR =
     "The ** operator requires a positive integer on the right-hand side. "
     + "Instead got type " + typR + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonPipelineDollarApp typ =
     "The $ operator requires a transform or pipeline on the right-hand side. "
     + "Instead got type " + typ + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonPipelineMultipleAppLhs typL =
     "The ** operator requires a function, transform or pipeline on the left-hand side. "
     + "Instead got type " + typL + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonPipelineUnfinished typ =
     "Only pipelines can be an unfinished output. "
@@ -164,33 +210,38 @@ let nonPositiveAppMultiplier m =
     "The ** operator requires a positive integer on the right-hand side. "
     + "Instead got " + m + "."
     |> ValueError
-    |> Error
+    |> BilboError.ofError
 
 let alapMaybeAppNonPLine typ =
     "The ! and ? pipeline modifiers must be applied to a transform or pipeline. "
     + "Instead got " + typ + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let functionAlapError() =
     "Functions cannot be applied as-long-as-possible (ALAP)"
     |> TypeError
-    |> Error   
+    |> BilboError.ofError   
 
 let nonNodeAmpExpr typ =
     "The & operator must be applied to a node. "
     + "Attempted to apply it to a type " + typ + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let nonNodeHashExpr typ =
     "The && operator must be applied to a node. "
     + "Attempted to apply it to a type " + typ + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
 
 let binOpTypeError opSymbol typL typR =
-    "The " + opSymbol + " cannot be used with the types "
+    "The operator " + opSymbol + " cannot be used with the types "
     + typL + " and " + typR + "."
     |> TypeError
-    |> Error
+    |> BilboError.ofError
+
+let divideModByZero() =
+    "Cannot divide or modulo by zero."
+    |> ValueError
+    |> BilboError.ofError

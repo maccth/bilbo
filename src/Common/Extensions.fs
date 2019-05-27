@@ -1,6 +1,12 @@
 module Bilbo.Common.Extensions
 
 let (|->) l r = Result.bind (r) l
+
+let (|-/>) l r =
+    match l with
+    | Ok a -> a |> Ok
+    | Error e -> e |> r 
+
 let (|=>) l r = Result.bind (r >> Ok) l
 
 type Match<'T> =

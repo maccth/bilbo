@@ -31,7 +31,7 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
 
 and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
     match out with
-    | [] -> "There has been a terrible match error. Nothing matched." |> MatchError |> Error
+    | [] -> "There has been a terrible match error. Nothing matched." |> MatchError |> BilboError.ofError
     | [one] -> one |> Ok
     | _ ->
         let graphCheck lst mIn =
@@ -43,7 +43,7 @@ and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
                 | _ ->
                     "You cannot possible have something of type "
                     + (typeStr mIn) + " in a collection. Fool."
-                    |> TypeError |> Error
+                    |> TypeError |> BilboError.ofError
         List.fold graphCheck (Ok []) out
         |=> Collection.ofList
         |=> Collection.toMeaning
@@ -119,7 +119,7 @@ and evalMatchCase syms spLst (modif : Modifier Option) (hg : Graph) (case : Matc
         | Ok false -> [] |> Ok
         | Ok true ->
             match term with
-            | Become _ -> "Cannot use become in a catch-all match case" |> SyntaxError |> Error
+            | Become _ -> "Cannot use become in a catch-all match case" |> SyntaxError |> BilboError.ofError
             | Return ret ->
                 let stHd, rest = Symbols.top syms           
                 evalFuncBody rest spLst stHd bod ret
@@ -319,7 +319,7 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGrap
     let evalExprWithinPg (e : Expr) =
         match e with
         | Var v -> v |> String |> Value |> Ok
-        | _ -> "Can only use identifiers to be bound in pattern graph" |> TypeError |> Error
+        | _ -> "Can only use identifiers to be bound in pattern graph" |> TypeError |> BilboError.ofError
     let node nid = {nid=nid}
     let edge s w t = {source = node s; weight = w; target = node t}
     let evalPgEdgeOp ln edgeOp rn =
@@ -388,7 +388,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             | Output _, Ok (Output(m))
             | Output (m), Ok (Output _) ->
                 "Got a non-graph in a collection. Type " + (m |> typeStr) + "."
-                |> TypeError |> Error
+                |> TypeError |> BilboError.ofError
             | Unfinished (Value(Pipeline(pl1'))), Ok (Unfinished(Value(Pipeline(pl2')))) ->
                 (pl1',pl2') |> AndPipe |> Pipeline |> Value |> Unfinished |> Ok
             | Unfinished (m1), _ -> m1 |> typeStr |> nonPipelineUnfinished
@@ -401,7 +401,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             |> OrPipe |> Pipeline |> Value |> Unfinished |> Ok
         | Ok (Unfinished(m)) -> m |> typeStr |> nonPipelineUnfinished 
         | Ok (Output(res)) -> res |> Output |> Ok
-        | Error (MatchError _) ->
+        | NoMatches _ ->
             applyArgsToPipeline syms spLst plOtherwise modif (argsSoFar @ [arg])
             |=> Output
         | Error e -> e |> Error   
@@ -410,7 +410,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
         | Maybe firstArg ->
             let applied = applyArgToPipeline syms spLst modPLine modif arg
             match applied with
-            | Error (MatchError _) ->
+            | NoMatches _ ->
                 match firstArg with
                 | Some alreadyArg -> alreadyArg |> Output |> Ok
                 | None  -> arg |> Output |> Ok
@@ -429,7 +429,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
                 match output with
                 | Ok (Output _) -> true 
                 | Ok (Unfinished _) -> false
-                | Error (MatchError _) -> false
+                | NoMatches _ -> false
                 | Error _ -> false
             while keepApplying output do
                 outputPrev <- output
@@ -439,7 +439,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
                     | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError
             match output with
             | Ok (Unfinished unfinPl) -> unfinPl |> Unfinished |> Ok
-            | Error (MatchError _ ) -> outputPrev
+            | NoMatches _ -> outputPrev
             | Error _ -> output
             | Ok (Output _) -> "The output is of type Ok but the ALAP loop was exited" |> implementationError        
     | PStage ps -> applyArgToPStage syms spLst ps modif arg
@@ -522,7 +522,7 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
                     applyArgsToPipeline syms spLst pl' modif args'
                 | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError                
         match output with
-        | Error (MatchError _) -> outputPrev
+        | NoMatches _ -> outputPrev
         | Error _ -> output
         | _ -> outputPrev
     | _ ->
@@ -543,7 +543,7 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
             | _ ->
                 "Too many arguments enpiped into function or transform."
                 |> TypeError
-                |> Error
+                |> BilboError.ofError
 
 and enpipeRules syms spLst (l : Expr) (r : Expr) =
     let lRes = evalExpr syms spLst l
@@ -584,12 +584,12 @@ and isRules syms spLst lhs rhs =
                 | _ ->
                     "Cannot use `is` operator on nodes, graphs, type definitions, functions, transforms or pipelines."
                     |> TypeError
-                    |> Error
+                    |> BilboError.ofError
             | Space (Object(oTyp), _) ->  oTyp |> Ok
             | _ ->
                 "Can only check type for primative types"
                 |> TypeError
-                |> Error
+                |> BilboError.ofError
     let rhsTypeStr = lazy (
         let rhs' = evalExpr syms spLst rhs
         match rhs' with
@@ -609,16 +609,16 @@ and isRules syms spLst lhs rhs =
     | Error e -> e |> Error
     | Ok lTyp ->
         match rhsTypeStr.Force() with
-        | Error e -> e |> Error
+        | Error e -> e |> BilboError.ofError
         | Ok rTyp ->
             lTyp = rTyp |> Bool |> Value |> Ok
 
-and hasRules syms spLst lhs rhs =
+and hasRules syms spLst lhs rhs : BilboResult<Meaning> =
     match varAsString rhs with
     | None ->
         "`has` should be followed by an attribute name"
         |> OperatorError
-        |> Error
+        |> BilboError.ofError
     | Some attr ->
         let lhs' = evalExpr syms spLst lhs
         match lhs' with
@@ -629,7 +629,7 @@ and hasRules syms spLst lhs rhs =
             | _ ->
                 "`has` must have an object on the left-hand side"
                 |> OperatorError
-                |> Error    
+                |> BilboError.ofError    
 
 and evalTypeCast syms spLst typ e =
     let e' = evalExpr syms spLst e
@@ -642,7 +642,7 @@ and evalTypeCast syms spLst typ e =
     | Ok _v ->
         "Cannot convert to a primative type"
         |> ValueError
-        |> Error
+        |> BilboError.ofError
     | Error err -> err |> Error
 
 and evalObjExpr syms spLst (oe : ObjExpr)  =
@@ -666,7 +666,7 @@ and evalObjExpr syms spLst (oe : ObjExpr)  =
                     | Some v -> (v) :: lst |> Ok 
             let attrLst = List.fold folder (Ok []) expAttrs
             match attrLst with
-            | Error e -> e |> Error
+            | Error e -> e |> BilboError.ofError
             | Ok attrLst' -> evalObjInstan syms spLst typ (List.rev attrLst')
         | _ -> typ |> typeNotDefined                                                                              
 
@@ -825,7 +825,7 @@ and dotRules syms spLst lhs rhs =
     | _ ->
         "Clearly this isn't an object or a namespace..."
         |> TypeError
-        |> Error
+        |> BilboError.ofError
 
 and arrowRules syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
@@ -838,11 +838,11 @@ and arrowRules syms spLst lhs rhs =
         | _ ->
             "Clearly that nodes load is not isn't an object..."
             |> TypeError
-            |> Error
+            |> BilboError.ofError
     | _ ->
         "Clearly that isn't a node. Can only use -> with nodes."
         |> TypeError
-        |> Error                  
+        |> BilboError.ofError                  
             
 and evalSExpr syms spLst s : BilboResult<Meaning> =
     match s with

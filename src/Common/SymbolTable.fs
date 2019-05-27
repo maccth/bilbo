@@ -19,14 +19,14 @@ module SymbolTable =
                 | _ ->
                     "Namespace " + "\"" + n + "\"" + " is not defined"
                     |> NameError
-                    |> Error
+                    |> BilboError.ofError    
         let findMeaning (st : SymbolTable) (vid : ValueId) : BilboResult<Meaning> =
             match Map.tryFind vid.id st with
             | Some v -> v |> Ok
             | _ ->
                 "Field " + "\"" + vid.id + "\"" + " is not defined"
                 |> NameError
-                |> Error              
+                |> BilboError.ofError                 
         vid
         |> findSpace symtab
         |> Result.bind (fun st' -> findMeaning st' vid)
@@ -35,7 +35,7 @@ module SymbolTable =
         let setMeaning (st : SymbolTable) (vid : ValueId) =
             Map.add vid.id value st
         
-        let rec setNodePart (st : SymbolTable) (vid : ValueId) spLstRest (partId : Id option) getPart update spaceUpdate =
+        let rec setNodePart (st : SymbolTable) (vid : ValueId) spLstRest (partId : Id option) getPart update spaceUpdate : BilboResult<SymbolTable> =
             match partId with
             | None ->
                 match Map.tryFind vid.id st with
@@ -43,7 +43,7 @@ module SymbolTable =
                     let changedNode = update node value |> Node |> Value
                     Map.add vid.id changedNode st
                     |> Ok
-                | _ -> "No node there" |> NameError |> Error
+                | _ -> "No node there" |> NameError |> BilboError.ofError    
             | Some nodeId ->
                 match Map.tryFind nodeId st with
                 | Some (Value(Node node)) ->
@@ -51,18 +51,17 @@ module SymbolTable =
                     | Space (typ,st') ->
                         let st'' = setSpace st' {id=vid.id; spLst=spLstRest}
                         match st'' with
-                        | Error e -> e |> Error
+                        | Error e -> e |> Error             
                         | Ok id' ->
                             let node' = spaceUpdate node typ id' |> Node |> Value
                             Map.add nodeId node' st
                             |> Ok
-                    | _ -> "No space there" |> NameError |> Error                            
-                | _ -> "Again no node there" |> NameError |> Error
+                    | _ -> "No space there" |> NameError |> BilboError.ofError                                
+                | _ -> "Again no node there" |> NameError |> BilboError.ofError    
             
         and setSpace (st : SymbolTable) (vid : ValueId) : BilboResult<SymbolTable> =
             match vid.spLst with
             | [] -> setMeaning st vid |> Ok
-
             | NodePart (IdSpace, id) :: rest ->
                 let spaceUpdate node typ idSpace = {node with Node.id = (typ,idSpace) |> Space}               
                 setNodePart st vid rest id (fun n -> n.id) (fun n v -> {n with id = v}) spaceUpdate 
@@ -79,14 +78,14 @@ module SymbolTable =
                 | _ ->
                      "Name " + "\"" + n + "\"" + " is not is not defined"
                     |> NameError
-                    |> Error
+                    |> BilboError.ofError    
 
         setSpace symtab vid
 
     // TODO: Serious code sketch. Will need to permeate use of vid.spLst 
     let remove (symtab : SymbolTable) (vid : ValueId) =
         match Map.containsKey vid.id symtab with
-        | false -> "Cannot delete an identifier that does not exist" |> TypeError |> Error
+        | false -> "Cannot delete an identifier that does not exist" |> TypeError |> BilboError.ofError    
         | true -> Map.remove vid.id symtab |> Ok
 
 
@@ -105,19 +104,19 @@ module Symbols =
         
     let empty : Symbols = [] 
     let find (syms : Symbols) (vid : ValueId) : BilboResult<Meaning> =
-        let rec findClosest (symsIn : Symbols) (errLst : BilboError list) : BilboResult<Meaning> =
+        let rec findClosest (symsIn : Symbols) (err : ProgramError option) : BilboResult<Meaning> =
             match symsIn with
             | st :: rest ->
                 match SymbolTable.find st vid with
                 | Ok value -> value |> Ok
-                | Error e -> findClosest rest (e::errLst)
+                | Error e -> findClosest rest (Some e)
             | [] ->
                 // TODO: generate specific error from errList
                 // let errLst' = List.rev errLst
                 "Name " + "\"" + vid.id + "\"" + " is not is not defined"
                 |> NameError
-                |> Error
-        findClosest syms []
+                |> BilboError.ofError                       
+        findClosest syms None
 
     let set (syms : Symbols) (vid : ValueId) (value : Meaning) : BilboResult<Symbols> =
         match syms with

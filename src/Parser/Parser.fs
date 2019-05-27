@@ -3,39 +3,9 @@ module Bilbo.Parser.Parser
 open FParsec
 open Bilbo.Common.Ast
 open Bilbo.Common.Error
+open Bilbo.Parser.Position
 
 let qp x = printfn "%A" x
-
-// FParsec line and column number
-// ==============================
-// credit : https://stackoverflow.com/questions/55590902/fparsec-keeping-line-and-column-numbers
-// edited by maccth
-
-type WithPos<'T> = (Loc * 'T)
-
-module Position =
-    /// Get the previous position on the same line.
-    let leftOf (p: Position) =
-        if p.Column > 1L then
-            Position(p.StreamName, p.Index - 1L, p.Line, p.Column - 1L)
-        else
-            p
-
-    /// Wrap a parser to include the position
-    let attachPos fname (p: Parser<'T, 'U>) : Parser<WithPos<'T>, 'U> =
-        // Get the position before and after parsing
-        pipe3 getPosition p getPosition <| fun start value finish ->
-            let loc = {
-                file = fname;
-                startLine = start.Line;
-                startCol = start.Column;
-                endLine = (leftOf finish).Line;
-                endCol = (leftOf finish).Column;
-            }
-            (loc, value)
-
-    let bind binder (p : Parser<WithPos<'T>, 'U>) =
-        p |>> binder
 
 // Extensions to FParsec
 // =====================
@@ -529,8 +499,17 @@ let pFile nspace fname = (pProgram nspace fname) .>> eof
 
 // Top level parsers
 // =================
-let pBilboFile' nspace file =
-    runParserOnFile (pFile nspace file) () file System.Text.Encoding.UTF8
+let pBilboFile' nspace file loc : BilboResult<ParserResult<ProgramUnit list,unit>> =
+    try
+        runParserOnFile (pFile nspace file) () file System.Text.Encoding.UTF8
+        |> FSharp.Core.Ok
+    with
+    | :? System.IO.FileNotFoundException ->
+        match loc with
+        | None -> "Import issues" |> ImportError |> BilboError.ofError
+        | Some l -> 
+            let e = "Import issues" |> ImportError
+            (e, l) ||> BilboError.ofErrorLoc
 
 let pBilboStr' nspace str =
     let stream = "user input"
@@ -545,7 +524,7 @@ let getAst reply fSucc fFail : BilboResult<Program>=
 
 let rec resolveImports (astIn : ProgramUnit list) : BilboResult<Program> =
     let rec extendAst loc imLine astRest ast fp nLst  =
-        let importedLines = pBilboFile fp nLst
+        let importedLines = pBilboFile fp nLst (Some loc)
         match importedLines with
         | FSharp.Core.Ok importedLines' -> 
             // Keep import statement for semantic analysis to record the namespace
@@ -570,12 +549,14 @@ let rec resolveImports (astIn : ProgramUnit list) : BilboResult<Program> =
         | [] -> astOut |> FSharp.Core.Ok
     resolveImports' astIn []
 
-and pBilboFile file nspace : BilboResult<Program> =
-    let res = pBilboFile' nspace file
-    getAst res resolveImports (parseError file)
+and pBilboFile file nspace loc : BilboResult<Program> =
+    let res = pBilboFile' nspace file loc
+    match res with
+    | FSharp.Core.Ok pRes -> getAst pRes resolveImports (parseError file)
+    | FSharp.Core.Error e -> e |> FSharp.Core.Error
 
 let bilboParser file : BilboResult<Program> =
-    pBilboFile file []
+    pBilboFile file [] None
 
 let bilboStringParser str =
     let res = pBilboStr' [] str   
