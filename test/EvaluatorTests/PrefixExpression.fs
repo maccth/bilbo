@@ -26,23 +26,23 @@ let ampTests = [
     ""","User type object node id. Ensure this is returned"
 ]
 
-let dblAmpTests = [
+let hashTests = [
     """
     n = 10::20
-    a = &&n
+    a = #n
     b = 20
     ""","Integer node load. Ensure this is returned"
 
     """
     n = False::"Hello world"
-    a = &&n
+    a = #n
     b = "Hello world"
     ""","String node load. Ensure this is returned"
 
     """
     type T = p1,p2,p3
     n = "NodeId"::T(False,"Hello",34.5)
-    a = &&n
+    a = #n
     b = T(False,"Hello",34.5)
     ""","User type object node load. Ensure this is returned"
 ]
@@ -54,5 +54,5 @@ let test =
 
 [<Tests>]
 let test2 =
-    let name = "Double ampersand operator tests"
-    testList name (dblAmpTests |> abTwinVarTests)
+    let name = "hash operator tests"
+    testList name (hashTests |> abTwinVarTests)

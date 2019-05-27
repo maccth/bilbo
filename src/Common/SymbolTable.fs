@@ -1,7 +1,7 @@
 module Bilbo.Common.SymbolTable
 
-open Bilbo.Common.Value
 open Bilbo.Common.Ast
+open Bilbo.Common.Value
 open Bilbo.Common.Error
 
 module SymbolTable =
@@ -10,8 +10,8 @@ module SymbolTable =
     let find (symtab : SymbolTable) (vid : ValueId) : BilboResult<Meaning> =
         let rec findSpace (st : SymbolTable) (vid : ValueId) : BilboResult<SymbolTable> =
             match vid.spLst with
+            | NodePart _ :: _ -> "NodePart SpaceIds should not be used find objects in the symbol table" |> implementationError
             | [] -> st |> Ok
-            | Top :: rest -> findSpace st {vid with spLst = rest}
             | Name n :: rest ->
                 match Map.tryFind n st with
                 | Some (Space(_, stNext)) -> 
@@ -31,17 +31,44 @@ module SymbolTable =
         |> findSpace symtab
         |> Result.bind (fun st' -> findMeaning st' vid)
 
-    let set (symtab : SymbolTable) (vid : ValueId) (value : Meaning) (*: BilboResult<Table list>*) =
+    let set (symtab : SymbolTable) (vid : ValueId) (value : Meaning) =
         let setMeaning (st : SymbolTable) (vid : ValueId) =
             Map.add vid.id value st
+        
+        let rec setNodePart (st : SymbolTable) (vid : ValueId) spLstRest (partId : Id option) getPart update spaceUpdate =
+            match partId with
+            | None ->
+                match Map.tryFind vid.id st with
+                | Some (Value(Node node)) ->
+                    let changedNode = update node value |> Node |> Value
+                    Map.add vid.id changedNode st
+                    |> Ok
+                | _ -> "No node there" |> NameError |> Error
+            | Some nodeId ->
+                match Map.tryFind nodeId st with
+                | Some (Value(Node node)) ->
+                    match getPart node with
+                    | Space (typ,st') ->
+                        let st'' = setSpace st' {id=vid.id; spLst=spLstRest}
+                        match st'' with
+                        | Error e -> e |> Error
+                        | Ok id' ->
+                            let node' = spaceUpdate node typ id' |> Node |> Value
+                            Map.add nodeId node' st
+                            |> Ok
+                    | _ -> "No space there" |> NameError |> Error                            
+                | _ -> "Again no node there" |> NameError |> Error
             
-        let rec setSpace (st : SymbolTable) (vid : ValueId) : BilboResult<SymbolTable> =
+        and setSpace (st : SymbolTable) (vid : ValueId) : BilboResult<SymbolTable> =
             match vid.spLst with
-            | [] ->
-                setMeaning st vid
-                |> Ok                          
-            | Top :: rest ->
-                setSpace st {vid with spLst=rest}
+            | [] -> setMeaning st vid |> Ok
+
+            | NodePart (IdSpace, id) :: rest ->
+                let spaceUpdate node typ idSpace = {node with Node.id = (typ,idSpace) |> Space}               
+                setNodePart st vid rest id (fun n -> n.id) (fun n v -> {n with id = v}) spaceUpdate 
+            | NodePart (LoadSpace,load) :: rest ->
+                let spaceUpdate node typ idSpace = {node with Node.load = (typ,idSpace) |> Space}               
+                setNodePart st vid rest load (fun n -> n.load) (fun n v -> {n with load = v}) spaceUpdate
             | Name n :: rest ->
                 match Map.tryFind n st with
                 | Some (Space(spType, stExisting)) ->                 
@@ -49,22 +76,24 @@ module SymbolTable =
                     match stUpdated with
                     | Ok stU' -> Map.add n ((spType,stU') |> Space) st |> Ok
                     | Error e -> e |> Error
-                | Some (Value(Value.Node node)) ->
-                    match node.load with
-                    | Space(loadTyp, existingLoad) ->
-                        let updatedLoad = setSpace existingLoad {vid with spLst=rest} 
-                        match updatedLoad with
-                        | Ok load' ->
-                            let node' = 
-                                {node with load=Space(loadTyp, load')}
-                                |> Value.Node
-                                |> Value
-                            Map.add n node' st |> Ok
-                        | Error e -> e |> Error
-                    | _ ->
-                        "Field access forwarding requires the node load to be of object type"
-                        |> TypeError
-                        |> Error                    
+
+                // | Some (Value(Value.Node node)) ->
+                //     match node.load with
+                //     | Space(loadTyp, existingLoad) ->
+                //         let updatedLoad = setSpace existingLoad {vid with spLst=rest} 
+                //         match updatedLoad with
+                //         | Ok load' ->
+                //             let node' = 
+                //                 {node with load=Space(loadTyp, load')}
+                //                 |> Value.Node
+                //                 |> Value
+                //             Map.add n node' st |> Ok
+                //         | Error e -> e |> Error
+                //     | _ ->
+                //         "Field access forwarding requires the node load to be of object type"
+                //         |> TypeError
+                //         |> Error
+                                    
                 | _ ->
                      "Name " + "\"" + n + "\"" + " is not is not defined"
                     |> NameError

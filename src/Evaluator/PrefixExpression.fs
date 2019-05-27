@@ -21,10 +21,10 @@ let ampRules m : BilboResult<Meaning>=
     | Value(Node n) -> n.id |> Ok
     | _ -> m |> typeStr |> nonNodeAmpExpr
 
-let dblAmpRules m : BilboResult<Meaning>=
+let hashRules m : BilboResult<Meaning>=
     match m with
     | Value(Node n) -> n.load |> Ok
-    | _ -> m |> typeStr |> nonNodeDblAmpExpr
+    | _ -> m |> typeStr |> nonNodeHashExpr
 
 
 let dollarRules m =

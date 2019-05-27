@@ -812,7 +812,7 @@ and evalPrefixExpr syms spLst e op =
     match op with
     | Not -> (syms,spLst,e) |.> notRules
     | Amp -> (syms,spLst,e) |.> ampRules
-    | DblAmp -> (syms,spLst,e) |.> dblAmpRules
+    | Hash -> (syms,spLst,e) |.> hashRules
     | Dollar -> (syms,spLst,e) |.> dollarRules
     
 and dotRules syms spLst lhs rhs =
@@ -855,7 +855,6 @@ and evalSExpr syms spLst s : BilboResult<Meaning> =
         | Ok lst -> lst |> ParamList |> Ok
         | Error e -> e |> Error
 
-
 and evalPostfixExpr syms spLst e op =
     let modifiedPLine = Modified >> Pipeline >> Value >> Ok
     let eRes = evalExpr syms spLst e
@@ -878,10 +877,25 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | PrefixExpr (op, e') -> evalPrefixExpr syms spLst e' op
     | SpecialExpr _ -> "Special expr [+] and [-]" |> notImplementedYet
 
+and consNodePartVid syms spLst e ndPart =
+    let partVid = consVid syms spLst e
+    match partVid with
+    | Error e -> e |> Error
+    | Ok vid ->
+        match vid.spLst with
+        | Name nd :: rest ->
+            let np = (ndPart, Some nd) |> NodePart
+            {vid with spLst = np :: rest} |> Ok
+        // This happens when two node prefix expressions are used in a row &&a or #&a etc. 
+        | NodePart _ :: _ -> failwith "fuck this "
+        | [] ->
+            let np = (ndPart, None) |> NodePart
+            {vid with spLst = [np]} |> Ok   
+
 and consVid syms spLst e : BilboResult<ValueId> =
     match e with
     | Var v -> {spLst=spLst; id=v} |> Ok
-    | BinExpr(l, Dot, r) ->
+    | BinExpr (l, Dot, r) ->
         let lVid = consVid syms spLst l
         match lVid with
         | Error e -> e |> Error
@@ -890,7 +904,14 @@ and consVid syms spLst e : BilboResult<ValueId> =
             match rVid with
             | Error e -> e |> Error
             | Ok rVid' ->
-                {rVid' with spLst=lVid'.spLst @ [Name lVid'.id]} |> Ok
+                match List.rev lVid'.spLst with
+                | NodePart (ns,None) :: lRest ->
+                    let spLstNew = NodePart (ns, Some lVid'.id) :: lRest |> List.rev
+                    {rVid' with spLst=spLstNew} |> Ok
+                | _ ->
+                    {rVid' with spLst=lVid'.spLst @ [Name lVid'.id]} |> Ok
+    | PrefixExpr (Hash, e') -> consNodePartVid syms spLst e' LoadSpace
+    | PrefixExpr (Amp, e') -> consNodePartVid syms spLst e' IdSpace        
     | _ ->
         "vId construction"
         |> notImplementedYet

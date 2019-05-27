@@ -183,7 +183,7 @@ let nonNodeAmpExpr typ =
     |> TypeError
     |> Error
 
-let nonNodeDblAmpExpr typ =
+let nonNodeHashExpr typ =
     "The && operator must be applied to a node. "
     + "Attempted to apply it to a type " + typ + "."
     |> TypeError

@@ -13,6 +13,7 @@
     <Compile Include="Value.fs" />
     <Compile Include="PrefixExpression.fs" />
     <Compile Include="BinaryExpression.fs" />
+     <Compile Include="AssignmentExpression.fs" />
     <Compile Include="Function.fs" />
     <Compile Include="SingleMatchTransform.fs" />
     <Compile Include="Transform.fs" />

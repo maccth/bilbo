@@ -12,8 +12,11 @@ let noLoc res : ProgramResult<'T> = Result.mapError (fun e -> (None, e)) res
 let nLstStr nLst id =
     let folder s space =
         match space with
-        | Top -> s
         | Name n -> s + n + "." 
+        | NodePart _ ->
+            "NodePart SpaceIds should not be present in the AST before evaluation-time"
+            |> implementationError
+            |> failwithf "%A"
     List.fold folder "" nLst + id 
 
 let evalProgramUnit (syms : Symbols) pUnit : ProgramResult<Symbols> =

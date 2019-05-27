@@ -213,7 +213,7 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 16, al, NodeCons;
+        "::", 17, al, NodeCons;
         ".", 15, al, Dot
 
         "^", 14, ar, Pow;
@@ -262,8 +262,8 @@ let binExprOps2 =
         ">", 11, [","; ":"; ">"], al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, nf |> nfLst |> Some, assoc, astOp))
 
-exprOpp.AddOperator(PrefixOperator("&&", ws, 15, true, fun x -> (DblAmp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&", (notFollowedBy (str "&")) >>. ws, 15, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("#", ws, 16, true, fun x -> (Hash,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", ws, 16, true, fun x -> (Amp,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("not", ws, 11, true, fun x -> (Not,x) |> PrefixExpr))
 
 exprOpp.AddOperator(PrefixOperator("$", ws, 15, true, fun x -> (Dollar,x) |> PrefixExpr))
@@ -574,10 +574,10 @@ and pBilboFile file nspace : BilboResult<Program> =
     getAst res resolveImports (parseError file)
 
 let bilboParser file : BilboResult<Program> =
-    pBilboFile file [Top]
+    pBilboFile file []
 
 let bilboStringParser str =
-    let res = pBilboStr' [Top] str   
+    let res = pBilboStr' [] str   
     getAst res resolveImports (parseError "user input")
 
 let bilboStringParserPrint str =

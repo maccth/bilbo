@@ -5,8 +5,12 @@ type Program = ProgramUnit list
 and ProgramUnit = SpaceId list * Statement
 
 and SpaceId =
-    | Top
     | Name of Id
+    | NodePart of NodeSpace * Id option
+
+and NodeSpace =
+    | LoadSpace
+    | IdSpace
 
 and Loc = {
         file        : FilePath
@@ -75,7 +79,7 @@ and BinOp =
 
 and PreOp =
     | Not
-    | Amp | DblAmp
+    | Amp | Hash
     | Dollar
 
 and PostOp =
