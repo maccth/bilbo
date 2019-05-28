@@ -21,13 +21,16 @@ let rec evalPStageBody (syms : Symbols) spLst st bod =
         | Ok syms' ->
             let loc,es' = es
             evalExprStatement syms' spLst es'
+            |-/> BilboError.addExtraLoc "Inside body of function or transform." loc 
     List.fold folder (Ok syms') bod
 
 and evalFuncBody (syms : Symbols) spLst fst bod ret =
     let symsPostFunc = evalPStageBody syms spLst fst bod
     match symsPostFunc with
     | Error e -> e |> Error
-    | Ok syms'' -> evalExpr syms'' spLst ret
+    | Ok syms'' ->
+        evalExpr syms'' spLst ret
+        |-/> BilboError.addExtra "Inside return statement of function."
 
 and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
     match out with
@@ -459,7 +462,9 @@ and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) (arg : M
                 | [] ->
                     let symsUpdated = evalPStageBody syms spLst tstUpdated preMatchBod
                     match symsUpdated with
-                    | Error e -> e |> Error
+                    | Error e ->
+                        e
+                        |> BilboError.addExtra ("While applying transform " + tName + ".")
                     | Ok syms' ->
                         evalMatchStatement syms' spLst modif tMatch
                         |-> inspectTranOutput
@@ -473,7 +478,7 @@ and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) (arg : M
                     |> Unfinished
                     |> Ok 
     | Function(fDef, fst) ->
-        let fId, fParams, bod, ret = fDef
+        let fName, fParams, bod, ret = fDef
         match fParams with
         | [] -> zeroParamFunctionError()
         | hd :: paramsLeft ->
@@ -485,9 +490,10 @@ and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) (arg : M
                 | [] ->
                     let funcResultAsParam = evalFuncBody syms spLst fstUpdated bod ret
                     funcResultAsParam
+                    |-/> BilboError.addExtra ("While applying function " + fName + ".")
                     |=> Output
                 | _ ->
-                    ((fId, paramsLeft, bod, ret), fstUpdated)
+                    ((fName, paramsLeft, bod, ret), fstUpdated)
                     |> Function
                     |> PStage
                     |> Pipeline

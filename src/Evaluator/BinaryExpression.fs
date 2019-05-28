@@ -198,7 +198,7 @@ let notEqualsRules ops =
     equalsRules ops
     |> function
     | Ok (Value(Bool(b))) -> b |> not |> Bool |> Value |> Ok
-    | Ok (_) -> binOpMeanError "!=" ops
+    | Ok _ -> binOpMeanError "!=" ops
     | Error e -> e |> Error
 
 let boolean ops binOp =
