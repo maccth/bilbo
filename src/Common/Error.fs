@@ -245,3 +245,8 @@ let divideModByZero() =
     "Cannot divide or modulo by zero."
     |> ValueError
     |> BilboError.ofError
+
+let edgePresentInEdgeComprehension() =
+    "Edge present in edge comprehension. Edge comprehensions can only contain nodes."
+    |> ValueError
+    |> BilboError.ofError

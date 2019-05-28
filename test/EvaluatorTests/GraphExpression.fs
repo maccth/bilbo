@@ -82,6 +82,80 @@ let nestedPathExpressions = [
     """, "Ensure that the nesting of nested path expressions correctly constructs the graph."
 ]
 
+let pathComprehensions = [
+    """
+    a = [&=: ]
+    b = []
+    ""","Ensure id setting works (does nothing) with an empty graph."
+
+    """
+    a = [&=: "a"]
+    b = ["a"::"a"]
+    ""","Ensure id setting works with a single node."
+
+    """
+    a = [&=: "a", "b"]
+    b = ["a"::"a", "b"::"b"]
+    ""","Ensure id setting works with a pair of nodes."
+
+    """
+    na = "a"::10
+    a = [&=: na, "b"]
+    b = ["a"::10, "b"::"b"]
+    """, "Ensure id setting works with nodes in the expression by selecting id and load of node present."
+
+    """
+    a = [&=: 1,2,3,4,5,>,6]
+    b = [1::1,2::2,3::3,4::4,5::5,>,6::6]
+    """, "Ensure id setting works with edges present in the path expression."
+
+    """
+    a = [#=10: ]
+    b = []
+    ""","Ensure load setting works (does nothing) with an empty graph."
+
+    """
+    a = [#=False: "a"]
+    b = ["a"::False]
+    ""","Ensure load setting works with a single node."
+
+    """
+    a = [#=0: "a", "b"]
+    b = ["a"::0, "b"::0]
+    ""","Ensure load setting works with a pair of nodes."
+
+    """
+    na = "a"::10
+    a = [#=300: na, "b"]
+    b = ["a"::300, "b"::300]
+    """, "Ensure load setting works with nodes in the expression by selecting id of node present and set load."
+
+    """
+    a = [#=0: 1,2,3,4,5,>,6]
+    b = [1::0,2::0,3::0,4::0,5::0,>,6::0]
+    """, "Ensure load setting works with edges present in the path expression."
+
+    nodes + """
+    a = [<10>: ]
+    b = []
+    ""","Ensure edge setting does nothing in an empty graph."
+
+    nodes + """
+    a = [10>: na]
+    b = [na]
+    ""","Ensure edge setting does nothing in a graph with a single node."
+
+    nodes + """
+    a = [70>: na,na]
+    b = [na,70>,na]
+    ""","Ensure edge setting creates a loop in a graph with a single node repeated."
+
+    nodes + """
+    a = [<45+5>: na,nb,nc,nc,nd,na]
+    b = [na,<50>,nb,<50>,nc,<50>,nc,<50>,nd,<50>,na]
+    ""","Ensure edge setting works for longer path expressions."
+]
+
 [<Tests>]
 let test =
     let name = "Standard path expressions"
@@ -92,3 +166,8 @@ let test =
 let test2 =
     let name = "Nested path expressions"
     testList name (nestedPathExpressions |> abTwinVarTests)
+
+[<Tests>]
+let test3 =
+    let name = "Path comprehensions"
+    testList name (pathComprehensions |> abTwinVarTests)

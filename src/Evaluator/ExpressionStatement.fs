@@ -802,11 +802,65 @@ and evalPathElemLst syms spLst peLst =
     |> List.fold pathScan (Ok Graph.empty)
     |> Result.bind (Graph >> Value >> Ok)
 
+and evalPathCompLst syms spLst (pcLst : PathCompOp list) (peLst : BilboResult<PathElem list>) : BilboResult<PathElem list> =
+    match peLst with
+    | Error e -> e |> Error
+    | Ok peLst' ->
+        match pcLst with
+        | [] -> peLst' |> Ok
+        | comp :: rest ->
+            match comp with
+            | SetLoad load ->
+                let nodeMapper (pElem : PathElem) =
+                    let addLoad x = (x,NodeCons,load) |> BinExpr
+                    match pElem with
+                    | PathElem.Node n -> n |> addLoad |> PathElem.Node
+                    | PathElem.Edge (l,eOp,r) -> (l |> addLoad, eOp, r |> addLoad) |> PathElem.Edge
+                let loadsSet = List.map nodeMapper peLst'
+                evalPathCompLst syms spLst rest (loadsSet |> Ok)
+            | SetId ->
+                let nodeMapper (pElem : PathElem) =
+                    let idAndLoad x = (x,NodeCons,x) |> BinExpr
+                    match pElem with
+                    | PathElem.Node n -> n |> idAndLoad |> PathElem.Node
+                    | PathElem.Edge (l,eOp,r) -> (l |> idAndLoad, eOp, r |> idAndLoad) |> PathElem.Edge
+                let idsSet = List.map nodeMapper peLst'
+                evalPathCompLst syms spLst rest (idsSet |> Ok)
+            | AddEdge eOp ->
+                let pairwise = neighbourPairs peLst'
+                match pairwise with
+                | [] ->
+                    match peLst' with
+                    | [] -> evalPathCompLst syms spLst rest ([] |> Ok)
+                    | [PathElem.Node _] -> evalPathCompLst syms spLst rest (peLst' |> Ok)
+                    | [PathElem.Edge _] -> edgePresentInEdgeComprehension()
+                    | _ ->
+                        "The path element list should have exactly zero or one element."
+                        + " This is because the pairwise list has none."
+                        |> implementationError
+                | _ ->                
+                    let edgeFolder newPeLst (l,r) =
+                        match newPeLst with
+                        | Error e -> e |> Error
+                        | Ok pLst ->
+                            match l,r with
+                            | PathElem.Edge _, _ -> edgePresentInEdgeComprehension()
+                            | _, PathElem.Edge _ -> edgePresentInEdgeComprehension()
+                            | PathElem.Node nl, PathElem.Node nr ->
+                                let edge = (nl,eOp,nr) |> PathElem.Edge
+                                edge :: pLst |> Ok
+                    let peLstToAdd = List.fold edgeFolder (Ok []) pairwise
+                    match peLstToAdd with
+                    | Error e -> e |> Error
+                    | Ok lst -> evalPathCompLst syms spLst rest (lst @ peLst' |> Ok)           
+                        
 and evalGExpr syms spLst ge : BilboResult<Meaning> =
     match ge with
     | PathExpr pe ->
         match pe with
-        | PathComp _ -> "Path comprehensions" |> notImplementedYet
+        | PathComp (pcLst,peLst) ->
+            evalPathCompLst syms spLst pcLst (Ok peLst)
+            |-> evalPathElemLst syms spLst
         | Path peLst -> evalPathElemLst syms spLst peLst
 
 and evalBinOperands syms spLst lhs rhs =

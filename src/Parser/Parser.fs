@@ -280,7 +280,7 @@ let compOp weight load =
     let setId = pipe2 (str "&") (str "=") (fun _ _ -> SetId)
     let setLoad = pipe3 (str "#") (str "=") load (fun _ _ e -> e |> SetLoad)
     let addEdge = (pEdgeOp weight) |>> AddEdge
-    choice [addEdge; setId; setLoad]
+    chance [setId; setLoad;addEdge]
 
 let compOps weight load =
     let co = compOp weight load

@@ -44,3 +44,11 @@ let (|??>) first second = Match.lcompose first second
 let (<??|??>) first second = Match.lcompose first second
 
 let (|..>) m instead = Match.underlie instead m
+
+let neighbourPairs lst =
+    match lst with
+    | [] -> []
+    | head :: toEnd ->
+        match List.rev lst with
+        | last :: toHead -> List.zip (List.rev toHead) toEnd
+        | [] -> []

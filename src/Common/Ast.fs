@@ -111,7 +111,7 @@ and PathElem =
 
 and PathCompOp =
     | AddEdge of EdgeOp
-    // &&=expr
+    // #=expr
     | SetLoad of Expr
     // &=
     | SetId
