@@ -267,7 +267,7 @@ let pLeftEdgeOps weight =
 let pRightEdgeOps weight =
     tuple2 (opt weight) (str ">") |>> fst |>> Right
 
-let pEdgeOp weight = (pLeftEdgeOps weight <|> pRightEdgeOps weight) <?> "edge"
+let pEdgeOp weight = (pRightEdgeOps weight <|> pLeftEdgeOps weight) <?> "edge"
 
 let edge weight node = pEdgeOp weight .>> followedBy (str (",") .>>. node)
 
@@ -277,10 +277,10 @@ let pathElem weight node =
     node .>>. opt (pipe2 (followedBy (commaEdge weight node)) (commaEdge weight node) (fun x y -> y))
 
 let compOp weight load =
-    let setId = pipe2 ((notFollowedBy (str "&&")) >>. str "&") (str "=") (fun _ _ -> SetId)
-    let setLoad = pipe3 (str "&&") (str "=") load (fun _ _ e -> e |> SetLoad)
+    let setId = pipe2 (str "&") (str "=") (fun _ _ -> SetId)
+    let setLoad = pipe3 (str "#") (str "=") load (fun _ _ e -> e |> SetLoad)
     let addEdge = (pEdgeOp weight) |>> AddEdge
-    choice [setId; setLoad; addEdge]
+    choice [addEdge; setId; setLoad]
 
 let compOps weight load =
     let co = compOp weight load

@@ -124,9 +124,9 @@ let notMatchingWithinGraph typ =
     |> TypeError
     |> BilboError.ofError
 
-let nonNodeInPathEdge typL typR =
+let invalidTypeInPathEdge typL typR =
     let mes =
-        "Only nodes can appear on either side of an edge. "
+        "An edge must have a node or graph on each side. "
         + "Attempted to create an edge with type "
         + typL + " on the left and type "
         + typR + " on the right."

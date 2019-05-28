@@ -731,38 +731,83 @@ and evalEdgeOp syms spLst (lhs : Node) (rhs : Node) (eOp : EdgeOp) =
         | _, Error e -> e |> Error
         | Ok r', Ok l' -> r' @ l' |> Ok
 
+and edgesBetweenNodes syms spLst nodesLeft nodesRight eOp =
+    let nodePairs = List.allPairs nodesLeft nodesRight
+    let folder edgeLst (nl,nr) =
+        match edgeLst with
+        | Error e -> e |> Error
+        | Ok lst ->
+            let newEs = evalEdgeOp syms spLst nl nr eOp
+            match newEs with
+            | Error e -> e |> Error
+            | Ok es -> es @ lst |> Ok
+    List.fold folder (Ok []) nodePairs
+
+and evalPathEdge syms spLst g lhs eOp rhs =
+    let lhsRes = evalExpr syms spLst lhs
+    let rhsRes = evalExpr syms spLst rhs
+    match lhsRes,rhsRes with
+    | Error e, _ -> e |> Error
+    | _, Error e -> e |> Error
+    | Ok (Value(Node l)), Ok (Value(Node r)) ->
+        let eLstRes = evalEdgeOp syms spLst l r eOp
+        match eLstRes with
+        | Error e -> e |> Error
+        | Ok eLst -> Graph.addEdges eLst g |> Ok
+    | Ok (Value(Graph gl)), Ok (Value(Graph gr)) ->
+        let extraEdges = edgesBetweenNodes syms spLst (Graph.nodes gl) (Graph.nodes gr) eOp
+        match extraEdges with
+        | Error e -> e |> Error
+        | Ok edges ->
+            Graph.addGraphs g gl
+            // Must flip the order of the graphs so that later id clashes favour 'right-most' nodes
+            |> fun gsum -> Graph.addGraphs gsum gl
+            |> fun gsum -> Graph.addGraphs gsum gr
+            |> Graph.addEdges edges
+            |> Ok
+    | Ok (Value(Node(nl))), Ok (Value(Graph gr)) ->
+        let extraEdges = edgesBetweenNodes syms spLst [nl] (Graph.nodes gr) eOp
+        match extraEdges with
+        | Error e -> e |> Error
+        | Ok edges ->
+            Graph.addNode nl g
+            |> fun gsum -> Graph.addGraphs gsum gr
+            |> Graph.addEdges edges
+            |> Ok
+    | Ok (Value(Graph gl)), Ok (Value(Node(nr))) ->
+        let extraEdges = edgesBetweenNodes syms spLst (Graph.nodes gl) [nr] eOp
+        match extraEdges with
+        | Error e -> e |> Error
+        | Ok edges ->
+            Graph.addGraphs g gl
+            |> Graph.addNode nr
+            |> Graph.addEdges edges
+            |> Ok                     
+    | Ok l, Ok r -> (l |> typeStr, r |> typeStr) ||> invalidTypeInPathEdge
+
+and evalPathElemLst syms spLst peLst = 
+    let pathScan (g : BilboResult<Graph>) (pe : PathElem) =
+        match g with
+        | Error e -> e |> Error
+        | Ok g' -> 
+            match pe with
+            | PathElem.Edge (lhs,eOp,rhs) -> evalPathEdge syms spLst g' lhs eOp rhs
+            | PathElem.Node e ->
+                let n = evalExpr syms spLst e
+                match n with
+                | Error e -> e |> Error
+                | Ok (Value(Node n')) -> Graph.addNode n' g' |> Ok
+                | Ok n' -> n' |> typeStr |> nonNodeInPath 
+    peLst
+    |> List.fold pathScan (Ok Graph.empty)
+    |> Result.bind (Graph >> Value >> Ok)
+
 and evalGExpr syms spLst ge : BilboResult<Meaning> =
     match ge with
     | PathExpr pe ->
         match pe with
         | PathComp _ -> "Path comprehensions" |> notImplementedYet
-        | Path peLst ->
-            let pathScan (g : BilboResult<Graph>) (pe : PathElem) =
-                match g with
-                | Error e -> e |> Error
-                | Ok g' -> 
-                    match pe with
-                    | PathElem.Edge (lhs,eOp,rhs) ->
-                        let lhsRes = evalExpr syms spLst lhs
-                        let rhsRes = evalExpr syms spLst rhs
-                        match lhsRes,rhsRes with
-                        | Error e, _ -> e |> Error
-                        | _, Error e -> e |> Error
-                        | Ok (Value(Node l)), Ok (Value(Node r)) ->
-                            let eLstRes = evalEdgeOp syms spLst l r eOp
-                            match eLstRes with
-                            | Error e -> e |> Error
-                            | Ok eLst -> Graph.addEdges eLst g' |> Ok
-                        | Ok l, Ok r -> (l |> typeStr, r |> typeStr) ||> nonNodeInPathEdge
-                    | PathElem.Node e ->
-                        let n = evalExpr syms spLst e
-                        match n with
-                        | Error e -> e |> Error
-                        | Ok (Value(Node n')) -> Graph.addNode n' g' |> Ok
-                        | Ok n' -> n' |> typeStr |> nonNodeInPath 
-            peLst
-            |> List.fold pathScan (Ok Graph.empty)
-            |> Result.bind (Graph >> Value >> Ok)
+        | Path peLst -> evalPathElemLst syms spLst peLst
 
 and evalBinOperands syms spLst lhs rhs =
     let valL = evalExpr syms spLst lhs
