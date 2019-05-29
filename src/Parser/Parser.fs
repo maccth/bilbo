@@ -72,6 +72,8 @@ let keywords = [
     "import";
     "is";
     "has";
+    "filter"; "min"; "max"
+    "by";
 ]
 
 let typeWords = [
@@ -183,34 +185,35 @@ let binExprOps1 =
     let al = Associativity.Left
     let ar = Associativity.Right
     [
-        "::", 17, al, NodeCons;
-        "->",16,al, Arrow
-        ".", 15, al, Dot
+        "::", 18, al, NodeCons;
+        "->",17,al, Arrow
+        ".", 16, al, Dot
 
-        "^", 14, ar, Pow;
+        "^", 15, ar, Pow;
 
-        "**", 13, al, MulApp;
+        "**", 14, al, MulApp;
         // Times is defined below
-        "/", 13, al, Divide;
-        "%", 13, al, Percent;
+        "/", 14, al, Divide;
+        "%", 14, al, Percent;
 
-        "+", 13, al, Plus;
+        "+", 14, al, Plus;
         // Minus is defined below
 
-        "<", 11, al, LessThan;
-        "<=", 11, al, LessThanEq;
+        "<", 12, al, LessThan;
+        "<=", 12, al, LessThanEq;
         // Greater than is defined below
-        ">=", 11, al, GreaterThanEq;
-        "==", 11, al, Equal;
-        "is", 11, al, Is;
-        "has", 11, al, Has;
-        "!=", 11, al, NotEqual;
+        ">=", 12, al, GreaterThanEq;
+        "==", 12, al, Equal;
+        "is", 12, al, Is;
+        "has", 12, al, Has;
+        "!=", 12, al, NotEqual;
 
         // "not" has precedence 10, but is prefix (unary)
-        "and", 9, al, And;
-        "xor", 8, al, Xor;
-        "or", 7, al, Or;
+        "and", 10, al, And;
+        "xor", 9, al, Xor;
+        "or", 8, al, Or;
 
+        "by", 7, al, By;
         "<&>", 6, al, AndPipe;        
         "<|>", 5, al, OrPipe;
         "|>", 4, al, ThenPipe;
@@ -223,23 +226,23 @@ let binExprOps2 =
     let al = Associativity.Left
     [
         // Stops conflicts with `**` and `*!*`
-        "*", 13, ["*"; "!"], al, Times;
+        "*", 14, ["*"; "!"], al, Times;
         // Stops conflicts with `->`
-        "-", 12, [">"], al, Minus;
+        "-", 13, [">"], al, Minus;
         // Stops conflicts with
         //   `x>,y` in path expressions
         //   `[a>:b,>,c]` in path comprehensions
         //   `a >> y` for function application
-        ">", 11, [","; ":"; ">"], al, GreaterThan;
+        ">", 12, [","; ":"; ">"], al, GreaterThan;
     ] |> List.map (fun (op, prec, nf, assoc, astOp) -> (op, prec, nf |> nfLst |> Some, assoc, astOp))
 
-exprOpp.AddOperator(PrefixOperator("#", ws, 16, true, fun x -> (Hash,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("&", ws, 16, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("not", ws, 11, true, fun x -> (Not,x) |> PrefixExpr))
+exprOpp.AddOperator(PrefixOperator("#", ws, 17, true, fun x -> (Hash,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("&", ws, 17, true, fun x -> (Amp,x) |> PrefixExpr ))
+exprOpp.AddOperator(PrefixOperator("not", ws, 12, true, fun x -> (Not,x) |> PrefixExpr))
 
-exprOpp.AddOperator(PrefixOperator("$", ws, 15, true, fun x -> (Dollar,x) |> PrefixExpr))
-exprOpp.AddOperator(PostfixOperator("!", ws, 14, true, fun x -> (x, AlapApp) |> PostfixExpr ))
-exprOpp.AddOperator(PostfixOperator("?", ws, 14, true, fun x -> (x, MaybeApp) |> PostfixExpr))
+exprOpp.AddOperator(PrefixOperator("$", ws, 16, true, fun x -> (Dollar,x) |> PrefixExpr))
+exprOpp.AddOperator(PostfixOperator("!", ws, 15, true, fun x -> (x, AlapApp) |> PostfixExpr ))
+exprOpp.AddOperator(PostfixOperator("?", ws, 15, true, fun x -> (x, MaybeApp) |> PostfixExpr))
 
 let binExprOps = List.append binExprOps1 binExprOps2
 
@@ -345,9 +348,19 @@ let gpPathExpr pWeight pNode pLoad =
 
 let pGExpr = gpPathExpr pExpr pExpr pExpr
 
+let pReducExpr =
+    let filter = str "filter", Filter
+    let min = str "min", Min
+    let max = str "max", Max
+    let reducs = [filter; min; max]
+    let cons (pReduc, reducTyp) = pReduc |>> fun _ -> reducTyp |> ReducExpr
+    reducs    
+    |> List.map cons
+    |> choice
+
 let pPosPatternGraph = keyw "[+]" |>> fun _ -> PosPatternGraph |> SpecialExpr
 
-let exprs = [pSExpr; pVar; pGExpr; pPosPatternGraph]
+let exprs = [pSExpr; pVar; pGExpr; pReducExpr; pPosPatternGraph]
 do pExprTermRef := chance exprs
    
 let pAssignmentExpr =

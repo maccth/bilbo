@@ -143,6 +143,12 @@ let nonNodeInPath typ =
     |> TypeError
     |> BilboError.ofError 
 
+let nonFuncTranInReduction typL typR =
+    "Only functions or transforms can be used in a reduction expression with `by`. "
+    + "Attempted to use a " + typR + " with a " + typL + "."
+    |> TypeError
+    |> BilboError.ofError
+
 let nonFuncTranInThenPipe typL typR =
     "Only functions or transforms can be composed in a pipeline with |>. "
     + "Attempted to compose a " + typL + " and a " + typR + "."
@@ -249,4 +255,16 @@ let divideModByZero() =
 let edgePresentInEdgeComprehension() =
     "Edge present in edge comprehension. Edge comprehensions can only contain nodes."
     |> ValueError
+    |> BilboError.ofError
+
+let nonPStageReduc typ =
+    "Only functions, transforms or pipelines can be used to reduce a collection. "
+    + "Attempted to use a " + typ + "."
+    |> TypeError
+    |> BilboError.ofError
+
+let nonGraphInCollection typ =
+    "Attempted to place something of type " + typ + " in a collection. "
+    + "Collections can only contain graphs."
+    |> TypeError
     |> BilboError.ofError

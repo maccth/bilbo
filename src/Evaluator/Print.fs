@@ -35,7 +35,8 @@ and valuePrint (v : Value) =
     | Node n -> nodePrint n
     | Type _ -> "Type definition printing" |> notImplementedYet
     | Graph g -> graphPrint g
-    | Collection c -> collectionPrinting c
+    | Collection c -> collectionPrint c
+    | Reducer r -> reducerPrint r
 
 and nodePrint n =
     let id = print n.id
@@ -108,6 +109,12 @@ and graphPrint (g : Graph) =
     | _, Ok "" -> edgeStr
     | _ -> plusFold [edgeStr; nodeStr]
 
-and collectionPrinting (c : Collection) =
+and collectionPrint (c : Collection) =
     let cStrs = c |> Set.toList |> List.map (Graph >> valuePrint) 
     strFold "\n|&| " cStrs
+
+and reducerPrint (r : Reducer) =
+    match r with
+    | Filter -> "Filter" |> Ok
+    | Min -> "Min" |> Ok
+    | Max -> "Max" |> Ok

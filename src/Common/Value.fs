@@ -23,6 +23,7 @@ and Value =
     | Node of Node
     | Graph of Graph
     | Collection of Collection
+    | Reducer of Reducer
 
 and ValueId = {
     spLst   : SpaceId list
@@ -34,6 +35,7 @@ and ParamList = Meaning list
 and Pipeline =
     | PStage of PStage
     | Modified of Pipeline * Modifier
+    | Reduction of Pipeline * Reducer
     | ThenPipe of Pipeline * Pipeline
     | OrPipe of Pipeline * Pipeline * Meaning list
     | AndPipe of Pipeline * Pipeline
@@ -47,6 +49,11 @@ and Modifier =
     | Alap
     | Maybe of Meaning option
     | Once
+
+and Reducer =
+    | Filter
+    | Min
+    | Max
 
 and PipelineOutput<'T> =
     | Unfinished of 'T

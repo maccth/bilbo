@@ -19,6 +19,7 @@
     <Compile Include="SingleMatchTransform.fs" />
     <Compile Include="Transform.fs" />
     <Compile Include="Modifier.fs" />
+    <Compile Include="Reduction.fs" />
     <Compile Include="Pipe.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>

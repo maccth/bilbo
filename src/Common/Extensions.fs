@@ -51,4 +51,4 @@ let neighbourPairs lst =
     | head :: toEnd ->
         match List.rev lst with
         | last :: toHead -> List.zip (List.rev toHead) toEnd
-        | [] -> []
+        | [] -> []     

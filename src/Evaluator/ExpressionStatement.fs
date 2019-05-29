@@ -34,7 +34,7 @@ and evalFuncBody (syms : Symbols) spLst fst bod ret =
 
 and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
     match out with
-    | [] -> "There has been a terrible match error. Nothing matched." |> MatchError |> BilboError.ofError
+    | [] -> "Nothing matched." |> MatchError |> BilboError.ofError
     | [one] -> one |> Ok
     | _ ->
         let graphCheck lst mIn =
@@ -43,34 +43,161 @@ and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
             | Ok lst' ->
                 match mIn with
                 | Value(Graph(g)) -> g :: lst' |> Ok
-                | _ ->
-                    "You cannot possible have something of type "
-                    + (typeStr mIn) + " in a collection. Fool."
-                    |> TypeError |> BilboError.ofError
+                | _ -> mIn |> typeStr |> nonGraphInCollection 
         List.fold graphCheck (Ok []) out
         |=> Collection.ofList
         |=> Collection.toMeaning
-  
-and evalMatchStatement (syms : Symbols) spLst modif (mat : MatchStatement) : BilboResult<Meaning list> =
+
+and generalMatchStatementEval syms spLst modif mat graphMatcher collecFolder startState postProc =
+        let matchGExpr,cases = mat
+        let syms' = SymbolTable.empty :: syms
+        let matchG = evalExpr syms' spLst matchGExpr
+        let mLstOut =
+            match matchG with
+            | Error e -> e |> Error
+            | Ok (Value(Graph g)) -> graphMatcher syms' spLst modif cases g
+            | Ok (Value(Collection c)) ->
+                let folder = collecFolder syms' spLst modif cases         
+                let out = List.fold folder startState (Set.toList c)
+                out |> postProc
+            | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
+        mLstOut
+
+and evalMinMaxMatchStatement (syms : Symbols) spLst modif reduc mat =
     let matchGExpr,cases = mat
     let syms' = SymbolTable.empty :: syms
-    let matchG = evalExpr syms' spLst matchGExpr
+    let matchG = evalExpr syms' spLst matchGExpr  
     let matchOut =
         match matchG with
         | Error e -> e |> Error
-        | Ok (Value(Graph g)) -> evalMatchCases syms' spLst modif cases g
-        | Ok (Value(Collection c)) ->
-            let folder mLstIn g =
-                match mLstIn with
-                | Error e -> e |> Error
-                | Ok mLstOut ->
-                    let mLstRes = evalMatchCases syms' spLst modif cases g
-                    match mLstRes with
-                    | Error e -> e |> Error
-                    | Ok mLst -> mLst @ mLstOut |> Ok
-            List.fold folder (Ok []) (Set.toList c)
+        | Ok (Value(Graph g)) -> Ok [g |> Graph |> Value]
+        | Ok (Value(Collection c)) -> findMinMaxBest syms' spLst modif reduc cases c
         | Ok mean -> mean |> typeStr |> notMatchingWithinGraph
-    matchOut 
+    matchOut    
+
+and findMinMaxBest (syms : Symbols) spLst modif reduc cases (c : Collection) =
+    let pickBestScore, pickBestG =
+        let compare rule l r  =
+            let ans = (l, r) |> rule
+            match ans with
+            | Error e -> e |> Error
+            | Ok (Value(Bool(b))) -> b |> Ok  
+            | Ok _ -> "Bilbo less than / greater than operator retruned non-Bool" |> implementationError     
+        let suprememum comparator lst =
+                let rec iter lstIn lowest =
+                    match lstIn with
+                    | Ok (next :: rest) ->
+                        match comparator next lowest with
+                        | Ok true -> iter (Ok rest) next
+                        | Ok false -> iter (Ok rest) lowest
+                        | Error e -> e |> Error
+                    | Ok [] -> lowest |> Ok
+                    | Error e -> e |> Error    
+                match lst with
+                | [one] -> one |> Ok
+                | head :: lst' -> iter (Ok lst') head
+                | [] -> "Match error while doing min" |> MatchError |> BilboError.ofError   
+        let pickBestG comparator (lG, lScore) (rG, rScore) =
+            let less = (lScore, rScore) ||> comparator
+            match less with
+            | Ok true -> (lG,lScore) |> Ok
+            | Ok false -> (rG,rScore) |> Ok
+            | Error e -> e |> Error
+        match reduc with
+        | Min ->
+            let lessThan = compare ltRules
+            let lowestScore = suprememum lessThan 
+            let lowestScoringG = pickBestG lessThan
+            (lowestScore, lowestScoringG)
+        | Max ->
+            let greaterThan = compare gtRules
+            let greatestScore = suprememum greaterThan 
+            let greatestScoringG = pickBestG greaterThan
+            (greatestScore, greatestScoringG)
+        | Filter _ -> failwithf "Filter reduction should not be handled by min/max match statement handler"
+    let collectionFolder currentBest gIn =
+        match currentBest with
+        | Error e -> e |> Error
+        | Ok (Some(bestG, bestScore)) ->
+            let scoresRes = evalMatchCases syms spLst modif cases gIn
+            match scoresRes with
+            | Error e -> e |> Error
+            | Ok scores ->
+                let gInScoreRes = pickBestScore scores
+                match gInScoreRes with
+                | Error e -> e |> Error
+                | Ok gInScore ->
+                    pickBestG (gIn,gInScore) (bestG,bestScore)
+                    |=> Some
+        | Ok None ->
+            let scoresRes = evalMatchCases syms spLst modif cases gIn
+            match scoresRes with
+            | Error e -> e |> Error
+            | Ok scores ->
+                let gInScoreRes = pickBestScore scores
+                match gInScoreRes with
+                | Error e -> e |> Error
+                | Ok gInScore -> (gIn,gInScore) |> Some |> Ok
+    let unpackBest res =
+        match res with
+        | Error e -> e |> Error
+        | Ok None -> "No graphs." |> implementationError
+        | Ok (Some(g,_)) -> Ok [g |> Graph |> Value] 
+    List.fold collectionFolder (Ok None) (Set.toList c)
+    |> unpackBest
+    
+and evalFilteredlMatchStatement (syms : Symbols) spLst modif (mat : MatchStatement) =
+    let graphMatcher syms spLst modif cases g =
+            let filterRes = evalFilteredMatchCases syms spLst modif cases g
+            match filterRes with
+            | Error e -> e |> Error
+            | Ok true -> [g |> Graph |> Value] |> Ok
+            | Ok false -> [] |> Ok
+    let collectionFolder syms spLst modif cases keptGs gIn =
+        match keptGs with
+        | Error e -> e |> Error
+        | Ok gs ->
+            let tryKeep = evalFilteredMatchCases syms spLst modif cases gIn
+            match tryKeep with
+            | Error e -> e |> Error
+            | Ok true -> (gIn |> Graph |> Value) :: gs |> Ok
+            | Ok false -> gs |> Ok
+    generalMatchStatementEval syms spLst modif mat graphMatcher collectionFolder (Ok []) id    
+    
+and evalFilteredMatchCases syms spLst modif (cases : MatchCase list) (hg : Graph)  =
+    let folder keep case = 
+        match keep with
+        | Error e -> e |> Error
+        | Ok (Some b) -> b |> Some |> Ok
+        | Ok None ->
+            match evalMatchCase syms spLst modif hg case with
+            | NoMatches _  -> None |> Ok
+            | Ok [] -> None |> Ok            
+            | Error e -> e |> Error
+            | Ok mLst ->
+                List.exists (fun m -> m=Value(Bool(false))) mLst
+                |> not |> Some |> Ok
+    let unpackKeep k =
+        match k with
+        | Ok (Some true) -> true |> Ok
+        | Ok (Some false) -> false |> Ok
+        // Failure to match favours removal
+        | Ok None -> false |> Ok
+        | Error e -> e |> Error         
+    List.fold folder (Ok None) cases
+    |> unpackKeep
+
+and evalMatchStatement (syms : Symbols) spLst modif (mat : MatchStatement): BilboResult<Meaning list> =
+    let graphMatcher = evalMatchCases
+    let collectionFolder syms spLst modif cases mLstIn gIn =
+        match mLstIn with
+        | Error e -> e |> Error
+        | Ok mLstOut ->
+            let mLstRes = evalMatchCases syms spLst modif cases gIn
+            match mLstRes with
+            | Error e -> e |> Error
+            | Ok mLst -> mLst @ mLstOut |> Ok
+    generalMatchStatementEval syms spLst modif mat graphMatcher collectionFolder (Ok []) id      
 
 and evalMatchCases syms spLst modif (cases : MatchCase list) (hg : Graph) : BilboResult<Meaning list> =
     let folder mLst case = 
@@ -81,7 +208,7 @@ and evalMatchCases syms spLst modif (cases : MatchCase list) (hg : Graph) : Bilb
             | Error e -> e |> Error
             | Ok newMLst -> newMLst |> Ok
         | Ok mLst' -> mLst' |> Ok
-    List.fold folder (Ok []) cases        
+    List.fold folder (Ok []) cases
 
 and addNodesToSyms spLst (nLst : Node list) (nMap : NodeMap) (syms : Symbols) =
     let nLst' : (Node*UnboundNodeId) list = nLst |> List.map (fun n -> n, Map.find n.id nMap)
@@ -368,21 +495,21 @@ and evalPatternPathExpr (*syms spLst*) (pe : PathExpr) : BilboResult<UnboundGrap
             Result.bind (fun ug -> evalPathElem (*syms spLst*) elem ug) ug     
         List.fold folder (Ok UnboundGraph.empty) peLst
 
-and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (arg : Meaning) : BilboResult<PipelineOutput<Meaning>> =
+and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (reduc : Reducer option) (arg : Meaning) : BilboResult<PipelineOutput<Meaning>> =
     match pLine with
     | ThenPipe (plFirst,plThen) ->
-        let applied = applyArgToPipeline syms spLst plFirst modif arg
+        let applied = applyArgToPipeline syms spLst plFirst modif reduc arg
         match applied with
         | Error e -> e |> Error
         | Ok (Unfinished(Value(Pipeline(p)))) -> (p,plThen) |> ThenPipe |> Pipeline |> Value |> Unfinished |> Ok
         | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
-        | Ok (Output(nextArg)) -> applyArgToPipeline syms spLst plThen modif nextArg
+        | Ok (Output(nextArg)) -> applyArgToPipeline syms spLst plThen modif reduc nextArg
     | AndPipe (pl1, pl2) ->
-        let applied1 = applyArgToPipeline syms spLst pl1 modif arg
+        let applied1 = applyArgToPipeline syms spLst pl1 modif reduc arg
         match applied1 with
         | Error e -> e |> Error
         | Ok res1 ->
-            let applied2 = applyArgToPipeline syms spLst pl2 modif arg
+            let applied2 = applyArgToPipeline syms spLst pl2 modif reduc arg
             match res1, applied2 with
             | _, Error e -> e |> Error
             | Output (Value(Collection c1)), Ok (Output(Value(Collection c2))) ->
@@ -397,7 +524,7 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             | Unfinished (m1), _ -> m1 |> typeStr |> nonPipelineUnfinished
             | _, Ok (Unfinished(m2)) -> m2 |> typeStr |> nonPipelineUnfinished
     | OrPipe (plTry, plOtherwise, argsSoFar) ->
-        let tryRes = applyArgToPipeline syms spLst plTry modif arg
+        let tryRes = applyArgToPipeline syms spLst plTry modif reduc arg
         match tryRes with
         | Ok (Unfinished(Value(Pipeline(plTryRemain)))) ->
             (plTryRemain, plOtherwise, argsSoFar @ [arg])
@@ -405,13 +532,18 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
         | Ok (Unfinished(m)) -> m |> typeStr |> nonPipelineUnfinished 
         | Ok (Output(res)) -> res |> Output |> Ok
         | NoMatches _ ->
-            applyArgsToPipeline syms spLst plOtherwise modif (argsSoFar @ [arg])
+            applyArgsToPipeline syms spLst plOtherwise modif reduc (argsSoFar @ [arg])
             |=> Output
         | Error e -> e |> Error   
+    | Reduction (reducPLine, reduc') ->
+        match reduc' with
+        | Filter -> applyArgToPipeline syms spLst reducPLine modif (Some Filter) arg
+        | Min -> applyArgToPipeline syms spLst reducPLine modif (Some Min) arg
+        | Max -> applyArgToPipeline syms spLst reducPLine modif (Some Max) arg
     | Modified (modPLine, modif') ->
         match modif' with
         | Maybe firstArg ->
-            let applied = applyArgToPipeline syms spLst modPLine modif arg
+            let applied = applyArgToPipeline syms spLst modPLine modif reduc arg
             match applied with
             | NoMatches _ ->
                 match firstArg with
@@ -421,12 +553,18 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             | Ok (Output m) -> m |> Output |> Ok
             | Ok (Unfinished(Value(Pipeline(p)))) ->
                 match firstArg with
-                | Some alreadyArg -> (p, Maybe firstArg) |> Modified |> Pipeline |> Value |> Unfinished |> Ok
-                | None -> (p, arg |> Some |> Maybe) |> Modified |> Pipeline |> Value |> Unfinished |> Ok
+                | Some alreadyArg ->
+                    (p, Maybe firstArg)
+                    |> Modified
+                    |> Pipeline |> Value |> Unfinished |> Ok
+                | None -> 
+                    (p, arg |> Some |> Maybe)
+                    |> Modified
+                    |> Pipeline |> Value |> Unfinished |> Ok
             | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
-        | Once -> applyArgToPipeline syms spLst modPLine (Some Once) arg
+        | Once -> applyArgToPipeline syms spLst modPLine (Some Once) reduc arg
         | Alap ->
-            let mutable output = applyArgToPipeline syms spLst modPLine modif arg
+            let mutable output = applyArgToPipeline syms spLst modPLine modif reduc arg
             let mutable outputPrev = arg |> Output |> Ok
             let keepApplying output =
                 match output with
@@ -438,16 +576,16 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
                 outputPrev <- output
                 output <- 
                     match outputPrev with
-                    | Ok (Output(mean)) -> applyArgToPipeline syms spLst modPLine modif mean
+                    | Ok (Output(mean)) -> applyArgToPipeline syms spLst modPLine modif reduc mean
                     | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError
             match output with
             | Ok (Unfinished unfinPl) -> unfinPl |> Unfinished |> Ok
             | NoMatches _ -> outputPrev
             | Error _ -> output
             | Ok (Output _) -> "The output is of type Ok but the ALAP loop was exited" |> implementationError        
-    | PStage ps -> applyArgToPStage syms spLst ps modif arg
+    | PStage ps -> applyArgToPStage syms spLst ps modif reduc arg
 
-and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) (arg : Meaning) =
+and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) reduc (arg : Meaning) =
     match ps with
     | Transform(tDef, tst) ->
         let tName,tParams,preMatchBod,tMatch = tDef
@@ -466,17 +604,39 @@ and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) (arg : M
                         e
                         |> BilboError.addExtra ("While applying transform " + tName + ".")
                     | Ok syms' ->
-                        evalMatchStatement syms' spLst modif tMatch
+                        let output = 
+                            match reduc with
+                            | None -> evalMatchStatement syms' spLst modif tMatch
+                            | Some Filter -> evalFilteredlMatchStatement syms' spLst modif tMatch
+                            | Some Min -> evalMinMaxMatchStatement syms' spLst modif Min tMatch
+                            | Some Max -> evalMinMaxMatchStatement syms' spLst modif Max tMatch
+                        output                        
                         |-> inspectTranOutput
                         |=> Output
                 | _ ->
-                    ((tName, paramsLeft,preMatchBod,tMatch), tstUpdated)
-                    |> Transform
-                    |> PStage
-                    |> Pipeline
-                    |> Value
-                    |> Unfinished
-                    |> Ok 
+                    let wrapPStage =
+                        ((tName, paramsLeft,preMatchBod,tMatch), tstUpdated)
+                        |> Transform |> PStage
+                    let wrapMean = Pipeline >> Value >> Unfinished >> Ok                
+                    match modif, reduc with
+                    | None, None -> wrapPStage |> wrapMean
+                    | Some m, None ->
+                        wrapPStage
+                        |> fun p -> (p,m)
+                        |> Modified 
+                        |> wrapMean
+                    | None, Some r ->
+                         wrapPStage
+                        |> fun p -> (p,r)
+                        |> Reduction 
+                        |> wrapMean
+                    | Some m, Some r ->
+                        wrapPStage
+                        |> fun p -> (p,m)
+                        |> Modified
+                        |> fun p -> (p,r)
+                        |> Reduction
+                        |> wrapMean
     | Function(fDef, fst) ->
         let fName, fParams, bod, ret = fDef
         match fParams with
@@ -507,10 +667,10 @@ and unpackPLineOutput m : BilboResult<Meaning> =
     | Ok (Unfinished m) -> m |> Ok
     | Ok (Output m) -> m |> Ok
 
-and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
+and applyArgsToPipeline syms spLst pLine modif reduc args : BilboResult<Meaning> =
     match pLine with
     | Modified(pl', Alap _) ->
-        let mutable output = applyArgsToPipeline syms spLst pl' modif args
+        let mutable output = applyArgsToPipeline syms spLst pl' modif reduc args
         let mutable outputPrev = List.head args |> Ok
         let keepApplying output =
             match output with
@@ -525,7 +685,7 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
                         match args with
                         | [] -> [input]
                         | first :: rest ->(input::rest)
-                    applyArgsToPipeline syms spLst pl' modif args'
+                    applyArgsToPipeline syms spLst pl' modif reduc args'
                 | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError                
         match output with
         | NoMatches _ -> outputPrev
@@ -535,13 +695,13 @@ and applyArgsToPipeline syms spLst pLine modif args : BilboResult<Meaning> =
         match args with
         | [] -> "Control should have passed onto single argument handler." |> implementationError
         | [arg] ->
-            applyArgToPipeline syms spLst pLine modif arg
+            applyArgToPipeline syms spLst pLine modif reduc arg
             |> unpackPLineOutput
         | arg :: rest ->
-            let oneArgApplied = applyArgToPipeline syms spLst pLine modif arg
+            let oneArgApplied = applyArgToPipeline syms spLst pLine modif reduc arg
             match oneArgApplied with
             | Error e -> e |> Error
-            | Ok (Unfinished(Value(Pipeline pLine'))) -> applyArgsToPipeline syms spLst pLine' modif rest
+            | Ok (Unfinished(Value(Pipeline pLine'))) -> applyArgsToPipeline syms spLst pLine' modif reduc rest
             | Ok (Output(m)) ->
                 match rest with
                 | [] -> m |> Ok
@@ -559,9 +719,9 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
     | _, Error e -> e |> Error
     | Ok lMean, Ok rMean ->
         match lMean, rMean with
-        | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine None pLst
+        | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine None None pLst
         | _, Value (Pipeline pLine) ->
-            applyArgsToPipeline syms spLst pLine None [lMean]
+            applyArgsToPipeline syms spLst pLine None None [lMean]
         | _ -> rMean |> typeStr |> nonPStageOnEnpipeRhs
 
 and varAsString var =
@@ -910,6 +1070,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
     | MulApp -> (syms,spLst,lhs,rhs) |..> mulAppRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
+    | By -> (syms,spLst,lhs,rhs) |..> byRules
     | BinOp.ThenPipe -> (syms,spLst,lhs,rhs) |..> thenPipeRules
     | BinOp.OrPipe -> (syms,spLst,lhs,rhs) |..> orPipeRules
     | BinOp.AndPipe -> (syms,spLst,lhs,rhs) |..> andPipeRules
@@ -947,7 +1108,13 @@ and arrowRules syms spLst lhs rhs =
     | _ ->
         "Clearly that isn't a node. Can only use -> with nodes."
         |> TypeError
-        |> BilboError.ofError                  
+        |> BilboError.ofError
+
+and evalReducExpr re =
+    match re with
+    | ReducExpr.Filter -> Filter |> Reducer |> Value |> Ok
+    | ReducExpr.Min -> Min |> Reducer |> Value |> Ok
+    | ReducExpr.Max -> Max |> Reducer |> Value |> Ok
             
 and evalSExpr syms spLst s : BilboResult<Meaning> =
     match s with
@@ -989,7 +1156,8 @@ and evalExpr (syms : Symbols) spLst (e : Expr) : BilboResult<Meaning> =
     | GExpr g -> evalGExpr syms spLst g
     | PostfixExpr (e',op) -> evalPostfixExpr syms spLst e' op
     | PrefixExpr (op, e') -> evalPrefixExpr syms spLst e' op
-    | SpecialExpr _ -> "Special expr [+] and [-]" |> notImplementedYet
+    | ReducExpr re -> re |> evalReducExpr
+    | SpecialExpr _ -> "Special expressions [+] and [-]" |> notImplementedYet
 
 and consNodePartVid syms spLst e ndPart =
     let partVid = consVid syms spLst e
@@ -1000,8 +1168,7 @@ and consNodePartVid syms spLst e ndPart =
         | Name nd :: rest ->
             let np = (ndPart, Some nd) |> NodePart
             {vid with spLst = np :: rest} |> Ok
-        // This happens when two node prefix expressions are used in a row &&a or #&a etc. 
-        | NodePart _ :: _ -> failwith "fuck this "
+        | NodePart _ :: _ ->  "This happens when two node prefix expressions are used in a row &&a or #&a etc. " |> notImplementedYet
         | [] ->
             let np = (ndPart, None) |> NodePart
             {vid with spLst = [np]} |> Ok   

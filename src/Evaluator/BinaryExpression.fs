@@ -242,6 +242,7 @@ let nodeConsRules (ops : Meaning * Meaning) =
             | Pipeline _ -> nodeConsError "function or transform" partStr
             | Graph _ -> nodeConsError "graph" partStr
             | Collection _ -> nodeConsError "collection" partStr
+            | Reducer _ -> nodeConsError "reducer" partStr
         | Space (Object oTyp, symTab) -> obj |> Ok
         | Space _ -> nodeConsError "namespace" partStr
         | ParamList _ -> nodeConsError "parameter list" partStr
@@ -273,6 +274,12 @@ let collectRules ops =
         | Graph l, Graph r -> [l;r] |> Collection.ofList |> cOk
         | _ -> typeError
     | _ -> typeError
+
+let byRules ops : BilboResult<Meaning> =
+    let lMean, rMean = ops
+    match lMean, rMean with
+    | Value (Reducer r), Value (Pipeline pl) -> (pl,r) |> Reduction |> Pipeline |> Value |> Ok
+    | _ ->  ops |> opTypes ||> nonFuncTranInReduction
 
 let thenPipeRules ops : BilboResult<Meaning> =
     let lMean, rMean = ops

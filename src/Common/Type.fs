@@ -23,3 +23,4 @@ and typeStrValue (v : Value) : string =
         let loadT = typeStr n.load
         "node (with identifier of type " + idT + " and load of type " + loadT + ")"
     | Graph _ -> "graph"
+    | Reducer _ -> "reducer"

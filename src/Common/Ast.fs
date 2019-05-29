@@ -48,6 +48,7 @@ and Expr =
     | PrefixExpr of PreOp  * Expr
     | PostfixExpr of Expr * PostOp
     | SpecialExpr of SpecialExpr
+    | ReducExpr of ReducExpr
 
 and SExpr =
     | ObjExpr of ObjExpr
@@ -76,6 +77,7 @@ and BinOp =
     | Enpipe
     | MulApp
     | Collect
+    | By
 
 and PreOp =
     | Not
@@ -88,6 +90,11 @@ and PostOp =
 
 and SpecialExpr =
     | PosPatternGraph
+
+and ReducExpr =
+    | Filter
+    | Min
+    | Max
 
 and Literal =
     | StrLit of string
