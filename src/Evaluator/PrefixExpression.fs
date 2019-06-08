@@ -3,7 +3,7 @@ module Bilbo.Evaluator.PrefixExpression
 open Bilbo.Common.Type
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Evaluator.PrimativeType
 
 let notRules m : BilboResult<Meaning> =

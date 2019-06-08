@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <RuntimeFrameworkVersion>2.2</RuntimeFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.6.1" />
@@ -12,7 +13,7 @@
     <Compile Include="Cli.fs" />
     <Compile Include="Value.fs" />
     <Compile Include="Type.fs" />
-    <Compile Include="Error.fs" />
+    <Compile Include="Result.fs" />
     <Compile Include="SymbolTable.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

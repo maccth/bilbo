@@ -5,7 +5,7 @@ open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.Type
 open Bilbo.Common.SymbolTable
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Evaluator.PrimativeType
 open Bilbo.Evaluator.BinaryExpression
 open Bilbo.Evaluator.PrefixExpression

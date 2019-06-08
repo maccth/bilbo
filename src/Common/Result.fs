@@ -1,4 +1,4 @@
-module Bilbo.Common.Error
+module Bilbo.Common.Result
 
 open Bilbo.Common.Ast
 

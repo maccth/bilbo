@@ -2,7 +2,7 @@ module Bilbo.Tests.EvaluatorTests.Helpers
 
 open Expecto
 open Bilbo.Common.Value
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Common.SymbolTable
 open Bilbo.Parser.Parser
 open Bilbo.Evaluator.Evaluator

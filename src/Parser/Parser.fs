@@ -2,7 +2,7 @@ module Bilbo.Parser.Parser
 
 open FParsec
 open Bilbo.Common.Ast
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Parser.Position
 
 let qp x = printfn "%A" x

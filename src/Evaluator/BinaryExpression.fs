@@ -3,7 +3,7 @@ module Bilbo.Evaluator.BinaryExpression
 open Bilbo.Common.Extensions
 open Bilbo.Common.Type
 open Bilbo.Common.Value
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 

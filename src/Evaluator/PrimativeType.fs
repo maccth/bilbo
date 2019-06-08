@@ -3,7 +3,7 @@ module Bilbo.Evaluator.PrimativeType
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.Type
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 
 let evalLiteral l : BilboResult<Meaning> =
     let lit =

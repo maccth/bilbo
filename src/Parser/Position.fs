@@ -2,7 +2,7 @@ module Bilbo.Parser.Position
 
 open FParsec
 open Bilbo.Common.Ast
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 
 // FParsec line and column number
 // ==============================

@@ -4,7 +4,7 @@ open Bilbo.Common.Extensions
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Evaluator.ExpressionStatement
 
 let attachLoc loc res =

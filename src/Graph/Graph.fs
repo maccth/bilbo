@@ -2,7 +2,7 @@ module Bilbo.Graph.Graph
 
 open Bilbo.Common.Extensions
 open Bilbo.Common.Value
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 open Bilbo.Common.SymbolTable
 
 // Haskell style list "multi-set difference"

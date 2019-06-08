@@ -2,7 +2,7 @@ module Bilbo.Common.SymbolTable
 
 open Bilbo.Common.Ast
 open Bilbo.Common.Value
-open Bilbo.Common.Error
+open Bilbo.Common.Result
 
 module SymbolTable =
     let empty : SymbolTable = Map.empty
