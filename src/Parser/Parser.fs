@@ -69,7 +69,7 @@ let keywords = [
     "True"; "False";
     "print";
     "delete";
-    "import";
+    "import"; "as";
     "is";
     "has";
     "filter"; "min"; "max"
@@ -93,7 +93,6 @@ let pnAnyKeyword  =
 let pnKeyword =
     pnStrLst keywords
     <?> "keywords"
-
 
 let idBase : Parser<string, unit> =
     let firstChar c = isLetter c
@@ -186,8 +185,8 @@ let binExprOps1 =
     let ar = Associativity.Right
     [
         "::", 18, al, NodeCons;
-        "->",17,al, Arrow
-        ".", 16, al, Dot
+        "..",17,al, DblDot;
+        ".", 16, al, Dot;
 
         "^", 15, ar, Pow;
 
@@ -238,7 +237,7 @@ let binExprOps2 =
 
 exprOpp.AddOperator(PrefixOperator("#", ws, 17, true, fun x -> (Hash,x) |> PrefixExpr ))
 exprOpp.AddOperator(PrefixOperator("&", ws, 17, true, fun x -> (Amp,x) |> PrefixExpr ))
-exprOpp.AddOperator(PrefixOperator("not", ws, 12, true, fun x -> (Not,x) |> PrefixExpr))
+exprOpp.AddOperator(PrefixOperator("not", (nextCharSatisfiesNot isLetter) >>. ws, 12, true, fun x -> (Not,x) |> PrefixExpr))
 
 exprOpp.AddOperator(PrefixOperator("$", ws, 16, true, fun x -> (Dollar,x) |> PrefixExpr))
 exprOpp.AddOperator(PostfixOperator("!", ws, 15, true, fun x -> (x, AlapApp) |> PostfixExpr ))

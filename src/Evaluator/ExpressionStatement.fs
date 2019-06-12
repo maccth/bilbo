@@ -42,6 +42,10 @@ and inspectTranOutput (out : Meaning list) : BilboResult<Meaning> =
             | Error e -> e |> Error
             | Ok lst' ->
                 match mIn with
+                | Value(Collection(c)) ->
+                    c
+                    |> Set.toList
+                    |> fun gLst -> gLst @ lst' |> Ok
                 | Value(Graph(g)) -> g :: lst' |> Ok
                 | _ -> mIn |> typeStr |> nonGraphInCollection 
         List.fold graphCheck (Ok []) out
@@ -564,26 +568,51 @@ and applyArgToPipeline syms spLst (pLine : Pipeline) (modif : Modifier Option) (
             | Ok (Unfinished m) -> m |> typeStr |> nonPipelineUnfinished
         | Once -> applyArgToPipeline syms spLst modPLine (Some Once) reduc arg
         | Alap ->
-            let mutable output = applyArgToPipeline syms spLst modPLine modif reduc arg
-            let mutable outputPrev = arg |> Output |> Ok
-            let keepApplying output =
-                match output with
-                | Ok (Output _) -> true 
-                | Ok (Unfinished _) -> false
-                | NoMatches _ -> false
-                | Error _ -> false
-            while keepApplying output do
-                outputPrev <- output
-                output <- 
-                    match outputPrev with
-                    | Ok (Output(mean)) -> applyArgToPipeline syms spLst modPLine modif reduc mean
-                    | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError
-            match output with
-            | Ok (Unfinished unfinPl) -> unfinPl |> Unfinished |> Ok
-            | NoMatches _ -> outputPrev
-            | Error _ -> output
-            | Ok (Output _) -> "The output is of type Ok but the ALAP loop was exited" |> implementationError        
+            match arg with
+            | Value (Collection c) ->
+                let applyAlapPerG = applyArgToAlapPipeline syms spLst modPLine modif reduc
+                let mLstReducer (pOut1 : BilboResult<PipelineOutput<Meaning>>) (pOut2 : BilboResult<PipelineOutput<Meaning>>) =
+                    match pOut1, pOut2 with
+                    | Error e, _ -> e |> Error
+                    | _, Error e -> e |> Error
+                    | Ok (Unfinished pOut1'), Ok (Unfinished pOut2') ->
+                        [pOut1'; pOut2']
+                        |> inspectTranOutput
+                        |=> Unfinished
+                    | Ok (Output pOut1'), Ok (Output pOut2') ->
+                        [pOut1'; pOut2']
+                        |> inspectTranOutput
+                        |=> Output
+                    | _ ->
+                        "Mixture of `Output` and `Unfinished` from ALAP application"
+                        |> implementationError
+                c
+                |> Set.toList
+                |> List.map (Graph >> Value >> applyAlapPerG)
+                |> List.reduce mLstReducer        
+            | _ -> applyArgToAlapPipeline syms spLst modPLine modif reduc arg
     | PStage ps -> applyArgToPStage syms spLst ps modif reduc arg
+
+and applyArgToAlapPipeline syms spLst modPLine modif reduc arg =
+    let mutable output = applyArgToPipeline syms spLst modPLine modif reduc arg
+    let mutable outputPrev = arg |> Output |> Ok
+    let keepApplying output =
+        match output with
+        | Ok (Output _) -> true 
+        | Ok (Unfinished _) -> false
+        | NoMatches _ -> false
+        | Error _ -> false
+    while keepApplying output do
+        outputPrev <- output
+        output <- 
+            match outputPrev with
+            | Ok (Output(mean)) -> applyArgToPipeline syms spLst modPLine modif reduc mean
+            | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError
+    match output with
+    | Ok (Unfinished unfinPl) -> unfinPl |> Unfinished |> Ok
+    | NoMatches _ -> outputPrev
+    | Error _ -> output
+    | Ok (Output _) -> "The output is of type Ok but the ALAP loop was exited" |> implementationError   
 
 and applyArgToPStage syms spLst (ps : PStage) (modif : Modifier Option) reduc (arg : Meaning) =
     match ps with
@@ -667,6 +696,29 @@ and unpackPLineOutput m : BilboResult<Meaning> =
     | Ok (Unfinished m) -> m |> Ok
     | Ok (Output m) -> m |> Ok
 
+and applyArgsToAlapPipeline syms spLst pl modif reduc args = 
+    let mutable output = applyArgsToPipeline syms spLst pl modif reduc args
+    let mutable outputPrev = List.head args |> Ok
+    let keepApplying output =
+        match output with
+        | Error _ -> false
+        | Ok _ -> true
+    while keepApplying output do
+        outputPrev <- output
+        output <-
+            match outputPrev with
+            | Ok input ->
+                let args' =
+                    match args with
+                    | [] -> [input]
+                    | first :: rest ->(input::rest)
+                applyArgsToPipeline syms spLst pl modif reduc args'
+            | _ -> "The previous output is of type Error but the ALAP loop was entered" |> implementationError                
+    match output with
+    | NoMatches _ -> outputPrev
+    | Error _ -> output
+    | _ -> outputPrev
+
 and applyArgsToPipeline syms spLst pLine modif reduc args : BilboResult<Meaning> =
     match pLine with
     | Modified(pl', Alap _) ->
@@ -721,7 +773,8 @@ and enpipeRules syms spLst (l : Expr) (r : Expr) =
         match lMean, rMean with
         | ParamList (pLst), Value (Pipeline pLine) -> applyArgsToPipeline syms spLst pLine None None pLst
         | _, Value (Pipeline pLine) ->
-            applyArgsToPipeline syms spLst pLine None None [lMean]
+            applyArgToPipeline syms spLst pLine None None lMean
+            |> unpackPLineOutput
         | _ -> rMean |> typeStr |> nonPStageOnEnpipeRhs
 
 and varAsString var =
@@ -1066,7 +1119,7 @@ and evalBinExpr syms spLst lhs op rhs =
     | Is -> isRules syms spLst lhs rhs
     | Has -> hasRules syms spLst lhs rhs
     | Dot -> dotRules syms spLst lhs rhs
-    | Arrow -> arrowRules syms spLst lhs rhs
+    | DblDot -> dblDotRules syms spLst lhs rhs
     | Collect -> (syms,spLst,lhs,rhs) |..> collectRules
     | MulApp -> (syms,spLst,lhs,rhs) |..> mulAppRules
     | Enpipe -> enpipeRules syms spLst lhs rhs
@@ -1093,7 +1146,7 @@ and dotRules syms spLst lhs rhs =
         |> TypeError
         |> BilboError.ofError
 
-and arrowRules syms spLst lhs rhs =
+and dblDotRules syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
     match lSpace with
     | Error e -> e |> Error
@@ -1106,7 +1159,7 @@ and arrowRules syms spLst lhs rhs =
             |> TypeError
             |> BilboError.ofError
     | _ ->
-        "Clearly that isn't a node. Can only use -> with nodes."
+        "Clearly that isn't a node. Can only use .. with nodes."
         |> TypeError
         |> BilboError.ofError
 
@@ -1193,7 +1246,7 @@ and consVid syms spLst e : BilboResult<ValueId> =
                     {rVid with spLst=lVid.spLst @ [Name lVid.id]} |> Ok            
     | PrefixExpr (Hash, e') -> consNodePartVid syms spLst e' LoadSpace
     | PrefixExpr (Amp, e') -> consNodePartVid syms spLst e' IdSpace
-    | BinExpr (el, Arrow, er) ->
+    | BinExpr (el, DblDot, er) ->
         let lVidRes = consVid syms spLst el
         match lVidRes with
         | Error e -> e |> Error
