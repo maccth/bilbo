@@ -285,6 +285,21 @@ let mixingModifiers = [
     b = [na,nb,nc,nd]
     """, ["b"],
     "ALAP and dollar applied transform. Ensure output is a single graph and $ has higher precedence than !."
+
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] => become [a,b]
+    g = [na,>,nb] |&| [nc,>,nd]
+    a = g >> $remEdge!
+    b = [na,nb] |&| [nc,nd]
+    """, ["b"],"ALAP and dollar applied transform. Ensure size of input collection is same size as output collection"
+
+    nodes + """
+    def remEdge(g) = match g | [a,>,b] => become [a,b]
+    g = [na,>,nb,>,nc] |&| [nc,>,nd]
+    a = g >> $remEdge!
+    b = [na,nb,nc] |&| [nc,nd]
+    """, ["b"],"ALAP and dollar applied transform. Ensure size of input collection is same size as output collection when
+    graphs in input collection match different number of times"
 ]
 
 [<Tests>]

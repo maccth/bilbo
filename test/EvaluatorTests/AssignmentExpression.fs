@@ -75,7 +75,7 @@ let nodeLoadFieldAssignTests = [
     """
     type City = capital,population
     a = "London"::City(True,100)
-    a->population = 70
+    a..population = 70
     b = "London"::City(True,70)
     """, "Reassignment of node load"
 
@@ -83,7 +83,7 @@ let nodeLoadFieldAssignTests = [
     type City = capital,loc
     type Location = x,y
     a = "London"::City(True,Location(200,500))
-    a->loc.y = 800
+    a..loc.y = 800
     b = "London"::City(True,Location(200,800))
     """, "Reassignment of node load field where field is itself an object"
 ]
@@ -105,5 +105,5 @@ let test3 =
 
 [<Tests>]
 let test4 =
-    let name = "Node load field assignment (using ->) on LHS"
+    let name = "Node load field assignment (using ..) on LHS"
     testList name (nodeLoadFieldAssignTests |> abTwinVarTests)
