@@ -268,3 +268,13 @@ let nonGraphInCollection typ =
     + "Collections can only contain graphs."
     |> TypeError
     |> BilboError.ofError
+
+let failedImportLoc file loc =
+    "Failed to import the file \"" + file + "\"."
+    |> ImportError
+    |> fun e -> (e,loc) ||> BilboError.ofErrorLoc
+
+let failedImport file =
+    "Failed to import the file \"" + file + "\"."
+    |> ImportError
+    |> BilboError.ofError

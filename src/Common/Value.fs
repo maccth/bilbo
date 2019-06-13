@@ -126,8 +126,3 @@ and EdgeMap = Map<UnboundEdgeId,EdgeId>
 // }
 
 and Collection = Set<Graph>
-
-// and PatternGraph = {
-//     pos : UnboundGraph
-//     neg : UnboundGraph option
-// }

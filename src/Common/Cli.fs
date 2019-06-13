@@ -38,7 +38,7 @@ let cli (cliArgs : string []) (replName : string) fileHandler repl startState =
         let mutable eval = startState
         while true do
             match stillReading with
-            | false -> printf "\n~~> "
+            | false -> printf "\n... "
             | true -> printf "    "
             let line = Console.ReadLine()
             codeIn <- codeIn + "\n" + line.Replace(";", "")

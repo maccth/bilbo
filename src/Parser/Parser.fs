@@ -516,12 +516,10 @@ let pBilboFile' nspace file loc : BilboResult<ParserResult<ProgramUnit list,unit
         runParserOnFile (pFile nspace file) () file System.Text.Encoding.UTF8
         |> FSharp.Core.Ok
     with
-    | :? System.IO.FileNotFoundException ->
+    | _ ->
         match loc with
-        | None -> "Import issues" |> ImportError |> BilboError.ofError
-        | Some l -> 
-            let e = "Import issues" |> ImportError
-            (e, l) ||> BilboError.ofErrorLoc
+        | None -> file |> failedImport
+        | Some l -> (file, l) ||> failedImportLoc
 
 let pBilboStr' nspace str =
     let stream = "user input"
