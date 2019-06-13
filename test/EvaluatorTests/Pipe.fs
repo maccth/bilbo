@@ -118,11 +118,11 @@ let andPipe = [
 let test =
     // These tests contain pipelines constructed using or pipes
     let name = "Pipelines with or pipes"
-    testList name (orPipe |> abTwinVarTests)
+    testList name (orPipe |> gotExpTwinVarTests)
 
 [<Tests>]
 let test2 =
     // These tests contain pipelines constructed using and pipes
     let name = "Pipelines with and pipes"
-    testList name (andPipe |> abTwinVarTests)
+    testList name (andPipe |> gotExpTwinVarTests)
     

@@ -159,15 +159,15 @@ let pathComprehensions = [
 [<Tests>]
 let test =
     let name = "Standard path expressions"
-    testList name (standardPathExpressions |> abTwinVarTests)
+    testList name (standardPathExpressions |> gotExpTwinVarTests)
 
 
 [<Tests>]
 let test2 =
     let name = "Nested path expressions"
-    testList name (nestedPathExpressions |> abTwinVarTests)
+    testList name (nestedPathExpressions |> gotExpTwinVarTests)
 
 [<Tests>]
 let test3 =
     let name = "Path comprehensions"
-    testList name (pathComprehensions |> abTwinVarTests)
+    testList name (pathComprehensions |> gotExpTwinVarTests)

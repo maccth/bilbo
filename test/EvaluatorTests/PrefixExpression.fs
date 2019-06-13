@@ -50,9 +50,9 @@ let hashTests = [
 [<Tests>]
 let test =
     let name = "Ampersand operator tests"
-    testList name (ampTests |> abTwinVarTests)
+    testList name (ampTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test2 =
     let name = "hash operator tests"
-    testList name (hashTests |> abTwinVarTests)
+    testList name (hashTests |> gotExpTwinVarTests)

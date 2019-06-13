@@ -91,19 +91,19 @@ let nodeLoadFieldAssignTests = [
 [<Tests>]
 let test =
     let name = "Field assignment on LHS"
-    testList name (fieldAssignTests |> abTwinVarTests)
+    testList name (fieldAssignTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test2 =
     let name = "Node load assignment on LHS"
-    testList name (nodeLoadAssignTests |> abTwinVarTests)
+    testList name (nodeLoadAssignTests |> gotExpTwinVarTests)
     
 [<Tests>]
 let test3 =
     let name = "Node id assignment on LHS"
-    testList name (nodeIdAssignTests |> abTwinVarTests)
+    testList name (nodeIdAssignTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test4 =
     let name = "Node load field assignment (using ..) on LHS"
-    testList name (nodeLoadFieldAssignTests |> abTwinVarTests)
+    testList name (nodeLoadFieldAssignTests |> gotExpTwinVarTests)

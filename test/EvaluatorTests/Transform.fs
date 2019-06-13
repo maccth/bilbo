@@ -158,19 +158,19 @@ let patternGraphOrOps = [
 [<Tests>]
 let test5 =
     let name = "Multiple match cases tests"
-    testList name (multipleMatchCasesTransformTests |> abTwinVarTests)
+    testList name (multipleMatchCasesTransformTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test6 =
     let name = "Tests involving collections due to multiple subgraph matches"
-    testList name (collectionTests |> abTwinVarTests)
+    testList name (collectionTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test7 =
     let name = "Tests involving pattern graph binary operations"
-    testList name (patternGraphBinOps |> abTwinVarTests)
+    testList name (patternGraphBinOps |> gotExpTwinVarTests)
 
 [<Tests>]
 let test8 =
     let name = "Tests involving pattern graph binary OR operations"
-    testList name (patternGraphOrOps |> abTwinVarTests)
+    testList name (patternGraphOrOps |> gotExpTwinVarTests)

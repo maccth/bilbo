@@ -86,11 +86,11 @@ let graphCollectionBinOps = [
 [<Tests>]
 let test =
     let name = "Binary operations on graphs"
-    testList name (graphBinOps |> abTwinVarTests)
+    testList name (graphBinOps |> gotExpTwinVarTests)
 
 [<Tests>]
 let test2 =
     let name = "Binary operations on graphs and collections"
-    testList name (graphCollectionBinOps |> abTwinVarTests)
+    testList name (graphCollectionBinOps |> gotExpTwinVarTests)
 
    

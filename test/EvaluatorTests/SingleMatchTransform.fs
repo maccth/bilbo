@@ -223,7 +223,7 @@ let test =
     // The transforms all return rather than become
     // The transforms in these tests have no where statement, a single match case, and a single subgraph match
     let name = "Return transforms with empty and single node graph patterns"
-    testList name (smallPatternReturnTransforms |> abTwinVarTests)
+    testList name (smallPatternReturnTransforms |> gotExpTwinVarTests)
 
 [<Tests>]
 let test2 =
@@ -231,7 +231,7 @@ let test2 =
     // The transforms all return rather than become
     // The transforms in these tests have no where statement, a single match case, and a single subgraph match
     let name = "Single parameter return transforms"
-    testList name (oneParamReturnTransforms |> abTwinVarTests)
+    testList name (oneParamReturnTransforms |> gotExpTwinVarTests)
 
 
 [<Tests>]
@@ -239,14 +239,14 @@ let test3 =
     let name =
         "Multiple param transforms with explict matching."
         + "No where statements and a single match case that will match a single subgraph."
-    testList name (singleMatchMultipleParamTransformTests |> abTwinVarTests)
+    testList name (singleMatchMultipleParamTransformTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test4 =
     let name = "Same node appears more than once in pattern graph"
-    testList name (singleMatchNodeMatchesMultipleTimes |> abTwinVarTests)
+    testList name (singleMatchNodeMatchesMultipleTimes |> gotExpTwinVarTests)
 
 [<Tests>]
 let test5 =
     let name = "Single match become tests"
-    testList name (singleMatchBecomeTests |> abTwinVarTests)
+    testList name (singleMatchBecomeTests |> gotExpTwinVarTests)

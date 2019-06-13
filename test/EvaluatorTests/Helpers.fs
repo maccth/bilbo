@@ -91,7 +91,7 @@ let twinVarTests testDataLst =
         consTwinVarTest codeStr var1 var2 des
     testDataLst |> List.map consTest
 
-let abTwinVarTests tLst =
+let gotExpTwinVarTests tLst =
     tLst
     |> List.map (fun (codeStr,des) -> (codeStr,"got","exp",des))
     |> twinVarTests
@@ -122,7 +122,7 @@ let runOneOfTest codeStr gotVar expVars =
 let consOneOfTest codeStr gotVar expVars des =
     testCase des <| fun _ -> runOneOfTest codeStr gotVar expVars
 
-let aOneOfTests tLst =
+let gotOneOfTests tLst =
     tLst
     |> List.map (fun (codeStr,expVars,des) -> consOneOfTest codeStr "got" expVars des)   
 

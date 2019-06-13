@@ -307,35 +307,35 @@ let mixingModifiers = [
 let test =
     // These tests contain multiple applications of functions
     let name = "Mulaplied functions"
-    testList name (multipleApplicationFunctions |> abTwinVarTests)
+    testList name (multipleApplicationFunctions |> gotExpTwinVarTests)
 
 [<Tests>]
 let test2 =
     // These tests contain multiple applications of transforms
     let name = "Mulaplied transforms"
-    testList name (multipleApplicationTransforms |> abTwinVarTests)
+    testList name (multipleApplicationTransforms |> gotExpTwinVarTests)
 
 [<Tests>]
 let test3 =
     // These tests contain ALAP applications of transforms
     let name = "ALAP application of transforms"
-    testList name (alapTransforms |> abTwinVarTests)
+    testList name (alapTransforms |> gotExpTwinVarTests)
 
 [<Tests>]
 let test4 =
     // These tests contain dollar applications of transforms
     let name = "Dollar application of transforms"
-    testList name (dollarTransforms |> aOneOfTests)
+    testList name (dollarTransforms |> gotOneOfTests)
 
 [<Tests>]
 let test5 =
     // These tests contain maybe applications of transforms
     let name = "Maybe application of transforms"
-    testList name (maybeTransforms |> abTwinVarTests)
+    testList name (maybeTransforms |> gotExpTwinVarTests)
 
 [<Tests>]
 let test6 =
     // These tests contain transforms applied with multiple modifiers
     let name = "Dollar application of transforms"
-    testList name (mixingModifiers |> aOneOfTests)
+    testList name (mixingModifiers |> gotOneOfTests)
     

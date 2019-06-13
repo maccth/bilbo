@@ -127,15 +127,15 @@ let maxTests = [
 [<Tests>]
 let test =
     let name = "Filter reduction tests"
-    testList name (filterTests |> abTwinVarTests)
+    testList name (filterTests |> gotExpTwinVarTests)
 
 
 [<Tests>]
 let test2 =
     let name = "Min reduction tests"
-    testList name (minTests |> abTwinVarTests)
+    testList name (minTests |> gotExpTwinVarTests)
 
 [<Tests>]
 let test3 =
     let name = "Max reduction tests"
-    testList name (minTests |> abTwinVarTests)
+    testList name (minTests |> gotExpTwinVarTests)
