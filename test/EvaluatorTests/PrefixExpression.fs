@@ -8,42 +8,42 @@ open Expecto
 let ampTests = [
     """
     n = 10::20
-    a = &n
-    b = 10
+    got = &n
+    exp = 10
     ""","Integer node id. Ensure this is returned"
 
     """
     n = "Hello world"::False
-    a = &n
-    b = "Hello world"
+    got = &n
+    exp = "Hello world"
     ""","String node id. Ensure this is returned"
 
     """
     type T = p1,p2,p3
     n = T(False,"Hello",34.5)::"Load"
-    a = &n
-    b = T(False,"Hello",34.5)
+    got = &n
+    exp = T(False,"Hello",34.5)
     ""","User type object node id. Ensure this is returned"
 ]
 
 let hashTests = [
     """
     n = 10::20
-    a = #n
-    b = 20
+    got = #n
+    exp = 20
     ""","Integer node load. Ensure this is returned"
 
     """
     n = False::"Hello world"
-    a = #n
-    b = "Hello world"
+    got = #n
+    exp = "Hello world"
     ""","String node load. Ensure this is returned"
 
     """
     type T = p1,p2,p3
     n = "NodeId"::T(False,"Hello",34.5)
-    a = #n
-    b = T(False,"Hello",34.5)
+    got = #n
+    exp = T(False,"Hello",34.5)
     ""","User type object node load. Ensure this is returned"
 ]
 

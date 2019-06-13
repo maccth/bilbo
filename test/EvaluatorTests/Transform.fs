@@ -11,8 +11,8 @@ let multipleMatchCasesTransformTests = [
         | [] =>
             n = "startNode"::200
             return [n]
-    a = [na] >> graph
-    b = [na]        
+    got = [na] >> graph
+    exp = [na]        
     ""","Match first case, doesn't go to second."
 
     nodes + """
@@ -22,8 +22,8 @@ let multipleMatchCasesTransformTests = [
         | [] =>
             n = "startNode"::200
             return [n]
-    a = [] >> graph
-    b = ["startNode"::200]        
+    got = [] >> graph
+    exp = ["startNode"::200]        
     ""","Fail first case, go to second."
 
     nodes + """
@@ -31,8 +31,8 @@ let multipleMatchCasesTransformTests = [
         match g
         | [a] => return []
         | [a] => return g
-    a = [na] >> graph
-    b = []        
+    got = [na] >> graph
+    exp = []        
     ""","Both cases the same. Ensure first is taken."
 
     nodes + """
@@ -40,8 +40,8 @@ let multipleMatchCasesTransformTests = [
         match g
         | [a] where a == nb => return []
         | [a] => return g
-    a = [na] >> graph
-    b = [na]        
+    got = [na] >> graph
+    exp = [na]        
     ""","Both pattern graphs the same, but first where clause fails. Ensure second is taken."
 
     nodes + """
@@ -49,8 +49,8 @@ let multipleMatchCasesTransformTests = [
         match g
         | [a] where a == na => return []
         | [a] => return g
-    a = [na] >> graph
-    b = []        
+    got = [na] >> graph
+    exp = []        
     ""","Both pattern graphs the same, but first where clause passes. Ensure first is taken."
 
     """
@@ -61,8 +61,8 @@ let multipleMatchCasesTransformTests = [
     nb = "b"::1
     nc = "c"::2
     g = [na,>,nb] + [na,>,nc]
-    a = g >> change
-    b = ["a"::20,>,nb] + ["a"::20,>,nc]
+    got = g >> change
+    exp = ["a"::20,>,nb] + ["a"::20,>,nc]
     """, "Changing a node in the graph. Ensure that edge deletion/preservation on works correctly when nodes are changed"
 
     """
@@ -73,8 +73,8 @@ let multipleMatchCasesTransformTests = [
     nb = "b"::1
     nc = "c"::2
     g = [na,>,nb] + [na,20>,nc]
-    a = g >> change
-    b = ["a"::20, 30>, nb] + ["a"::20, 20>, nc]
+    got = g >> change
+    exp = ["a"::20, 30>, nb] + ["a"::20, 20>, nc]
     """, "Changing a node in the graph. Ensure that edge deletion/preservation on works correctly when nodes and edges are changed"
 ]
 
@@ -82,22 +82,22 @@ let collectionTests = [
     nodes + """
     def delNode(g) = match g | [x] => become []
     g = [na,nb]
-    a = g >> delNode
-    b = [na] |&| [nb]
+    got = g >> delNode
+    exp = [na] |&| [nb]
     """, "Deleting a node resulting in a collection of two graphs. Ensure both graphs are returned in a collection."
 
     nodes + """
     def delNode(g) = match g | [x] => become []
     g = [na,nb]
-    a = g >> delNode |> delNode
-    b = []
+    got = g >> delNode |> delNode
+    exp = []
     """, "Deleting a node twice. Returns a collection of two empty graphs. Ensure that these are collapsed to one graph."
 
     nodes + """
     def delNode(g) = match g | [x] => become []
     g = [na,>,nb,>,nc]
-    a = g >> delNode
-    b =
+    got = g >> delNode
+    exp =
         [nb,>,nc]
         |&| [na,nc]
         |&| [na,>,nb]
@@ -111,8 +111,8 @@ let patternGraphBinOps = [
         match g
         | [a,>,b] and [b,>,c] => return [b]
     g = [na,>,nb,>,nc]
-    a = g >> middle
-    b = [nb]
+    got = g >> middle
+    exp = [nb]
     """, "And condition used not in a negative application condition"
 
     nodes + """
@@ -120,8 +120,8 @@ let patternGraphBinOps = [
         match g
         | [a,>,b] and not [b,>,c] => return [a,>,b]
     g = [na,>,nb,>,nc]
-    a = g >> endPair
-    b = [nb,>,nc]
+    got = g >> endPair
+    exp = [nb,>,nc]
     """, "Negative application conditions ensure only one subgraph matches"
 
     nodes + """
@@ -129,8 +129,8 @@ let patternGraphBinOps = [
         match g
         | [a,>,b] and not [b,>,c] => return [a,>,b]
     g = [na,>,nb,>,nc] + [nd,>,ne,>,nc]
-    a = g >> endPair
-    b = [nb,>,nc] |&| [ne,>,nc]
+    got = g >> endPair
+    exp = [nb,>,nc] |&| [ne,>,nc]
     """, "Negative application conditions ensure a collection of only two graphs is returned"
 ]
 
@@ -140,8 +140,8 @@ let patternGraphOrOps = [
         | [a,<>,b]
         or [a,>,b] => return [a,b]
     g = [na,<>,nb]
-    a = g >> edge
-    b = [na,nb]
+    got = g >> edge
+    exp = [na,nb]
     """, "Or application conditions in positive graph"
 
     nodes + """
@@ -149,8 +149,8 @@ let patternGraphOrOps = [
         match g
         | [a,>,b] and not ([b,>,c] or [d,>,b]) => return [a,>,b]
     g = [na,>,nb] + [nc,>,na,<,nd] + [nc,>,nd,>,ne]
-    a = g >> deadLink
-    b = [na,>,nb] |&| [nd,>,ne]
+    got = g >> deadLink
+    exp = [na,>,nb] |&| [nd,>,ne]
     """, "Or application conditions in negative graph"
 ]
 

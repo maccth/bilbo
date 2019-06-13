@@ -6,43 +6,43 @@ open Expecto
 let filterTests = [
     nodes + """
     def anything(g) = match g | [] => return True
-    a = [] >> filter by anything
-    b = []
+    got = [] >> filter by anything
+    exp = []
     """, "Ensure positive filtering works on empty graph."
     
     nodes + """
     def hasNodes(g) = match g | [x] => return True
-    a = [na] >> filter by hasNodes
-    b = [na]
+    got = [na] >> filter by hasNodes
+    exp = [na]
     """, "Ensure positive filtering works on single node graph."
 
     nodes + """
     def hasNodes(g) = match g | [x] => return True
-    a = [na] |&| [nb] |&| [nc] >> filter by hasNodes
-    b = [na] |&| [nb] |&| [nc]
+    got = [na] |&| [nb] |&| [nc] >> filter by hasNodes
+    exp = [na] |&| [nb] |&| [nc]
     """, "Ensure positive filtering works on a collection of single node graphs."
 
     nodes + """
     def hasSelfLoop(g) = match g | [a,>,a] => return True 
     g = [na,>,na] |&| [na,>,nb,>,nc]
-    a = g >> filter by hasSelfLoop
-    b = [na,>,na]
+    got = g >> filter by hasSelfLoop
+    exp = [na,>,na]
     """, "Ensure no match favours deletion."
 
     nodes + """
     def hasSelfLoop(g) = match g | [a,>,a] => return True
     def doubleEdge(g) = match g | [x,>,x] and not [x,<>,x] => become [x,<>,x]
     g = [na,>,na] |&| [na,>,nb,>,nc]
-    a = g >> filter by hasSelfLoop |> doubleEdge!
-    b = [na,<>,na]
+    got = g >> filter by hasSelfLoop |> doubleEdge!
+    exp = [na,<>,na]
     """, "Ensure filtering works at the start of a pipeline."
 
     nodes + """
     def hasSelfLoop(g) = match g | [a,>,a] => return True
     def doubleEdge(g) = match g | [x,>,x] and not [x,<>,x] => become [x,<>,x]
     g = [na,>,na] |&| [na,>,nb,>,nc]
-    a = g >> filter by hasSelfLoop |> doubleEdge!
-    b = [na,<>,na]
+    got = g >> filter by hasSelfLoop |> doubleEdge!
+    exp = [na,<>,na]
     """, "Ensure filtering works at the end of a pipeline."
 
     nodes + """
@@ -51,8 +51,8 @@ let filterTests = [
         | [x,>,x]   => return False
         | _         => return True
     g = [na,>,na,>,nb] |&| [na,>,nb,>,nc] |&| [na,<,na]
-    a = g >> filter by hasNoSelfLoop
-    b = [na,>,nb,>,nc]
+    got = g >> filter by hasNoSelfLoop
+    exp = [na,>,nb,>,nc]
     """, "Ensure negative questions can be answered due to the all Truth requirement."
 
     """
@@ -61,8 +61,8 @@ let filterTests = [
     nb = "b"::20
     g = [na] |&| [nb]
     g' = g >> filter by hasWeightLargerThan
-    a = 12 >> g'
-    b = [nb] 
+    got = 12 >> g'
+    exp = [nb] 
     ""","Ensure partially applied filters work"
 ]
 
@@ -71,8 +71,8 @@ let minTests = [
     def load(g) = match g | [x] => return #x
     na = "a"::100
     g = [na]
-    a = g >> min by load
-    b = [na]
+    got = g >> min by load
+    exp = [na]
     ""","Ensure min reduction with a single graph returns that same graph."
 
     """
@@ -80,8 +80,8 @@ let minTests = [
     na = "a"::100
     nb = "b"::200
     g = [na] |&| [nb]
-    a = g >> min by load
-    b = [na]
+    got = g >> min by load
+    exp = [na]
     ""","Ensure min reduction works on single node graphs."
 
     """
@@ -90,8 +90,8 @@ let minTests = [
     nb = "b"::200
     nc = "c"::300
     g = [nc,>,na] |&| [nb,<,nc]
-    a = g >> min by load
-    b = [nc,>,na]
+    got = g >> min by load
+    exp = [nc,>,na]
     ""","Ensure min reduction picks the min within every graph, if there are multiple matches."
 ]
 
@@ -100,8 +100,8 @@ let maxTests = [
     def load(g) = match g | [x] => return #x
     na = "a"::100
     g = [na]
-    a = g >> max by load
-    b = [na]
+    got = g >> max by load
+    exp = [na]
     ""","Ensure max reduction with a single graph returns that same graph."
 
     """
@@ -109,8 +109,8 @@ let maxTests = [
     na = "a"::100
     nb = "b"::200
     g = [na] |&| [nb]
-    a = g >> max by load
-    b = [nb]
+    got = g >> max by load
+    exp = [nb]
     ""","Ensure max reduction works on single node graphs."
 
     """
@@ -119,8 +119,8 @@ let maxTests = [
     nb = "b"::200
     nc = "c"::300
     g = [nc,>,na] |&| [nb,<,na]
-    a = g >> max by load
-    b = [nc,>,na]
+    got = g >> max by load
+    exp = [nc,>,na]
     ""","Ensure max reduction picks the max within every graph, if there are multiple matches."
 ]
 

@@ -93,7 +93,7 @@ let twinVarTests testDataLst =
 
 let abTwinVarTests tLst =
     tLst
-    |> List.map (fun (codeStr,des) -> (codeStr,"a","b",des))
+    |> List.map (fun (codeStr,des) -> (codeStr,"got","exp",des))
     |> twinVarTests
 
 let runOneOfTest codeStr gotVar expVars =
@@ -124,7 +124,7 @@ let consOneOfTest codeStr gotVar expVars des =
 
 let aOneOfTests tLst =
     tLst
-    |> List.map (fun (codeStr,expVars,des) -> consOneOfTest codeStr "a" expVars des)   
+    |> List.map (fun (codeStr,expVars,des) -> consOneOfTest codeStr "got" expVars des)   
 
 let nodes = """
 na = "nodeA"::1001

@@ -76,7 +76,7 @@ module SymbolTable =
                     | Ok stU' -> Map.add n ((spType,stU') |> Space) st |> Ok
                     | Error e -> e |> Error
                 | _ ->
-                     "Name " + "\"" + n + "\"" + " is not is not defined"
+                     "Name " + "\"" + n + "\"" + " is not defined"
                     |> NameError
                     |> BilboError.ofError    
 
@@ -113,7 +113,7 @@ module Symbols =
             | [] ->
                 // TODO: generate specific error from errList
                 // let errLst' = List.rev errLst
-                "Name " + "\"" + vid.id + "\"" + " is not is not defined"
+                "Name " + "\"" + vid.id + "\"" + " is not defined"
                 |> NameError
                 |> BilboError.ofError                       
         findClosest syms None

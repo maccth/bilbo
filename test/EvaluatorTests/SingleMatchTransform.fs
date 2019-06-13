@@ -6,26 +6,26 @@ open Expecto
 let smallPatternReturnTransforms = [
     nodes + """
     def empty(g) = match g | [] => return 100
-    a = [na] >> empty
-    b = 100
+    got = [na] >> empty
+    exp = 100
     """, "Match on empty subgraph in non-empty host, return int";
 
     nodes + """
     def empty(g) = match g | [] => return 100
-    a = [] >> empty
-    b = 100
+    got = [] >> empty
+    exp = 100
     """, "Match on empty subgraph in empty host, return int";
 
     """
     def node(g) = match g | [x] => return x
-    a = ["aNode"::23984] >> node
-    b = "aNode"::23984
+    got = ["aNode"::23984] >> node
+    exp = "aNode"::23984
     """, "Match on single node, return it";
 
     """
     def number(g) = match g | [x] => return 2.7182818
-    a = ["node"::"load"] >> number
-    b = 2.7182818
+    got = ["node"::"load"] >> number
+    exp = 2.7182818
     """, "Match on single node, return a literal";
 
     """
@@ -33,8 +33,8 @@ let smallPatternReturnTransforms = [
         val = 2.7182818
         match g
         | [x] => return val
-    a = ["node"::"load"] >> number
-    b = 2.7182818
+    got = ["node"::"load"] >> number
+    exp = 2.7182818
     """, "Match on single node, return a value defined in pre-match body";
 
     """
@@ -44,15 +44,15 @@ let smallPatternReturnTransforms = [
         | [x] =>
             val = 3.14159
             return val
-    a = ["node"::"load"] >> number
-    b = 3.14159
+    got = ["node"::"load"] >> number
+    exp = 3.14159
     """, "Match on single node, return a value defined in match-case body";
 
     nodes + """
     val = 2.7182818
     def number(g) = match g | [x] => return val
-    a = [na] >> number
-    b = 2.7182818
+    got = [na] >> number
+    exp = 2.7182818
     """, "Match on single node, return value from function closure";
 ]
 
@@ -60,92 +60,92 @@ let oneParamReturnTransforms = [
 
     nodes + """
     def source(g) = match g | [a,>,b] => return a
-    a = [na,>,nb] >> source
-    b = na
+    got = [na,>,nb] >> source
+    exp = na
     """, "Match on single edge, return source"
 
     nodes + """
     def wedge(g) = match g | [a,w>,b] => return w
-    a = [na,200>,nb] >> wedge
-    b = 200
+    got = [na,200>,nb] >> wedge
+    exp = 200
     """, "Match on single weighted edge, return weight"
 
     nodes + """
     def midIn(g) = match g | [x,w>,y,<,z] => return y
-    a = [na,10>,nb,<,nc] >> midIn
-    b = nb
+    got = [na,10>,nb,<,nc] >> midIn
+    exp = nb
     """, "Match on 3 node pattern with edges in both directions";
 
     nodes + """
     def midOut(g) = match g | [x,<w,y,>,z] => return y
-    a = [na,>,nb] + [nc,<10,na] >> midOut
-    b = na
+    got = [na,>,nb] + [nc,<10,na] >> midOut
+    exp = na
     """, "Graph addition enpiped into match on 3 node pattern with edges in both directions";
 
     nodes + """
     def last3(g) = match g | [a,>,b,>,c,>,d,>,e,>,f] => return [d,e,f]
-    a = [na,>,nb,>,nc,>,nd,>,ne,>,nf] >> last3
-    b = [nd,ne,nf]
+    got = [na,>,nb,>,nc,>,nd,>,ne,>,nf] >> last3
+    exp = [nd,ne,nf]
     """, "6 node match, returning graphs";
 
     nodes + """
     def right(g) = match g | [a,>,b] => return [b]
     def loop(g) = match g | [b] => return [b,2000>,b]
-    a = [na,>,nb] >> right |> loop
-    b = [nb,2000>,nb]
+    got = [na,>,nb] >> right |> loop
+    exp = [nb,2000>,nb]
     """, "Two transforms in pipeline, return graph from both.";
 
     nodes + """
     def weight(g) = match g | [r,s>,t] => return s
-    b = 200
-    a = [na,b>,nb] >> weight
+    exp = 200
+    got = [na,exp>,nb] >> weight
     """, "Return weight found in subgraph.";
 
     nodes + """
     def biWeight(g) = match g | [a,<x>,b,>,c] => return x
-    b = 200
-    a = [nb,<b>,nc,>,nd] >> biWeight
+    exp = 200
+    got = [nb,<exp>,nc,>,nd] >> biWeight
     """, "Return weight, uses <> in pattern graph.";
 
     nodes + """
     def add100(n) = return n+100
     def weightAdd(g) = match g | [a,x>,b] => return x >> add100
     c = 200
-    a = [na,c>,nb] >> weightAdd
-    b = c >> add100
+    got = [na,c>,nb] >> weightAdd
+    exp = c >> add100
     """, "Return weight found in subgraph and piped through function.";
 
     nodes + """
     def add100(n) = return n+100
     def weight(g) = match g | [a,x>,b] => return x >> add100
     c = 200
-    a = [na,c>,nb] >> weight >> add100
-    b = c >> add100 >> add100
+    got = [na,c>,nb] >> weight >> add100
+    exp = c >> add100 >> add100
     """, "Return weight found in subgraph and piped through 2 stage pipeline.";
 
     nodes + """
     newNode = "NewNode"::29384
     def changeNode(g) = match g | [a,>,b,>,c] => return [a,>,newNode,>,c]
-    a = [nd,>,nb] + [nb,>,na] >> changeNode
-    b = [na,<,newNode,<,nd] 
+    got = [nd,>,nb] + [nb,>,na] >> changeNode
+    exp = [na,<,newNode,<,nd] 
     """, "Returning graph where node is swapped for a different node captured by closure"
 ]
 
 let singleMatchMultipleParamTransformTests = [
     nodes + """
     def weightAddN(n,g) = match g | [a,x>,b] => return x+n
-    a = 2234
-    g = [nc,a-10>,nd,ne]
-    b = (10,g) >> weightAddN
+    got = 2234
+    g = [nc,got-10>,nd,ne]
+    exp = (10,g) >> weightAddN
     """, "Multiple param transform, uses non-graph param in return, transform is never partial.";
 
     nodes + """
     def weightAddN(n,g) = match g | [a,x>,b] => return x+n
-    a = 2234
+    got = 2234
     n = 86312
     t = 86312 >> weightAddN
-    g = [nc,a-n>,nd,ne]
-    b = g >> t
+    g = [nc,got-n>,nd,ne]
+    exp = g >> t
     """, "Multiple param transform, uses non-graph param in return, transform applied partially."
 
     nodes + """
@@ -153,8 +153,8 @@ let singleMatchMultipleParamTransformTests = [
     g = [na,100>,nb]
     p = g >> incWeight |> incWeight
     p' = 20 >> p
-    a = 30 >> p'
-    b = [na,100+20+30>,nb]
+    got = 30 >> p'
+    exp = [na,100+20+30>,nb]
     """, "Pipeline of multiple param transforms, applied partially"
 ]
 
@@ -162,27 +162,27 @@ let singleMatchWithWhere = [
     nodes + """
     def weight(g) = match g | [a,x>,b] where x>10
     g = [na,7>,nb]
-    a = g >> weight
+    got = g >> weight
     """, "Should not match. Where clause fails"
 ]
 
 let singleMatchNodeMatchesMultipleTimes = [
     nodes + """
     def tran(g) = match g | [a,>,b,>,a,>,c] => return b
-    a = [na,>,nb,>,na,>,nc] >> tran
-    b = nb
+    got = [na,>,nb,>,na,>,nc] >> tran
+    exp = nb
     """, "Node matches twice in pattern. I";
 
     nodes + """
     def tran(g) = match g | [a,>,b,>,a,>,c] => return b
-    a = [nb,>,nc,>,nb,>,nd] >> tran
-    b = nc
+    got = [nb,>,nc,>,nb,>,nd] >> tran
+    exp = nc
     """, "Node matches twice in pattern. II";
 
     nodes + """
     def tran(g) = match g | [a,<>,b,>,c] => return b
-    a = [nc,<>,nd,>,na] >> tran
-    b = nd
+    got = [nc,<>,nd,>,na] >> tran
+    exp = nd
     """, "Node matches twice in pattern. III"
 ]
 
@@ -190,30 +190,30 @@ let singleMatchBecomeTests = [
     nodes + """
     def swap(g) = match g | [a,>,b] => become [a,<,b]
     g = [na,>,nb]
-    a = g >> swap
-    b = [na,<,nb]
+    got = g >> swap
+    exp = [na,<,nb]
     """, "Become test. No other edges or nodes. Equivalent to return."
 
     nodes + """
     def swap(g) = match g | [a,>,b] => become [a,<,b]
     g = [na,>,nb,nc,nd]
-    a = g >> swap
-    b = [na,<,nb,nc,nd]
+    got = g >> swap
+    exp = [na,<,nb,nc,nd]
     """, "Become test. Edge swap with no other edges but other nodes."
 
     nodes + """
     def swapW(g) = match g | [a,x>,b] => become [a,<x,b]
     g = [na,>,nb,40>,nc,<>,nd]
-    a = g >> swapW
-    b = [na,>,nb,<40,nc,<>,nd]
+    got = g >> swapW
+    exp = [na,>,nb,<40,nc,<>,nd]
     """, "Become test. Edge swap with other edges but no other (non-endpoint) nodes."
 
 
     nodes + """
     def swapW(g) = match g | [a,x>,b] => become [a,<x,b]
     g = [ne,nf,na,>,nb,40>,nc,<>,nd]
-    a = g >> swapW
-    b = [ne,nf,na,>,nb,<40,nc,<>,nd]
+    got = g >> swapW
+    exp = [ne,nf,na,>,nb,<40,nc,<>,nd]
     """, "Become test. Edge swap with other edges and other nodes."
 ]
 

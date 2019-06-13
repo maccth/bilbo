@@ -27,59 +27,59 @@ let avg4Func = """
 
 let singleParamFunctionApplication = [
     add1Func + """
-    a = 10 >> add1
+    got = 10 >> add1
     """, 11 |> Int |> Value, "monic function, 1 stage pipeline";
 
     add1Func + """
-    a = 10 >> add1 |> add1
+    got = 10 >> add1 |> add1
     """, 12 |> Int |> Value, "monic func, 2 stage pipeline";
 
     add1Func + """
-    a = 10 >> add1 |> add1 |> add1
+    got = 10 >> add1 |> add1 |> add1
     """, 13 |> Int |> Value, "monic func, 3 stage pipeline";
 
     add1Func + negFunc + """
-    a = 100 >> add1 |> neg |> add1
+    got = 100 >> add1 |> neg |> add1
     """, -100 |> Int |> Value, "2 monic funcs, 3 stage pipeline"
 
     add1Func + """
     add3 = add1 |> add1 |> add1
-    a = 10 >> add3
+    got = 10 >> add3
     """, 13 |> Int |> Value, "enpipe input into monic func pipeline bound to identifier"
 
     add1Func + """
     add3 = add1 |> add1 |> add1
-    a = 10 >> add3 |> add1
+    got = 10 >> add3 |> add1
     """, 14 |> Int |> Value, "enpipe input into monic func pipeline composed with monic func"
 ]
 
 let partialFunctionApplication = [
     sumFunc + """
     x = 10 >> sum
-    a = 20 >> x
+    got = 20 >> x
     """, 30 |> Int |> Value, "2 arg function applied partially, one arg at a time"
 
     avg4Func + """
     c = 10 >> avg4
     d = 20 >> c
     e = 30 >> d
-    a = 40 >> e
+    got = 40 >> e
     """, 25 |> Int |> Value, "4 arg function applied partially, one arg at a time"
 ]
 
 let paramListAppliction = [
     sumFunc + """
-    a = (-345,72) >> sum
+    got = (-345,72) >> sum
     """, -345+72 |> Int |> Value, "2 arg param list enpiped into single function"
 
     sumFunc + add1Func + """
-    a = (56127,-864234) >> sum |> add1 |> add1
+    got = (56127,-864234) >> sum |> add1 |> add1
     """, (56127-864234+1+1) |> Int |> Value, "2 arg param list enpiped into 3 stage pipeline"
 
     sumFunc + """
-    a = 10 >> sum |> sum
-    a = 20 >> a
-    a = -5 >> a
+    got = 10 >> sum |> sum
+    got = 20 >> got
+    got = -5 >> got
     """, 25 |> Int |> Value, "3 stage partial pipeline application"
 ]
 
@@ -92,7 +92,7 @@ let functionsWithClosures = [
         a = 10 + c
         return x+c+a+7
 
-    a = 10 >> func1 |> func1
+    got = 10 >> func1 |> func1
     """, 164 |> Int |> Value, "Function closure contains global symbol and overwrites it";
 
     """
@@ -108,13 +108,13 @@ let functionsWithClosures = [
         c' = c >> sumVars
         return a'+b'+c'
 
-    a = (100,135,96) >> func1
+    got = (100,135,96) >> func1
     """, -211 |> Int |> Value, "Function closure contains global functions"
 ]
 
 
 let quickFunctionAppTest codeStr mean des =
-    let var = "a"
+    let var = "got"
     codeStr, var, mean, des
 
 let quickFunctionAppTests testDatalst =
