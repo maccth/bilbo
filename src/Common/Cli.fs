@@ -16,8 +16,9 @@ with
             | BilboFile _ -> "specify the Bilbo file"
             | Debug _ -> "specify whether debug information should be printed"
 
+let quote =  "\n\n" + "\"All we have to decide is what to do with the time that is given to us.\" - Gandalf\n"
+
 let cli (cliArgs : string []) (replName : string) fileHandler repl startState =
-    // TODO: create useage list for release
     let argParser = ArgumentParser.Create<CliArgs>(programName = replName)
     let args = argParser.Parse(inputs=cliArgs, ignoreUnrecognized=true)
     let debugInfo = args.Contains Debug
@@ -32,7 +33,7 @@ let cli (cliArgs : string []) (replName : string) fileHandler repl startState =
             if debugInfo then
                 printfn "%A" res
     | _ ->
-        printfn "%s" replName
+        printfn "%s" (replName + quote)
         let mutable codeIn = ""
         let mutable stillReading = false
         let mutable eval = startState
