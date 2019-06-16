@@ -26,48 +26,6 @@ module Graph =
         let nodesNew load = Map.add n.id load nodesStart
         let gNew load = {g with nodes = nodesNew load}
         {g with Graph.nodes = Map.add n.id n.load g.nodes}
-
-        // match n.id with
-        // | ParamList _ -> paramListImpError "a node id"
-        // | Space (Namespace, n) -> bindImpError "namespace" "a node id"
-        // // TODO: Others!!!
-        // | Value (Graph g) -> bindImpError "graph" "a node id"
-        // | _ ->
-        //     match n.load with
-        //     | ParamList _ -> paramListImpError "a node load"
-        //     | Space (Namespace, n) -> bindImpError "namespace" "a node load"
-        //     // TODO: Others!!!
-        //     | Value (Graph g) -> bindImpError "graph" "a node load"
-        //     | _ -> gNew n.load |> Ok
-            
-        // match n.load with
-        // | ParamList _ -> paramListImpError "a node load"
-        // | Space (Namespace, n) -> bindImpError "namespace" "a node load"
-        // | Value _ -> gNew n.load |> Ok
-        // match Map.tryFind n.id nodesStart with
-        // | None -> gNew n.load |> Ok
-        // | Some nExist ->
-        //     match nExist with
-        //     | ParamList _ -> paramListImpError "a node load"
-        //     | Space (Namespace, n) -> bindImpError "namespace" "a node load"
-        //     | Value _ -> gNew n.load |> Ok
-        //     | Space (Object(tExist), stExist) ->
-        //         match n.load with
-        //         | ParamList _ -> paramListImpError "a node load"
-        //         | Space (Namespace, n) -> bindImpError "namespace" "a node load"
-        //         | Value _ -> gNew n.load |> Ok
-        //         | Space (Object(tNew), stNew) ->
-        //             let st = SymbolTable.empty
-        //             let st' = SymbolTable.set st {id=tExist; spLst=[]} (Space (Object(tExist), stExist))
-        //             match st' with
-        //             | Error e -> e |> Error
-        //             | Ok st' ->
-        //                 let st'' = SymbolTable.set st' {id=tNew; spLst=[]} (Space (Object(tNew), stNew))
-        //                 match st'' with
-        //                 | Error e -> e |> Error
-        //                 | Ok st'' ->
-        //                     let loadNew = (Object "Object", st'') |> Space
-        //                     gNew loadNew |> Ok
                     
     let addNodes (nLst : Node list) (g : Graph) =
         List.fold (fun gIn nIn -> addNode nIn gIn) g nLst
@@ -146,7 +104,7 @@ module Graph =
         // The graphs will only have unique nodes, the set removes the issue of ordering
         let g1n = nodes g1 |> Set.ofList
         let g2n = nodes g2 |> Set.ofList
-        // The edges need may not be unique, so the ordering allows comparison in the presence of
+        // The edges need may not be unique, so the ordering allows comparison in the presence of
         //  duplicated edges.
         let g1e = edges g1 |> List.sort
         let g2e = edges g2 |> List.sort
