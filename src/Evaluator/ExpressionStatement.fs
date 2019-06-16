@@ -1254,7 +1254,7 @@ and consVid syms spLst e : BilboResult<ValueId> =
                 let spLstNew = lVid.spLst @ np :: rVid.spLst
                 {rVid with spLst=spLstNew}
                 |> Ok
-    | _ -> "vId construction for this" |> notImplementedYet
+    | _ -> assignError()
 
 and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
     match e with

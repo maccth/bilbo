@@ -5,6 +5,7 @@ open Bilbo.Common.Ast
 open Bilbo.Common.Value
 open Bilbo.Common.SymbolTable
 open Bilbo.Common.Result
+open Bilbo.Common.Error
 open Bilbo.Evaluator.ExpressionStatement
 
 let attachLoc loc res =
@@ -71,7 +72,7 @@ let evalProgramUnit (syms : Symbols) pUnit : BilboResult<Symbols> =
         attachLoc loc syms'
         |-/> BilboError.addExtra ("Within transform definition of " + nLstStr rnLst tName + ".")
 
-let evalBilbo syms ast =
+let evalBilbo syms ast : ProgramResult<Symbols> =
     let rec evalRec syms ast  =
         match ast with
         | pUnit :: rest ->
@@ -80,18 +81,21 @@ let evalBilbo syms ast =
            | Ok syms'' ->
                 evalRec syms'' rest
             | Error e ->
-                e |> Error
+                e |> prettyError |> Error
         | [] ->
             syms |> Ok
     evalRec syms ast    
 
-let bilboEvaluatorSymsIn (ast : BilboResult<Program>) (symsIn : Symbols) : BilboResult<Symbols> =
+let bilboEvaluatorSymsIn (ast : BilboResult<Program>) (symsIn : Symbols) : ProgramResult<Symbols> =
     match ast with
     | Ok ast' -> evalBilbo symsIn ast'
-    | Error e -> e |> Error
+    | Error e -> e |> prettyError |> Error
 
-let bilboEvaluator (ast : BilboResult<Program>) : BilboResult<Symbols> =
+let bilboEvaluator (ast : BilboResult<Program>) : ProgramResult<Symbols> =
     bilboEvaluatorSymsIn ast Symbols.empty
+    |> function
+    | Ok s -> s |> Ok
+    | Error e -> e |> Error
 
 let bilboEvaluatorPrint (ast : BilboResult<Program>) =
     ast

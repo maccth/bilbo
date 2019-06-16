@@ -308,3 +308,8 @@ let nonStringFilePath typ =
     + "Path was of type " + typ + "."
     |> TypeError
     |> BilboError.ofError
+
+let assignError() =
+    "Cannot assign to that. "
+    |> TypeError
+    |> BilboError.ofError

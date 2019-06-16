@@ -9,5 +9,6 @@ open Bilbo.Evaluator.Evaluator
 let main argv =
     let file code = code |> bilboParser |> bilboEvaluator
     let repl code syms = code |> bilboStringParser |> fun ast ->  bilboEvaluatorSymsIn ast syms
-    cli argv "Bilbo evaluator REPL" file repl Symbols.Empty
+    let titleStr = "Bilbo REPL v1.0" + "\n\n" + "\"All we have to decide is what to do with the time that is given to us.\" - Gandalf\n"
+    cli argv titleStr  file repl Symbols.Empty
     0
