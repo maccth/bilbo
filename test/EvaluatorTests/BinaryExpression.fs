@@ -3,6 +3,15 @@ module Bilbo.Tests.EvaluatorTests.BinaryExpression
 open Bilbo.Tests.EvaluatorTests.Helpers
 open Expecto
 
+let generalBinOps = [
+    """
+    type Thing = p1, p2
+    n = "n"::Thing(10,20)
+    got = n::n..p2
+    exp = "n"::20
+    """, "Ensure :: has higher precedence than .. ."
+]
+
 let graphBinOps = [
     nodes + """
     got = [na,>,nb] - [na]
@@ -92,5 +101,10 @@ let test =
 let test2 =
     let name = "Binary operations on graphs and collections"
     testList name (graphCollectionBinOps |> gotExpTwinVarTests)
+
+[<Tests>]
+let test3 =
+    let name = "General binary operator tests"
+    testList name (generalBinOps |> gotExpTwinVarTests)
 
    
