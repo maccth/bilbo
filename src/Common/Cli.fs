@@ -19,7 +19,7 @@ with
 let cli (cliArgs : string []) (replName : string) fileHandler repl startState =
     // TODO: create useage list for release
     let argParser = ArgumentParser.Create<CliArgs>(programName = replName)
-    let args = argParser.Parse cliArgs
+    let args = argParser.Parse(inputs=cliArgs, ignoreUnrecognized=true)
     let debugInfo = args.Contains Debug
     match args.Contains BilboFile with
     | true ->

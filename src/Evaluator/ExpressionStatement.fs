@@ -12,6 +12,7 @@ open Bilbo.Evaluator.PrefixExpression
 open Bilbo.Evaluator.Print
 open Bilbo.Graph.Graph
 open Bilbo.Graph.Isomorphism
+open System.IO
 
 let rec evalPStageBody (syms : Symbols) spLst st bod =
     let syms' : Symbols = st :: syms
@@ -1141,10 +1142,8 @@ and dotRules syms spLst lhs rhs =
     | Error e -> e |> Error
     | Ok (Space(spType, syms')) -> 
         evalExpr [syms'] [] rhs     
-    | _ ->
-        "Clearly this isn't an object or a namespace..."
-        |> TypeError
-        |> BilboError.ofError
+    | Ok l -> l |> typeStr|> dotAccessError
+        
 
 and dblDotRules syms spLst lhs rhs =
     let lSpace = evalExpr syms spLst lhs
@@ -1154,14 +1153,8 @@ and dblDotRules syms spLst lhs rhs =
         match n.load with
         | Space (typ,loadSt) ->
             evalExpr [loadSt] [] rhs
-        | _ ->
-            "Clearly that nodes load is not isn't an object..."
-            |> TypeError
-            |> BilboError.ofError
-    | _ ->
-        "Clearly that isn't a node. Can only use .. with nodes."
-        |> TypeError
-        |> BilboError.ofError
+        | m -> m |> typeStr |> dblDotLoadError
+    | Ok m -> m |> typeStr |> dblDotNodeError
 
 and evalReducExpr re =
     match re with
@@ -1221,7 +1214,9 @@ and consNodePartVid syms spLst e ndPart =
         | Name nd :: rest ->
             let np = (ndPart, Some nd) |> NodePart
             {vid with spLst = np :: rest} |> Ok
-        | NodePart _ :: _ ->  "This happens when two node prefix expressions are used in a row &&a or #&a etc. " |> notImplementedYet
+        | NodePart _ :: _ -> 
+            "Multiple node prefixes cannot be used in a row since nodes have a node as load or identifier"
+            |> notImplementedYet
         | [] ->
             let np = (ndPart, None) |> NodePart
             {vid with spLst = [np]} |> Ok   
@@ -1259,7 +1254,7 @@ and consVid syms spLst e : BilboResult<ValueId> =
                 let spLstNew = lVid.spLst @ np :: rVid.spLst
                 {rVid with spLst=spLstNew}
                 |> Ok
-    | _ -> "vId construction" |> notImplementedYet
+    | _ -> "vId construction for this" |> notImplementedYet
 
 and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<Symbols> =
     match e with
@@ -1277,8 +1272,7 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
     | DeleteExpr id ->
         Symbols.remove syms {id=id; spLst=spLst}
     | PrintExpr (thing,place) ->
-        match place with
-        | None ->
+        let printer handler thing =
             let strRes =         
                 thing
                 |> evalExpr syms spLst
@@ -1286,6 +1280,21 @@ and evalExprStatement (syms : Symbols) spLst (e : ExprStatement) : BilboResult<S
             match strRes with
             | Error e -> e |> Error
             | Ok str ->
-                printfn "%s" str
+                handler str
                 syms |> Ok          
-        | Some _ -> "Printing to files" |> notImplementedYet
+        match place with
+        | None ->
+            thing |> printer (printfn "%s")  
+        | Some fe ->
+            let fName = evalExpr syms spLst fe
+            match fName with
+            | Error e ->
+                e
+                |> Error
+                |-/> BilboError.addExtra "While trying to print to a file"
+            | Ok (Value(String fs)) ->
+                try
+                    thing |> printer (fun s -> File.AppendAllText(contents=s, path=fs))
+                with
+                | _ -> printingToFileError fs
+            | Ok m -> m |> typeStr |> nonStringFilePath

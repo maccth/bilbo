@@ -278,3 +278,33 @@ let failedImport file =
     "Failed to import the file \"" + file + "\"."
     |> ImportError
     |> BilboError.ofError
+
+let dotAccessError typ =
+    "The field access operator `.` can only be used on an object or namespace. "
+    + "Attempted " + typ + "."
+    |> TypeError
+    |> BilboError.ofError
+
+let dblDotLoadError typ =
+    "The node load field access operator `..` can only be used on a node that has an object load."
+    + "Attempted to use on a node with load of type " + typ + "."
+    |> TypeError
+    |> BilboError.ofError
+
+let dblDotNodeError typ =
+    "The node load field access operator `..` can only be used on a node that has an object load."
+    + "Attempted to use on a " + typ + "."
+    |> TypeError
+    |> BilboError.ofError
+
+let printingToFileError f =
+    "A problem occured when trying to print to the file "
+    + f + "."
+    |> ImplementationError
+    |> BilboError.ofError
+
+let nonStringFilePath typ =
+    "File path to print to must be of type str. "
+    + "Path was of type " + typ + "."
+    |> TypeError
+    |> BilboError.ofError
