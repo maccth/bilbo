@@ -1,5 +1,5 @@
 # Bilbo
-Bilbo is domain-specific language for programming with graphs at a high-level of abstraction
+Bilbo is a domain-specific language for programming with graphs at a high level of abstraction.
 
 Bilbo is completely cross-platform and runs on linux, macOS and windows.
 
@@ -20,8 +20,8 @@ dotnet bilbo/Bilbo.dll --bilbofile examples/shortest-path.bb
 
 Finally, the option `--debug` can be used to run either the REPL or the normal interpreter in debug mode.
 
-## Building from Source
-To build from source, clone the repository and resolve [Paket](https://fsprojects.github.io/Paket/index.html) dependencies.
+## Building and Running from Source
+To build or run from source, clone the repository and resolve [Paket](https://fsprojects.github.io/Paket/index.html) dependencies.
 
 To build and run the REPL:
 ```
@@ -37,4 +37,4 @@ To run the evaluator tests:
 ```
 dotnet run --project test/EvaluatorTests
 ```
-The evaluator test are one of three test suites. The other are `test/GraphTests` and `test/ParserTests` which can be run similarly.
+The evaluator test are one of three test suites. The others are `test/GraphTests` and `test/ParserTests` which can be run similarly.
